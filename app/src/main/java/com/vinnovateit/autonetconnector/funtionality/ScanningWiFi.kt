@@ -1,10 +1,14 @@
-package com.vinnovateit.autonetconnector
+package com.vinnovateit.autonetconnector.funtionality
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.Manifest
+import android.app.Activity
+import android.content.*
+import android.content.pm.PackageManager
+import android.net.wifi.ScanResult
+import android.net.wifi.WifiManager
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -13,44 +17,81 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.funtionality.WifiEntry
-import com.vinnovateit.autonetconnector.funtionality.WifiScanner
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-//import java.util.jar.Manifest
-import android.Manifest
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent {
-            AutoNetConnectorTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    WifiScan()
+class WifiScanner(private val context: Context) {
+
+    private val wifiManager =
+        context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+    companion object {
+        const val REQUEST_CODE_LOCATION = 123
+    }
+
+    fun hasPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun requestPermission(activity: Activity) {
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            REQUEST_CODE_LOCATION
+        )
+    }
+
+    fun scanWifiNetworks(onComplete: (List<ScanResult>) -> Unit) {
+        if (!hasPermission()) {
+            Toast.makeText(context, "Location permission not granted", Toast.LENGTH_SHORT).show()
+            onComplete(emptyList())
+            return
+        }
+
+        try {
+            if (!wifiManager.isWifiEnabled) {
+                wifiManager.isWifiEnabled = true
+            }
+
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    try {
+                        context?.unregisterReceiver(this)
+                        val results = wifiManager.scanResults
+                        onComplete(results)
+                    } catch (e: SecurityException) {
+                        Log.e("WifiScanner", "Permission error while reading results: ${e.message}")
+                        onComplete(emptyList())
+                    }
                 }
             }
+
+            val intentFilter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+            context.registerReceiver(receiver, intentFilter)
+            wifiManager.startScan()
+
+        } catch (e: SecurityException) {
+            Log.e("WifiScanner", "Scan blocked: ${e.message}")
+            onComplete(emptyList())
         }
     }
 }
 
 @Composable
-fun WifiScan() {
+fun WifiScanScreen() {
     val context = LocalContext.current
     val wifiScanner = remember { WifiScanner(context) }
     var wifiDataJson by remember { mutableStateOf("") }
@@ -63,7 +104,6 @@ fun WifiScan() {
                 val data = results.map {
                     WifiEntry(ssid = it.SSID, level = it.level)
                 }
-                // Convert to JSON-like string
                 wifiDataJson = data.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]") {
                     """  { "ssid": "${it.ssid}", "level": ${it.level} }"""
                 }
