@@ -55,25 +55,56 @@ class WifiScanner(private val context: Context) {
     }
 
     fun scanWifiNetworks(onComplete: (List<ScanResult>) -> Unit) {
+        // ADD DEBUGGING LOGS HERE
+        Log.d("WifiScan", "Starting scan...")
+        Log.d("WifiScan", "WiFi enabled: ${wifiManager.isWifiEnabled}")
+
         if (!hasPermission()) {
+            Log.d("WifiScan", "Permission not granted")
             Toast.makeText(context, "Location permission not granted", Toast.LENGTH_SHORT).show()
             onComplete(emptyList())
             return
         }
 
         try {
+            // CHECK WIFI STATE BEFORE SCANNING
             if (!wifiManager.isWifiEnabled) {
+                Log.d("WifiScan", "WiFi was disabled, enabling...")
                 wifiManager.isWifiEnabled = true
+                // ADD DELAY AFTER ENABLING WIFI
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    performScan(onComplete)
+                }, 2000) // Wait 2 seconds for WiFi to enable
+            } else {
+                Log.d("WifiScan", "WiFi already enabled")
+                performScan(onComplete)
             }
 
+        } catch (e: SecurityException) {
+            Log.e("WifiScanner", "Scan blocked: ${e.message}")
+            onComplete(emptyList())
+        }
+    }
+
+    // SEPARATE FUNCTION FOR ACTUAL SCANNING
+    private fun performScan(onComplete: (List<ScanResult>) -> Unit) {
+        try {
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
                     try {
                         context?.unregisterReceiver(this)
                         val results = wifiManager.scanResults
+                        // ADD DEBUG LOG FOR RESULTS
+                        Log.d("WifiScan", "Scan results count: ${results.size}")
+                        results.forEach { result ->
+                            Log.d("WifiScan", "Found: ${result.SSID} (${result.level})")
+                        }
                         onComplete(results)
                     } catch (e: SecurityException) {
                         Log.e("WifiScanner", "Permission error while reading results: ${e.message}")
+                        onComplete(emptyList())
+                    } catch (e: Exception) {
+                        Log.e("WifiScanner", "Error reading results: ${e.message}")
                         onComplete(emptyList())
                     }
                 }
@@ -81,7 +112,23 @@ class WifiScanner(private val context: Context) {
 
             val intentFilter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
             context.registerReceiver(receiver, intentFilter)
-            wifiManager.startScan()
+
+            // ADD TIMEOUT PROTECTION
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try {
+                    context.unregisterReceiver(receiver)
+                    Log.d("WifiScan", "Scan timeout, using cached results")
+                    val results = wifiManager.scanResults
+                    Log.d("WifiScan", "Cached results count: ${results.size}")
+                    onComplete(results)
+                } catch (e: Exception) {
+                    Log.e("WifiScan", "Timeout error: ${e.message}")
+                    onComplete(emptyList())
+                }
+            }, 15000) // 15 second timeout
+
+            val scanStarted = wifiManager.startScan()
+            Log.d("WifiScan", "Scan started: $scanStarted")
 
         } catch (e: SecurityException) {
             Log.e("WifiScanner", "Scan blocked: ${e.message}")
