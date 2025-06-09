@@ -1,48 +1,84 @@
 package com.vinnovateit.autonetconnector
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.funtionality.WifiEntry
-import com.vinnovateit.autonetconnector.funtionality.WifiScanner
+import com.vinnovateit.autonetconnector.funtionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-//import java.util.jar.Manifest
-import android.Manifest
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+
+// this is just a sample ui for debugging purposes
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var wifiScanner: WifiScanner
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        wifiScanner = WifiScanner(this)
+
+        val permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Location permission is required for WiFi scanning", Toast.LENGTH_LONG).show()
+            }
+        }
+
         setContent {
             AutoNetConnectorTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    WifiScan()
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    var selectedTab by remember { mutableStateOf(0) }
+                    val tabs = listOf("WiFi Scanner", "Credentials Debug")
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        TabRow(selectedTabIndex = selectedTab) {
+                            tabs.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = selectedTab == index,
+                                    onClick = { selectedTab = index },
+                                    text = { Text(title) }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // The content below takes full width and height minus tab row
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            when (selectedTab) {
+                                0 -> WifiScannerScreen(
+                                    onRequestPermission = {
+                                        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                    },
+                                    onScanRequest = { callback ->
+                                        wifiScanner.scanWifiNetworks(callback)
+                                    }
+                                    ,
+                                    wifiScanner = wifiScanner,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -50,54 +86,217 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WifiScan() {
-    val context = LocalContext.current
-    val wifiScanner = remember { WifiScanner(context) }
-    var wifiDataJson by remember { mutableStateOf("") }
+fun WifiScannerScreen(
+    onRequestPermission: () -> Unit,
+    onScanRequest: (onResult: (List<WifiEntry>) -> Unit) -> Unit,
+    wifiScanner: WifiScanner,
+    modifier: Modifier = Modifier
+) {
+    var wifiList by remember { mutableStateOf<List<WifiEntry>>(emptyList()) }
+    var isScanning by remember { mutableStateOf(false) }
+    var hasPermission by remember { mutableStateOf(wifiScanner.hasPermission()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var scanCompleted by remember { mutableStateOf(false) }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            wifiScanner.scanWifiNetworks { results ->
-                val data = results.map {
-                    WifiEntry(ssid = it.SSID, level = it.level)
-                }
-                // Convert to JSON-like string
-                wifiDataJson = data.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]") {
-                    """  { "ssid": "${it.ssid}", "level": ${it.level} }"""
-                }
-            }
-        }
-    }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        if (wifiScanner.hasPermission()) {
-            wifiScanner.scanWifiNetworks { results ->
-                val data = results.map {
-                    WifiEntry(ssid = it.SSID, level = it.level)
-                }
-                wifiDataJson = data.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]") {
-                    """  { "ssid": "${it.ssid}", "level": ${it.level} }"""
-                }
-            }
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        hasPermission = wifiScanner.hasPermission()
     }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        errorMessage?.let { error ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+            ) {
+                Text(
+                    text = error,
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
 
-        Text("Scanned Wi-Fi List (as JSON)", style = MaterialTheme.typography.headlineSmall)
+        Button(
+            onClick = {
+                errorMessage = null
+                scanCompleted = false
+                wifiList = emptyList()
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = wifiDataJson,
+                if (!hasPermission) {
+                    onRequestPermission()
+                    hasPermission = wifiScanner.hasPermission()
+                } else {
+                    isScanning = true
+                    onScanRequest { results ->
+                        wifiList = results
+                        isScanning = false
+                        scanCompleted = true
+                    }
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyMedium
+            enabled = !isScanning
+        ) {
+            if (isScanning) {
+                Row {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Scanning...")
+                }
+            } else {
+                Text(if (hasPermission) "Scan WiFi" else "Grant Permission & Scan")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (scanCompleted) {
+            Text(
+                text = "Scan complete.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        when {
+            isScanning -> {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    CircularProgressIndicator(modifier = Modifier.wrapContentSize())
+                }
+            }
+            wifiList.isEmpty() -> {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (hasPermission) "No WiFi networks found" else "Permission required to scan WiFi",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            else -> {
+                Text(
+                    text = "Found ${wifiList.size} WiFi network(s):",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(wifiList) { entry ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(text = entry.ssid, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    text = "Signal: ${entry.level} dBm",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CredentialsScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var regNo by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var debugText by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var wifiName by remember { mutableStateOf("") }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        OutlinedTextField(
+            value = regNo,
+            onValueChange = { regNo = it },
+            label = { Text("Registration Number") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                if (regNo.isNotBlank() && password.isNotBlank()) {
+                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
+                    message = "Credentials saved!"
+                } else {
+                    message = "Please enter registration number, password."
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Save Credentials")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(
+            onClick = {
+                val credentials = getUserCredentials(context)
+                if (credentials != null) {
+                    debugText = "Cached Credentials:\nReg No: ${credentials.registrationNumber}\nPassword: ${credentials.password}"
+                    message = "Credentials loaded from cache!"
+                } else {
+                    debugText = ""
+                    message = "No credentials found in cache."
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Get Credentials")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (message.isNotEmpty()) {
+            Text(text = message, color = MaterialTheme.colorScheme.primary)
+        }
+
+        if (debugText.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Text(
+                    text = debugText,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }

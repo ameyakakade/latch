@@ -8,32 +8,12 @@ import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class WifiScanner(private val context: Context) {
 
-    private val wifiManager =
-        context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
     companion object {
         const val REQUEST_CODE_LOCATION = 123
@@ -54,7 +34,7 @@ class WifiScanner(private val context: Context) {
         )
     }
 
-    fun scanWifiNetworks(onComplete: (List<ScanResult>) -> Unit) {
+    fun scanWifiNetworks(onComplete: (List<WifiEntry>) -> Unit) {
         // ADD DEBUGGING LOGS HERE
         Log.d("WifiScan", "Starting scan...")
         Log.d("WifiScan", "WiFi enabled: ${wifiManager.isWifiEnabled}")
@@ -87,19 +67,30 @@ class WifiScanner(private val context: Context) {
     }
 
     // SEPARATE FUNCTION FOR ACTUAL SCANNING
-    private fun performScan(onComplete: (List<ScanResult>) -> Unit) {
+    private fun performScan(onComplete: (List<WifiEntry>) -> Unit) {
+        var receiverUnregistered = false
+
         try {
             val receiver = object : BroadcastReceiver() {
                 override fun onReceive(context: Context?, intent: Intent?) {
+                    if (receiverUnregistered) return
+
                     try {
                         context?.unregisterReceiver(this)
+                        receiverUnregistered = true
+
                         val results = wifiManager.scanResults
-                        // ADD DEBUG LOG FOR RESULTS
                         Log.d("WifiScan", "Scan results count: ${results.size}")
                         results.forEach { result ->
                             Log.d("WifiScan", "Found: ${result.SSID} (${result.level})")
                         }
-                        onComplete(results)
+
+                        // Pass the ScanResult list to getVitWifiList, which returns WifiEntry list
+                        getVITWiFI.getVitWifiList(this@WifiScanner.context, results) { filteredList ->
+                            Log.d("WifiScan", "Filtered VIT WiFi count: ${filteredList.size}")
+                            onComplete(filteredList)
+                        }
+
                     } catch (e: SecurityException) {
                         Log.e("WifiScanner", "Permission error while reading results: ${e.message}")
                         onComplete(emptyList())
@@ -115,76 +106,53 @@ class WifiScanner(private val context: Context) {
 
             // ADD TIMEOUT PROTECTION
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    context.unregisterReceiver(receiver)
-                    Log.d("WifiScan", "Scan timeout, using cached results")
-                    val results = wifiManager.scanResults
-                    Log.d("WifiScan", "Cached results count: ${results.size}")
-                    onComplete(results)
-                } catch (e: Exception) {
-                    Log.e("WifiScan", "Timeout error: ${e.message}")
-                    onComplete(emptyList())
+                if (!receiverUnregistered) {
+                    try {
+                        context.unregisterReceiver(receiver)
+                        receiverUnregistered = true
+                        Log.d("WifiScan", "Scan timeout, using cached results")
+
+                        val results = wifiManager.scanResults
+                        Log.d("WifiScan", "Cached results count: ${results.size}")
+
+                        // Use the same filtering logic for timeout case
+                        getVITWiFI.getVitWifiList(context, results) { filteredList ->
+                            Log.d("WifiScan", "Timeout - Filtered VIT WiFi count: ${filteredList.size}")
+                            onComplete(filteredList)
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e("WifiScan", "Timeout error: ${e.message}")
+                        onComplete(emptyList())
+                    }
                 }
-            }, 15000) // 15 second timeout
+            }, 5000) // 5 second timeout
 
             val scanStarted = wifiManager.startScan()
             Log.d("WifiScan", "Scan started: $scanStarted")
 
+            if (!scanStarted) {
+                Log.w("WifiScan", "Failed to start scan, using cached results")
+                // If scan fails to start, try to use cached results immediately
+                try {
+                    context.unregisterReceiver(receiver)
+                    receiverUnregistered = true
+                    val results = wifiManager.scanResults
+                    getVITWiFI.getVitWifiList(context, results) { filteredList ->
+                        onComplete(filteredList)
+                    }
+                } catch (e: Exception) {
+                    Log.e("WifiScan", "Error getting cached results: ${e.message}")
+                    onComplete(emptyList())
+                }
+            }
+
         } catch (e: SecurityException) {
             Log.e("WifiScanner", "Scan blocked: ${e.message}")
             onComplete(emptyList())
+        } catch (e: Exception) {
+            Log.e("WifiScanner", "Unexpected error: ${e.message}")
+            onComplete(emptyList())
         }
-    }
-}
-
-@Composable
-fun WifiScanScreen() {
-    val context = LocalContext.current
-    val wifiScanner = remember { WifiScanner(context) }
-    var wifiDataJson by remember { mutableStateOf("") }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            wifiScanner.scanWifiNetworks { results ->
-                val data = results.map {
-                    WifiEntry(ssid = it.SSID, level = it.level)
-                }
-                wifiDataJson = data.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]") {
-                    """  { "ssid": "${it.ssid}", "level": ${it.level} }"""
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        if (wifiScanner.hasPermission()) {
-            wifiScanner.scanWifiNetworks { results ->
-                val data = results.map {
-                    WifiEntry(ssid = it.SSID, level = it.level)
-                }
-                wifiDataJson = data.joinToString(separator = ",\n", prefix = "[\n", postfix = "\n]") {
-                    """  { "ssid": "${it.ssid}", "level": ${it.level} }"""
-                }
-            }
-        } else {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-
-        Text("Scanned Wi-Fi List (as JSON)", style = MaterialTheme.typography.headlineSmall)
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = wifiDataJson,
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
