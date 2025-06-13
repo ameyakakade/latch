@@ -1,10 +1,12 @@
 package com.vinnovateit.autonetconnector
 
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,15 +26,21 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wifiScanner = WifiScanner(this)
 
         val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(this, "Location permission is required for WiFi scanning", Toast.LENGTH_LONG).show()
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
+            val nearbyWifiGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissions[android.Manifest.permission.NEARBY_WIFI_DEVICES] == true
+            } else true
+
+            if (!fineLocationGranted || !nearbyWifiGranted) {
+                Toast.makeText(this, "Permissions required for WiFi scanning", Toast.LENGTH_LONG).show()
             }
         }
 
@@ -59,19 +67,22 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // The content below takes full width and height minus tab row
                         Box(modifier = Modifier.fillMaxSize()) {
                             when (selectedTab) {
                                 0 -> WifiScannerScreen(
                                     onRequestPermission = {
-                                        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                        val permissions = mutableListOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            permissions.add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+                                        }
+                                        permissionLauncher.launch(permissions.toTypedArray())
                                     },
                                     onScanRequest = { callback ->
                                         wifiScanner.scanWifiNetworks(callback)
-                                    }
-                                    ,
+                                    },
                                     wifiScanner = wifiScanner,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -250,7 +261,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
+                    saveUserCredentials(context, UserCredentials(regNo, password, "D-ANX-VIT")) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."

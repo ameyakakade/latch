@@ -8,19 +8,6 @@ private const val KEY_REGISTRATION = "registrationNumber"
 private const val KEY_PASSWORD = "password"
 private const val KEY_WIFI_NAME = "wifiName"
 
-// save credentials in cache
-fun saveUserCredentials(context: Context, credentials: UserCredentials) {
-    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    prefs.edit().apply {
-        putString(KEY_REGISTRATION, credentials.registrationNumber)
-        putString(KEY_PASSWORD, credentials.password)
-        putString(KEY_WIFI_NAME, credentials.wifiName)  // Hardcoded WiFi name saved here
-        apply()
-    }
-    Log.d("CredentialsStorage", "Credentials saved: $credentials")
-}
-
-
 // gets from cache
 fun getUserCredentials(context: Context): UserCredentials? {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

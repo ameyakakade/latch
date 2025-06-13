@@ -50,7 +50,7 @@ object getVITWiFI {
 
         // If not found, find other VIT networks (starting with "VIT")
         val otherVitNetworks = scanResults.filter {
-            !it.SSID.isNullOrEmpty() && it.SSID.startsWith("VIT", ignoreCase = true)
+            !it.SSID.isNullOrEmpty() && it.SSID.contains("VIT", ignoreCase = true)
         }.distinctBy { it.SSID }
 
         val bestVitAlternative = otherVitNetworks.maxByOrNull { it.level }
@@ -75,18 +75,9 @@ object getVITWiFI {
         }
     }
 
-    /**
-     * Helper function to get preferred hostel SSID from cache.
-     * Replace this with your actual implementation of fetching preferred hostel WiFi from cache.
-     * this is a sample part
-     * to be perfected
-     */
-    fun getPreferredHostelSSIDFromCache(context: Context): String? {
-        // For example, you can reuse your existing credentials cache or
-        // create a new SharedPreferences key for preferred hostel SSID.
 
-        // Example implementation using SharedPreferences (replace as needed):
-        val prefs = context.getSharedPreferences("hostel_wifi_cache", Context.MODE_PRIVATE)
-        return prefs.getString("preferred_hostel_ssid", null)
+    fun getPreferredHostelSSIDFromCache(context: Context): String? {
+        val prefs = context.getSharedPreferences("user_credentials_cache", Context.MODE_PRIVATE)
+        return prefs.getString("wifiName", null)
     }
 }
