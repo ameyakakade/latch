@@ -1,16 +1,13 @@
-package com.vinnovateit.autonetconnector.funtionality
+package com.vinnovateit.autonetconnector.functionality
 
 import android.Manifest
-import android.app.Activity
 import android.content.*
 import android.content.pm.PackageManager
-import android.net.wifi.ScanResult
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 class WifiScanner(private val context: Context) {
@@ -46,6 +43,18 @@ class WifiScanner(private val context: Context) {
         if (!hasPermission()) {
             Log.d("WifiScan", "Permission not granted")
             Toast.makeText(context, "Location/WiFi permission not granted", Toast.LENGTH_SHORT).show()
+            onComplete(emptyList())
+            return
+        }
+
+        // ✅ NEW: Location Services (GPS/Network) Check
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        val isLocationEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+
+        if (!isLocationEnabled) {
+            Log.d("WifiScan", "Location Services are OFF")
+            Toast.makeText(context, "Please turn ON Location Services (GPS) to scan WiFi", Toast.LENGTH_LONG).show()
             onComplete(emptyList())
             return
         }
@@ -169,18 +178,21 @@ class WifiScanner(private val context: Context) {
     private fun autoConnectToPreferredWifi(filteredList: List<WifiEntry>) {
         val credentials = getUserCredentials(context)
 
+        // Default SSID (can make it configurable later)
+        val defaultWifiName = "D-ANX-VIT"
+
         if (credentials != null) {
             val matched = filteredList.find {
-                it.ssid.equals(credentials.wifiName, ignoreCase = true)
+                it.ssid.equals(defaultWifiName, ignoreCase = true)
             }
 
             if (matched != null) {
                 connectToWifi(
                     context = context,
-                    ssid = credentials.wifiName,
-                    password = credentials.password,
+                    ssid = defaultWifiName,
+                    password = credentials.password, // use password from saved credentials
                     onConnected = {
-                        Log.d("WifiScanner", "✅ Connected to ${credentials.wifiName}")
+                        Log.d("WifiScanner", "✅ Connected to $defaultWifiName")
                         detectCaptivePortal(context) { isCaptive ->
                             if (isCaptive) {
                                 Log.d("WifiScanner", "Captive portal detected — trigger login")
@@ -191,11 +203,11 @@ class WifiScanner(private val context: Context) {
                         }
                     },
                     onFailed = {
-                        Log.e("WifiScanner", "❌ Failed to connect to ${credentials.wifiName}")
+                        Log.e("WifiScanner", "❌ Failed to connect to $defaultWifiName")
                     }
                 )
             } else {
-                Log.w("WifiScanner", "No matching WiFi SSID found in scan")
+                Log.w("WifiScanner", "No matching WiFi SSID ($defaultWifiName) found in scan")
             }
         } else {
             Log.w("WifiScanner", "User credentials not found in cache")

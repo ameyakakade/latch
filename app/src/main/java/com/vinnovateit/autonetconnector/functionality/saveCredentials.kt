@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.funtionality
+package com.vinnovateit.autonetconnector.functionality
 
 import android.content.Context
 import android.util.Log
@@ -13,7 +13,6 @@ fun saveUserCredentials(context: Context, credentials: UserCredentials) {
     prefs.edit().apply {
         putString(KEY_REGISTRATION, credentials.registrationNumber)
         putString(KEY_PASSWORD, credentials.password)
-        putString(KEY_WIFI_NAME, credentials.wifiName)  // Hardcoded WiFi name saved here
         apply()
     }
     Log.d("CredentialsStorage", "Credentials saved: $credentials")
