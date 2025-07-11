@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.funtionality
+package com.vinnovateit.autonetconnector.functionality
 
 import android.content.Context
 import android.util.Log
