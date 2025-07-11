@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.funtionality
+package com.vinnovateit.autonetconnector.functionality
 
 data class WifiEntry(
     val ssid: String,

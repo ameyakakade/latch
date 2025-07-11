@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.funtionality
+package com.vinnovateit.autonetconnector.functionality
 
 import android.content.Context
 import android.util.Log
@@ -13,10 +13,9 @@ fun getUserCredentials(context: Context): UserCredentials? {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val reg = prefs.getString(KEY_REGISTRATION, null)
     val pass = prefs.getString(KEY_PASSWORD, null)
-    val wifi = prefs.getString(KEY_WIFI_NAME, null)  // get stored wifiName
 
-    return if (reg != null && pass != null && wifi != null) {
-        UserCredentials(registrationNumber = reg, password = pass, wifiName = wifi)
+    return if (reg != null && pass != null) {
+        UserCredentials(registrationNumber = reg, password = pass)
     } else {
         Log.d("CredentialsStorage", "No credentials found in cache or wifiName missing")
         null
