@@ -1,5 +1,8 @@
 package com.vinnovateit.autonetconnector
 
+import android.Manifest
+import android.app.Application
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -7,17 +10,55 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.funtionality.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vinnovateit.autonetconnector.functionality.StatsViewModel
+import com.vinnovateit.autonetconnector.functionality.UserCredentials
+import com.vinnovateit.autonetconnector.functionality.WifiEntry
+import com.vinnovateit.autonetconnector.functionality.WifiScanner
+import com.vinnovateit.autonetconnector.functionality.WifiStatsManager
+import com.vinnovateit.autonetconnector.functionality.getUserCredentials
+import com.vinnovateit.autonetconnector.functionality.saveUserCredentials
+import com.vinnovateit.autonetconnector.screen.stats.StatsScreen
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 // this is just a sample ui for debugging purposes
@@ -25,30 +66,48 @@ import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
+    private lateinit var wifiStatsManager: WifiStatsManager
 
     @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize helpers
         wifiScanner = WifiScanner(this)
+        wifiStatsManager = WifiStatsManager
+
+        // --- Permission Handling ---
+        val permissionsToRequest = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.CHANGE_WIFI_STATE
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionsToRequest.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        }
 
         val permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
-            val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
-            val nearbyWifiGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                permissions[android.Manifest.permission.NEARBY_WIFI_DEVICES] == true
-            } else true
-
-            if (!fineLocationGranted || !nearbyWifiGranted) {
-                Toast.makeText(this, "Permissions required for WiFi scanning", Toast.LENGTH_LONG).show()
+            val allPermissionsGranted = permissions.entries.all { it.value }
+            if (!allPermissionsGranted) {
+                Toast.makeText(this, "Permissions required for full functionality.", Toast.LENGTH_LONG).show()
             }
+        }
+        val permissionsNotGranted = permissionsToRequest.filter {
+            checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (permissionsNotGranted.isNotEmpty()) {
+            permissionLauncher.launch(permissionsNotGranted.toTypedArray())
         }
 
         setContent {
             AutoNetConnectorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    var selectedTab by remember { mutableStateOf(0) }
-                    val tabs = listOf("WiFi Scanner", "Credentials Debug")
+                    val statsViewModel: StatsViewModel = viewModel(factory = StatsViewModelFactory(application))
+
+                    var selectedTab by remember { mutableIntStateOf(0) }
+                    val tabs = listOf("WiFi Scanner", "Credentials Debug", "Network Stats")
 
                     Column(
                         modifier = Modifier
@@ -74,9 +133,9 @@ class MainActivity : ComponentActivity() {
                             when (selectedTab) {
                                 0 -> WifiScannerScreen(
                                     onRequestPermission = {
-                                        val permissions = mutableListOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                        val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            permissions.add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
+                                            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
                                         }
                                         permissionLauncher.launch(permissions.toTypedArray())
                                     },
@@ -87,12 +146,23 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize()
                                 )
                                 1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
+                                2 -> StatsScreen(viewModel = statsViewModel)
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+class StatsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return StatsViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
@@ -232,6 +302,13 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
     var debugText by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var wifiName by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        getUserCredentials(context)?.let {
+            regNo = it.registrationNumber
+            password = it.password
+        }
+    }
 
     Column(
         modifier = modifier
