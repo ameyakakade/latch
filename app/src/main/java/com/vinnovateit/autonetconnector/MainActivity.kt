@@ -1,5 +1,7 @@
 package com.vinnovateit.autonetconnector
 
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -15,8 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
+import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.funtionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import kotlinx.coroutines.launch
 
 // this is just a sample ui for debugging purposes
 
@@ -28,6 +34,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         wifiScanner = WifiScanner(this)
 
+        requestLocationPermissionIfNeeded()
+        WiFiMonitor.startMonitoring(applicationContext)
+
+
         val permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
@@ -36,9 +46,20 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val serviceIntent = Intent(this, MyForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+
+
         setContent {
             AutoNetConnectorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+
+                    // 🔒️ Commented out teammate's tab-based UI (preserved for later)
+                    /*
                     var selectedTab by remember { mutableStateOf(0) }
                     val tabs = listOf("WiFi Scanner", "Credentials Debug")
 
@@ -61,7 +82,6 @@ class MainActivity : ComponentActivity() {
                         }
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // The content below takes full width and height minus tab row
                         Box(modifier = Modifier.fillMaxSize()) {
                             when (selectedTab) {
                                 0 -> WifiScannerScreen(
@@ -70,8 +90,7 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onScanRequest = { callback ->
                                         wifiScanner.scanWifiNetworks(callback)
-                                    }
-                                    ,
+                                    },
                                     wifiScanner = wifiScanner,
                                     modifier = Modifier.fillMaxSize()
                                 )
@@ -79,10 +98,35 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    */
+
+                    // ✅ TEMPORARY UI for Auto-Login Debugging
+                    AutoLoginTestScreen(
+                        onRequestPermission = {
+                            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    )
                 }
             }
         }
     }
+
+    private fun requestLocationPermissionIfNeeded() {
+        val permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+
 }
 
 @Composable
@@ -300,3 +344,38 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+fun AutoLoginTestScreen(onRequestPermission: () -> Unit) {
+    val context = LocalContext.current
+    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = status, style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            status = "Running auto-login test..."
+            scope.launch {
+                LoginTestRunner.run(context.applicationContext)
+                status = "Test finished. Check logcat for output."
+            }
+        }) {
+            Text("Run Auto-Login Test")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onRequestPermission) {
+            Text("Grant Location Permission")
+        }
+    }
+}
+
