@@ -1,14 +1,12 @@
 package com.vinnovateit.autonetconnector
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,62 +15,53 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import com.vinnovateit.autonetconnector.functionality.*
+import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
+import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
+import com.vinnovateit.autonetconnector.funtionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import kotlinx.coroutines.launch
+
+// this is just a sample ui for debugging purposes
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wifiScanner = WifiScanner(this)
 
+        requestLocationPermissionIfNeeded()
+        WiFiMonitor.startMonitoring(applicationContext)
+
+
+        val permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Location permission is required for WiFi scanning", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        val serviceIntent = Intent(this, MyForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+
+
         setContent {
             AutoNetConnectorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+
+                    // 🔒️ Commented out teammate's tab-based UI (preserved for later)
+                    /*
                     var selectedTab by remember { mutableStateOf(0) }
                     val tabs = listOf("WiFi Scanner", "Credentials Debug")
-
-                    var hasPermission by remember { mutableStateOf(wifiScanner.hasPermission()) }
-
-                    val permissionLauncher = rememberLauncherForActivityResult(
-                        contract = ActivityResultContracts.RequestMultiplePermissions()
-                    ) { permissions ->
-                        val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
-                        val nearbyWifiGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            permissions[android.Manifest.permission.NEARBY_WIFI_DEVICES] == true
-                        } else true
-
-                        hasPermission = fineLocationGranted && nearbyWifiGranted
-                        Log.d("DEBUG", "Permission result: fineLocation=$fineLocationGranted, nearbyWifi=$nearbyWifiGranted")
-                        Toast.makeText(this, "Permissions granted: $hasPermission", Toast.LENGTH_SHORT).show()
-                        if (!hasPermission) {
-                            Toast.makeText(this, "Permissions required for WiFi scanning", Toast.LENGTH_LONG).show()
-                        }
-                    }
-
-                    // Update permission state on resume
-                    val lifecycleOwner = LocalLifecycleOwner.current
-                    DisposableEffect(lifecycleOwner) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_RESUME) {
-                                hasPermission = wifiScanner.hasPermission()
-                                Log.d("DEBUG", "ON_RESUME: hasPermission=$hasPermission")
-                                Toast.makeText(this@MainActivity, "App resumed. Permission: $hasPermission", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose {
-                            lifecycleOwner.lifecycle.removeObserver(observer)
-                        }
-                    }
 
                     Column(
                         modifier = Modifier
@@ -86,101 +75,77 @@ class MainActivity : ComponentActivity() {
                             tabs.forEachIndexed { index, title ->
                                 Tab(
                                     selected = selectedTab == index,
-                                    onClick = {
-                                        selectedTab = index
-                                        Log.d("DEBUG", "Tab switched to: $title")
-                                        Toast.makeText(this@MainActivity, "Tab: $title", Toast.LENGTH_SHORT).show()
-                                    },
+                                    onClick = { selectedTab = index },
                                     text = { Text(title) }
                                 )
                             }
                         }
-
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Box(modifier = Modifier.fillMaxSize()) {
                             when (selectedTab) {
                                 0 -> WifiScannerScreen(
                                     onRequestPermission = {
-                                        val permissions = mutableListOf(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            permissions.add(android.Manifest.permission.NEARBY_WIFI_DEVICES)
-                                        }
-                                        Log.d("DEBUG", "Requesting permissions: $permissions")
-                                        Toast.makeText(this@MainActivity, "Requesting permissions...", Toast.LENGTH_SHORT).show()
-                                        permissionLauncher.launch(permissions.toTypedArray())
+                                        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                                     },
                                     onScanRequest = { callback ->
-                                        Log.d("DEBUG", "Calling scanWifiNetworks()")
-                                        Toast.makeText(this@MainActivity, "Triggering WiFi scan...", Toast.LENGTH_SHORT).show()
                                         wifiScanner.scanWifiNetworks(callback)
                                     },
-                                    hasPermission = hasPermission,
-                                    selectedTab = selectedTab,
+                                    wifiScanner = wifiScanner,
                                     modifier = Modifier.fillMaxSize()
                                 )
                                 1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
                             }
                         }
                     }
+                    */
+
+                    // ✅ TEMPORARY UI for Auto-Login Debugging
+                    AutoLoginTestScreen(
+                        onRequestPermission = {
+                            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    )
                 }
             }
         }
     }
+
+    private fun requestLocationPermissionIfNeeded() {
+        val permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted ->
+            if (!isGranted) {
+                Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+
 }
 
 @Composable
 fun WifiScannerScreen(
     onRequestPermission: () -> Unit,
     onScanRequest: (onResult: (List<WifiEntry>) -> Unit) -> Unit,
-    hasPermission: Boolean,
-    selectedTab: Int,
+    wifiScanner: WifiScanner,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     var wifiList by remember { mutableStateOf<List<WifiEntry>>(emptyList()) }
     var isScanning by remember { mutableStateOf(false) }
+    var hasPermission by remember { mutableStateOf(wifiScanner.hasPermission()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var scanCompleted by remember { mutableStateOf(false) }
 
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
 
-    // Trigger scan on tab switch or app resume
-    LaunchedEffect(selectedTab, hasPermission) {
-        Log.d("DEBUG", "LaunchedEffect: selectedTab=$selectedTab, hasPermission=$hasPermission")
-        if (selectedTab == 0 && hasPermission) {
-            isScanning = true
-            Toast.makeText(context, "Auto-trigger scan (tab/resume)", Toast.LENGTH_SHORT).show()
-            onScanRequest { results ->
-                Log.d("DEBUG", "Scan results received: ${results.size}")
-                Toast.makeText(context, "Scan results: ${results.size}", Toast.LENGTH_SHORT).show()
-                wifiList = results
-                isScanning = false
-                scanCompleted = true
-            }
-        }
-    }
-
-    // Also trigger scan when app resumes and WiFi tab is selected
-    DisposableEffect(lifecycleOwner, selectedTab, hasPermission) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && selectedTab == 0 && hasPermission) {
-                Log.d("DEBUG", "LifecycleEventObserver: ON_RESUME, triggering scan")
-                Toast.makeText(context, "App resumed - triggering scan", Toast.LENGTH_SHORT).show()
-                isScanning = true
-                onScanRequest { results ->
-                    Log.d("DEBUG", "Scan results received (resume): ${results.size}")
-                    Toast.makeText(context, "Scan results (resume): ${results.size}", Toast.LENGTH_SHORT).show()
-                    wifiList = results
-                    isScanning = false
-                    scanCompleted = true
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+    LaunchedEffect(Unit) {
+        hasPermission = wifiScanner.hasPermission()
     }
 
     Column(
@@ -210,16 +175,11 @@ fun WifiScannerScreen(
                 wifiList = emptyList()
 
                 if (!hasPermission) {
-                    Log.d("DEBUG", "Button: Permission not granted, requesting")
-                    Toast.makeText(context, "Permission not granted, requesting...", Toast.LENGTH_SHORT).show()
                     onRequestPermission()
+                    hasPermission = wifiScanner.hasPermission()
                 } else {
-                    Log.d("DEBUG", "Button: Permission granted, scanning")
-                    Toast.makeText(context, "Button triggered scan", Toast.LENGTH_SHORT).show()
                     isScanning = true
                     onScanRequest { results ->
-                        Log.d("DEBUG", "Button scan results: ${results.size}")
-                        Toast.makeText(context, "Button scan results: ${results.size}", Toast.LENGTH_SHORT).show()
                         wifiList = results
                         isScanning = false
                         scanCompleted = true
@@ -304,6 +264,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
     var password by remember { mutableStateOf("") }
     var debugText by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
+    var wifiName by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -333,7 +294,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password))
+                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."
@@ -383,3 +344,38 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@Composable
+fun AutoLoginTestScreen(onRequestPermission: () -> Unit) {
+    val context = LocalContext.current
+    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = status, style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            status = "Running auto-login test..."
+            scope.launch {
+                LoginTestRunner.run(context.applicationContext)
+                status = "Test finished. Check logcat for output."
+            }
+        }) {
+            Text("Run Auto-Login Test")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onRequestPermission) {
+            Text("Grant Location Permission")
+        }
+    }
+}
+
