@@ -167,8 +167,8 @@ class MainActivity : ComponentActivity() {
             }
 
             if (checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
             }
         }
         requestLocationPermissionIfNeeded()
@@ -192,13 +192,13 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // This is the Material 3 tab switcher
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             tabs.forEachIndexed { index, title ->
                                 SegmentedButton(
                                     shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
                                     onClick = { selectedTab = index },
-                                    selected = selectedTab == index,
-                                    icon = {'*'}
+                                    selected = selectedTab == index
                                 ) {
                                     Text(title)
                                 }
@@ -415,7 +415,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G"))
+                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."
