@@ -1,12 +1,10 @@
 package com.vinnovateit.autonetconnector.functionality
 
 import android.Manifest
-import android.content.Context
+import android.content.*
 import android.content.pm.PackageManager
 import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
@@ -14,25 +12,17 @@ import androidx.core.content.ContextCompat
 
 class WifiScanner(private val context: Context) {
 
+    // Accessing the system WiFi service
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     companion object {
-        // A standard delay to wait for scan results to become available.
-        private const val SCAN_RESULTS_DELAY_MS = 4000L
+        const val REQUEST_CODE_LOCATION = 123
     }
 
-    /**
-     * Checks for all necessary permissions for scanning for Wi-Fi networks.
-     * Includes ACCESS_WIFI_STATE for better compatibility.
-     */
+    // Check if required permissions are granted
     fun hasPermission(): Boolean {
         val fineLocation = ContextCompat.checkSelfPermission(
             context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val wifiState = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_WIFI_STATE
         ) == PackageManager.PERMISSION_GRANTED
 
         val nearbyWifi = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -41,79 +31,186 @@ class WifiScanner(private val context: Context) {
             ) == PackageManager.PERMISSION_GRANTED
         } else true
 
-        // Log the status of each permission for easier debugging.
-        Log.d("PermissionsCheck", "ACCESS_FINE_LOCATION: $fineLocation, ACCESS_WIFI_STATE: $wifiState, NEARBY_WIFI_DEVICES: $nearbyWifi")
-
-        return fineLocation && wifiState && nearbyWifi
+        return fineLocation && nearbyWifi
     }
 
-    /**
-     * Initiates a WiFi scan with a more robust and simplified logic.
-     */
+//    Begin scanning WiFi networks and handle result through callback
     @RequiresApi(Build.VERSION_CODES.Q)
     fun scanWifiNetworks(onComplete: (List<WifiEntry>) -> Unit) {
-        Log.d("WifiScan_Stable", "Checking permissions and WiFi state...")
+        Log.d("WifiScan", "Starting scan...")
+        Log.d("WifiScan", "WiFi enabled: ${wifiManager.isWifiEnabled}")
+
         if (!hasPermission()) {
-            Log.w("WifiScan_Stable", "One or more permissions are not granted.")
-            Toast.makeText(context, "Permissions not granted.", Toast.LENGTH_SHORT).show()
+            Log.d("WifiScan", "Permission not granted")
+            Toast.makeText(context, "Location/WiFi permission not granted", Toast.LENGTH_SHORT).show()
             onComplete(emptyList())
             return
         }
 
-        if (!wifiManager.isWifiEnabled) {
-            Log.w("WifiScan_Stable", "WiFi is disabled.")
-            Toast.makeText(context, "WiFi is disabled.", Toast.LENGTH_SHORT).show()
+        // ✅ NEW: Location Services (GPS/Network) Check
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+        val isLocationEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+
+        if (!isLocationEnabled) {
+            Log.d("WifiScan", "Location Services are OFF")
+            Toast.makeText(context, "Please turn ON Location Services (GPS) to scan WiFi", Toast.LENGTH_LONG).show()
             onComplete(emptyList())
             return
         }
 
-        performStableScan(onComplete)
+        try {
+            if (!wifiManager.isWifiEnabled) {
+                Log.d("WifiScan", "WiFi was disabled, enabling...")
+                wifiManager.isWifiEnabled = true
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    performScan(onComplete)
+                }, 2000)
+            } else {
+                performScan(onComplete)
+            }
+
+        } catch (e: SecurityException) {
+            Log.e("WifiScanner", "Scan blocked: ${e.message}")
+            onComplete(emptyList())
+        }
     }
 
-    /**
-     * Performs the scan by initiating it and then polling for results after a delay.
-     * This method is more resilient to Android's scan throttling.
-     */
-    private fun performStableScan(onComplete: (List<WifiEntry>) -> Unit) {
-        Log.d("WifiScan_Stable", "Attempting to start a scan...")
+    // Internal method to perform WiFi scan and handle results
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun performScan(onComplete: (List<WifiEntry>) -> Unit) {
+        var receiverUnregistered = false
 
-        val scanStarted = wifiManager.startScan()
-
-        if (!scanStarted) {
-            // This is a common occurrence due to system throttling of scans.
-            Log.w("WifiScan_Stable", "wifiManager.startScan() returned false. This is likely due to throttling.")
-            Toast.makeText(context, "Scan throttled by system.", Toast.LENGTH_SHORT).show()
-        } else {
-            Log.d("WifiScan_Stable", "Scan initiated successfully. Waiting for results...")
+        // Check if cached results are already available
+        @Suppress("MissingPermission")
+        val cachedResults = wifiManager.scanResults
+        if (cachedResults.isNotEmpty()) {
+            Log.d("WifiScan", "Using cached WiFi results (count: ${cachedResults.size})")
+            getVITWiFI.getVitWifiList(context, cachedResults) { filteredList ->
+                autoConnectToPreferredWifi(filteredList)
+                onComplete(filteredList)
+            }
+            return //  Do not continue to scan
         }
 
-        // This unified path is simpler and more robust. We always wait for the delay
-        // and then retrieve the latest available results from the system.
-        mainHandler.postDelayed({
-            Log.d("WifiScan_Stable", "Polling for scan results now.")
-            try {
-                // Permissions are checked before this function is called.
+        // Scan if no cached results
+        try {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (receiverUnregistered) return
+
+                    try {
+                        context?.unregisterReceiver(this)
+                        receiverUnregistered = true
+
+                        @Suppress("MissingPermission")
+                        val results = wifiManager.scanResults
+                        Log.d("WifiScan", "Scan results count: ${results.size}")
+                        results.forEach { result ->
+                            Log.d("WifiScan", "Found: ${result.SSID} (${result.level})")
+                        }
+
+                        getVITWiFI.getVitWifiList(this@WifiScanner.context, results) { filteredList ->
+                            Log.d("WifiScan", "Filtered VIT WiFi count: ${filteredList.size}")
+                            autoConnectToPreferredWifi(filteredList)
+                            onComplete(filteredList)
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e("WifiScanner", "Scan receive error: ${e.message}")
+                        onComplete(emptyList())
+                    }
+                }
+            }
+
+            val intentFilter = IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
+            context.registerReceiver(receiver, intentFilter)
+
+            //  Timeout fallback
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (!receiverUnregistered) {
+                    try {
+                        context.unregisterReceiver(receiver)
+                        receiverUnregistered = true
+                        Log.d("WifiScan", "Scan timeout, using cached results")
+
+                        @Suppress("MissingPermission")
+                        val results = wifiManager.scanResults
+
+                        getVITWiFI.getVitWifiList(context, results) { filteredList ->
+                            autoConnectToPreferredWifi(filteredList)
+                            onComplete(filteredList)
+                        }
+
+                    } catch (e: Exception) {
+                        Log.e("WifiScan", "Timeout error: ${e.message}")
+                        onComplete(emptyList())
+                    }
+                }
+            }, 5000)
+
+            val scanStarted = wifiManager.startScan()
+            Log.d("WifiScan", "Scan started: $scanStarted")
+
+            if (!scanStarted) {
+                context.unregisterReceiver(receiver)
+                receiverUnregistered = true
+                Log.w("WifiScan", "Scan failed, using cached results")
+
                 @Suppress("MissingPermission")
                 val results = wifiManager.scanResults
-                Log.d("WifiScan_Stable", "Found ${results.size} results in the scan list.")
 
-                // Provide helpful feedback if the list is empty.
-                if (results.isEmpty()) {
-                    Toast.makeText(context, "No networks found. Please ensure Location is enabled on your device.", Toast.LENGTH_LONG).show()
+                getVITWiFI.getVitWifiList(context, results) { filteredList ->
+                    autoConnectToPreferredWifi(filteredList)
+                    onComplete(filteredList)
                 }
-
-                getVITWiFI.getVitWifiList(context, results, onComplete)
-            } catch (e: Exception) {
-                Log.e("WifiScan_Stable", "An exception occurred while getting scan results: ${e.message}")
-                onComplete(emptyList())
             }
-        }, SCAN_RESULTS_DELAY_MS)
+
+        } catch (e: Exception) {
+            Log.e("WifiScanner", "Unexpected error: ${e.message}")
+            onComplete(emptyList())
+        }
     }
 
-    /*
-     * == TESTING NOTE ==
-     * The autoConnectToPreferredWifi function remains disabled for testing.
-     * You should connect to a Wi-Fi network manually through the device's
-     * settings to allow the WifiStatsLogger service to begin recording data.
-     */
+
+    //    connects temporarily for captive portal login
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun autoConnectToPreferredWifi(filteredList: List<WifiEntry>) {
+        val credentials = getUserCredentials(context)
+
+        // Default SSID (can make it configurable later)
+        val defaultWifiName = "D-ANX-VIT"
+
+        if (credentials != null) {
+            val matched = filteredList.find {
+                it.ssid.equals(defaultWifiName, ignoreCase = true)
+            }
+
+            if (matched != null) {
+                connectToWifi(
+                    context = context,
+                    ssid = defaultWifiName,
+                    password = credentials.password, // use password from saved credentials
+                    onConnected = {
+                        Log.d("WifiScanner", "✅ Connected to $defaultWifiName")
+                        detectCaptivePortal(context) { isCaptive ->
+                            if (isCaptive) {
+                                Log.d("WifiScanner", "Captive portal detected — trigger login")
+                                // TODO: Login logic here
+                            } else {
+                                Log.d("WifiScanner", "Full internet access")
+                            }
+                        }
+                    },
+                    onFailed = {
+                        Log.e("WifiScanner", "❌ Failed to connect to $defaultWifiName")
+                    }
+                )
+            } else {
+                Log.w("WifiScanner", "No matching WiFi SSID ($defaultWifiName) found in scan")
+            }
+        } else {
+            Log.w("WifiScanner", "User credentials not found in cache")
+        }
+    }
 }
