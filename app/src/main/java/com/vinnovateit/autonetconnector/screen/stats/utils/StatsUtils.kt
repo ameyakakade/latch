@@ -1,4 +1,3 @@
-// path: com/vinnovateit/autonetconnector/screen/stats/utils/StatsUtils.kt
 package com.vinnovateit.autonetconnector.screen.stats.utils
 
 import androidx.compose.ui.graphics.Path
@@ -7,7 +6,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import kotlin.math.max
 
 enum class DisplayMode { TOTAL, DOWNLOAD, UPLOAD }
 enum class Timeframe { LIVE, LAST }
@@ -17,14 +15,27 @@ data class GraphData(
     val uploadPath: Path,
     val lineDownloadPath: Path,
     val lineUploadPath: Path,
-    val labels: List<Pair<String, Float>>,
-    val maxRateFormatted: String
+    val labels: List<Pair<String, Float>>
 )
 
 fun formatBytes(bytes: Long): Pair<String, String> = when {
-    bytes < 1_024L                    -> bytes.toString()         to "B"
-    bytes < 1_048_576L               -> "%.1f".format(bytes / 1_024f)            to "KB"
-    bytes < 1_073_741_824L           -> "%.1f".format(bytes / 1_048_576f)        to "MB"
+    bytes < 1_024L                    -> bytes.toString() to "B"
+    bytes < 1_048_576L               -> {
+        val kbFormatted = "%.1f".format(bytes / 1_024f)
+        if (kbFormatted == "1024.0") {
+            "1.0" to "MB"
+        } else {
+            kbFormatted to "KB"
+        }
+    }
+    bytes < 1_073_741_824L           -> {
+        val mbFormatted = "%.1f".format(bytes / 1_048_576f)
+        if (mbFormatted == "1024.0") {
+            "1.0" to "GB"
+        } else {
+            mbFormatted to "MB"
+        }
+    }
     else                             -> "%.2f".format(bytes / 1_073_741_824f)    to "GB"
 }
 
@@ -46,24 +57,27 @@ fun formatDate(millis: Long, pattern: String): String =
 fun createGraphPaths(
     history: List<LiveDataPoint>,
     width: Float,
-    height: Float
+    height: Float,
+    maxRate: Float,
+    graphHeightScale: Float
 ): GraphData {
     if (history.size < 2) {
-        return GraphData(
-            Path(), Path(), Path(), Path(), emptyList(), "0 B/s"
-        )
+        return GraphData(Path(), Path(), Path(), Path(), emptyList())
     }
 
-    val maxRx = history.maxOf { it.usage.rxBytes }.toFloat()
-    val maxTx = history.maxOf { it.usage.txBytes }.toFloat()
-    val maxRate = max(maxRx, maxTx).coerceAtLeast(1f)
-    val maxLabel = formatBytes(maxRate.toLong()).let { "${it.first} ${it.second}/s" }
-
+    val effectiveMaxRate = maxRate.coerceAtLeast(1f)
     val startTime = history.first().timestamp
     val duration = (history.last().timestamp - startTime).coerceAtLeast(1)
 
-    fun x(t: Long) = ((t - startTime).toFloat() / duration) * width
-    fun y(b: Long) = height - (b.toFloat() / maxRate) * height
+    fun x(t: Long): Float {
+        val elapsedTime = (t - startTime).toFloat()
+        return (elapsedTime / duration) * width
+    }
+
+    fun y(bytes: Long): Float {
+        val usageFraction = (bytes.toFloat() / effectiveMaxRate).coerceIn(0f, 1f)
+        return height - (usageFraction * height * graphHeightScale)
+    }
 
     val fillDL = Path().apply { moveTo(0f, height) }
     val fillUL = Path().apply { moveTo(0f, height) }
@@ -76,32 +90,40 @@ fun createGraphPaths(
         val yUL = y(p.usage.txBytes)
 
         if (i == 0) {
-            listOf(lineDL, fillDL, lineUL, fillUL).forEach { it.moveTo(xp, if (it == lineUL || it == fillUL) yUL else yDL) }
+            lineDL.moveTo(xp, yDL)
+            fillDL.lineTo(xp, yDL)
+            lineUL.moveTo(xp, yUL)
+            fillUL.lineTo(xp, yUL)
         } else {
-            val prev = history[i - 1]
-            val xpPrev = x(prev.timestamp)
-            val yDLPrev = y(prev.usage.rxBytes)
-            val yULPrev = y(prev.usage.txBytes)
-            val cx = (xpPrev + xp) / 2f
+            val prevPoint = history[i - 1]
+            val prevX = x(prevPoint.timestamp)
+            val prevYDL = y(prevPoint.usage.rxBytes)
+            val prevYUL = y(prevPoint.usage.txBytes)
+            val cx = (prevX + xp) / 2f
 
-            lineDL.cubicTo(cx, yDLPrev, cx, yDL, xp, yDL)
-            fillDL.cubicTo(cx, yDLPrev, cx, yDL, xp, yDL)
+            lineDL.cubicTo(cx, prevYDL, cx, yDL, xp, yDL)
+            fillDL.cubicTo(cx, prevYDL, cx, yDL, xp, yDL)
 
-            lineUL.cubicTo(cx, yULPrev, cx, yUL, xp, yUL)
-            fillUL.cubicTo(cx, yULPrev, cx, yUL, xp, yUL)
+            lineUL.cubicTo(cx, prevYUL, cx, yUL, xp, yUL)
+            fillUL.cubicTo(cx, prevYUL, cx, yUL, xp, yUL)
         }
     }
 
-    fillDL.lineTo(width, height)
+    val lastX = x(history.last().timestamp)
+    fillDL.lineTo(lastX, height)
     fillDL.close()
 
-    fillUL.lineTo(width, height)
+    fillUL.lineTo(lastX, height)
     fillUL.close()
 
-    val labels = (0..5).map { i ->
-        val t = startTime + i * duration / 5
-        formatDate(t, "hh:mm a") to x(t)
+    val labels = if (history.size > 1) {
+        (0..5).map { i ->
+            val timestamp = startTime + (i * duration / 5)
+            formatDate(timestamp, "hh:mm a") to x(timestamp)
+        }
+    } else {
+        emptyList()
     }
 
-    return GraphData(fillDL, fillUL, lineDL, lineUL, labels, maxLabel)
+    return GraphData(fillDL, fillUL, lineDL, lineUL, labels)
 }

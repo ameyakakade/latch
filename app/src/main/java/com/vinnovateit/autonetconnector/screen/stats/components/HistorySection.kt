@@ -346,7 +346,7 @@ fun StatDetailRow(
             Text(
                 "$v $u",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Bold
             )
         }
         Text(

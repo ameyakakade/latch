@@ -2,12 +2,14 @@ package com.vinnovateit.autonetconnector
 
 import android.Manifest
 import android.app.Application
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
@@ -29,11 +31,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,9 +49,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -58,13 +64,63 @@ import com.vinnovateit.autonetconnector.functionality.WifiScanner
 import com.vinnovateit.autonetconnector.functionality.WifiStatsManager
 import com.vinnovateit.autonetconnector.functionality.getUserCredentials
 import com.vinnovateit.autonetconnector.functionality.saveUserCredentials
+import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
+import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.screen.stats.StatsScreen
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import kotlinx.coroutines.launch
 
 // this is just a sample ui for debugging purposes
 
+class StatsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return StatsViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+@Composable
+fun AutoLoginTestScreen(onRequestPermission: () -> Unit) {
+    val context = LocalContext.current
+    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = status, style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            status = "Running auto-login test..."
+            scope.launch {
+                LoginTestRunner.run(context.applicationContext)
+                status = "Test finished. Check logcat for output."
+            }
+        }) {
+            Text("Run Auto-Login Test")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onRequestPermission) {
+            Text("Grant Location Permission")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
+    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var wifiScanner: WifiScanner
     private lateinit var wifiStatsManager: WifiStatsManager
 
@@ -72,7 +128,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize helpers
         wifiScanner = WifiScanner(this)
         wifiStatsManager = WifiStatsManager
 
@@ -86,7 +141,7 @@ class MainActivity : ComponentActivity() {
             permissionsToRequest.add(Manifest.permission.NEARBY_WIFI_DEVICES)
         }
 
-        val permissionLauncher = registerForActivityResult(
+        permissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             val allPermissionsGranted = permissions.entries.all { it.value }
@@ -94,6 +149,7 @@ class MainActivity : ComponentActivity() {
                 Toast.makeText(this, "Permissions required for full functionality.", Toast.LENGTH_LONG).show()
             }
         }
+
         val permissionsNotGranted = permissionsToRequest.filter {
             checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
         }
@@ -101,43 +157,64 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(permissionsNotGranted.toTypedArray())
         }
 
+        fun requestLocationPermissionIfNeeded() {
+            val permissionLauncher = registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (!isGranted) {
+                    Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            if (checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+        requestLocationPermissionIfNeeded()
+        WiFiMonitor.startMonitoring(applicationContext)
+        val serviceIntent = Intent(this, MyForegroundService::class.java)
+        startForegroundService(serviceIntent)
+
         setContent {
             AutoNetConnectorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val statsViewModel: StatsViewModel = viewModel(factory = StatsViewModelFactory(application))
 
                     var selectedTab by remember { mutableIntStateOf(0) }
-                    val tabs = listOf("WiFi Scanner", "Credentials Debug", "Network Stats")
+                    val tabs = listOf("WiFis", "Creds", "Stats", "Login")
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .statusBarsPadding()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        TabRow(selectedTabIndex = selectedTab) {
+                        // This is the Material 3 tab switcher
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             tabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedTab == index,
+                                SegmentedButton(
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
                                     onClick = { selectedTab = index },
-                                    text = { Text(title) }
-                                )
+                                    selected = selectedTab == index
+                                ) {
+                                    Text(title)
+                                }
                             }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                        // This Box stacks all tab content. Using Modifier.alpha to control
+                        // visibility keeps the inactive tabs in the composition,
+                        // which preserves their state.
                         Box(modifier = Modifier.fillMaxSize()) {
-                            when (selectedTab) {
-                                0 -> WifiScannerScreen(
+                            // Tab 1: WiFi Scanner
+                            Box(modifier = Modifier.fillMaxSize().alpha(if (selectedTab == 0) 1f else 0f)) {
+                                WifiScannerScreen(
                                     onRequestPermission = {
-                                        val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
-                                        }
-                                        permissionLauncher.launch(permissions.toTypedArray())
+                                        permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
                                     },
                                     onScanRequest = { callback ->
                                         wifiScanner.scanWifiNetworks(callback)
@@ -145,24 +222,31 @@ class MainActivity : ComponentActivity() {
                                     wifiScanner = wifiScanner,
                                     modifier = Modifier.fillMaxSize()
                                 )
-                                1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
-                                2 -> StatsScreen(viewModel = statsViewModel)
+                            }
+
+                            // Tab 2: Credentials
+                            Box(modifier = Modifier.fillMaxSize().alpha(if (selectedTab == 1) 1f else 0f)) {
+                                CredentialsScreen(modifier = Modifier.fillMaxSize())
+                            }
+
+                            // Tab 3: Network Stats
+                            Box(modifier = Modifier.fillMaxSize().alpha(if (selectedTab == 2) 1f else 0f)) {
+                                StatsScreen(viewModel = statsViewModel)
+                            }
+
+                            // Tab 4: Auto Login
+                            Box(modifier = Modifier.fillMaxSize().alpha(if (selectedTab == 3) 1f else 0f)) {
+                                AutoLoginTestScreen(
+                                    onRequestPermission = {
+                                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                                    }
+                                )
                             }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-class StatsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return StatsViewModel(application) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
@@ -303,13 +387,6 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
     var message by remember { mutableStateOf("") }
     var wifiName by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        getUserCredentials(context)?.let {
-            regNo = it.registrationNumber
-            password = it.password
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -338,7 +415,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password, "D-ANX-VIT")) // this is hardcoded for debugging... to be changed later
+                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."
