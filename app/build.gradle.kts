@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
+
     // Compose (using BOM)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
@@ -56,13 +57,15 @@ dependencies {
 
     // Data
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.gson)
+    implementation(libs.firebase.crashlytics.buildtools)
 
     // Tooling and Preview
     debugImplementation(libs.androidx.ui.tooling)
     implementation(libs.androidx.ui.tooling.preview)
 
     // Testing
+    implementation(libs.protolite.well.known.types)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,6 +73,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.activity.compose.v170)
+    implementation(libs.androidx.activity.compose)
+    implementation("com.google.code.gson:gson:2.11.0")
 
 }
