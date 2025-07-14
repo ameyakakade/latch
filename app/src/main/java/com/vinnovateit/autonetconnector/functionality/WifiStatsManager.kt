@@ -11,11 +11,14 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.TrafficStats
 import android.net.wifi.WifiInfo
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.location.LocationManagerCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -104,7 +107,7 @@ object WifiStatsManager {
   fun clearHistory() {
     val context = applicationContext ?: return
     managerScope.launch {
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
+      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
       _sessionSummaries.value = emptyList()
       _lastSession.value = null
       showToast("Stats history cleared")
@@ -121,6 +124,7 @@ object WifiStatsManager {
       .build()
 
     networkCallback = object : ConnectivityManager.NetworkCallback() {
+      @RequiresApi(Build.VERSION_CODES.Q)
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         showToast("Wi-Fi network available")
@@ -133,6 +137,7 @@ object WifiStatsManager {
           stopLogging()
         }
       }
+      @RequiresApi(Build.VERSION_CODES.Q)
       override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
         super.onCapabilitiesChanged(network, networkCapabilities)
         if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
@@ -145,6 +150,7 @@ object WifiStatsManager {
     showToast("Network callback registered")
   }
 
+  @RequiresApi(Build.VERSION_CODES.Q)
   private fun handleWifiConnection(cm: ConnectivityManager, network: Network) {
     val context = applicationContext ?: return
 
@@ -275,7 +281,6 @@ object WifiStatsManager {
     _liveStatus.value = null
   }
 
-  // ... (saveSessions and loadSessions remain the same)
   private fun saveSessions() {
     val context = applicationContext ?: return
     managerScope.launch {
