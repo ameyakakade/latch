@@ -2,6 +2,7 @@
 
 package com.vinnovateit.autonetconnector
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -31,8 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
-import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import kotlinx.coroutines.launch
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner;
+import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier;
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -47,12 +49,13 @@ val SatoshiFontFamily = FontFamily(
 @Composable
 fun HomeScreen(
     isConnected: Boolean = false,
-    networkName: String = "Vit S-block 2.4",
+    networkName: String = "",
     networkSpeed: String = "6 mbps",
     onSpectrumClick: () -> Unit = {}
 )
  {
      val context = LocalContext.current
+     val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context).toString() }
      val scope = rememberCoroutineScope()
      var status by remember { mutableStateOf("Press the button to run auto-login test.") }
      Box(
@@ -314,11 +317,12 @@ fun HomeScreen(
                             )
 
                             Text(
-                                text = networkName,
+                                text = resolvedNetworkName,
                                 color = Color.White,
                                 fontSize = 14.sp,
                                 fontFamily = SatoshiFontFamily
                             )
+
 
                             Box(
                                 modifier = Modifier

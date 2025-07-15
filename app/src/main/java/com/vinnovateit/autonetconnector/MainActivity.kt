@@ -13,9 +13,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vinnovateit.autonetconnector.functionality.WifiScanner
 import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
-import com.vinnovateit.autonetconnector.funtionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class MainActivity : ComponentActivity() {
