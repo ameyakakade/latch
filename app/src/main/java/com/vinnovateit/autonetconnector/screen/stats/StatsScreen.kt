@@ -1,21 +1,23 @@
 package com.vinnovateit.autonetconnector.screen.stats
 
 import android.app.Application
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -27,8 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +45,7 @@ import com.vinnovateit.autonetconnector.screen.stats.components.SessionCard
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
@@ -54,6 +59,7 @@ fun StatsScreen(
   val sessionToShow by viewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by viewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by viewModel.liveStatus.collectAsStateWithLifecycle()
+  val haptic = LocalHapticFeedback.current
 
   val isLive = remember(liveStatus, showMockData) { liveStatus != null && !showMockData }
   val currentTimeframe = if (isLive) Timeframe.LIVE else Timeframe.LAST
@@ -73,31 +79,35 @@ fun StatsScreen(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.fillMaxWidth()
           )
+        },
+        actions = {
+          // This Icon replaces the button and switch from the bottom bar.
+          Icon(
+            imageVector = Icons.Default.Refresh,
+            contentDescription = "Reset Stats or Toggle Mock Data",
+            modifier = Modifier
+              .padding(end = 8.dp)
+              .clip(RoundedCornerShape(50)) // Makes the ripple effect circular
+              .combinedClickable(
+                onClick = {
+                  // Single tap shows the reset dialog.
+                  if (!showMockData) {
+                    showResetDialog = true
+                  }
+                },
+                onLongClick = {
+                  // Long press toggles mock data.
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  viewModel.onToggleMockData(!showMockData)
+                }
+              )
+              .padding(8.dp) // Adds padding for a larger touch target
+          )
         }
       )
     },
-    bottomBar = {
-      Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Button(
-          onClick = { showResetDialog = true },
-          modifier = Modifier.fillMaxWidth(),
-          enabled = !showMockData
-        ) { Text("Reset All Stats") }
-
-        Row(
-          verticalAlignment = Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.End,
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Text("Mock Data")
-          Spacer(Modifier.width(8.dp))
-          Switch(
-            checked = showMockData,
-            onCheckedChange = { viewModel.onToggleMockData(it) }
-          )
-        }
-      }
-    }
+    // The bottom bar is now empty.
+    bottomBar = {}
   ) { padding ->
     LazyColumn(
       modifier = modifier
@@ -118,6 +128,11 @@ fun StatsScreen(
         }
       }
       item { HistorySection(history = historyToShow) }
+
+      // **THE FIX IS HERE:** Adds empty space at the bottom of the list.
+      item {
+        Spacer(modifier = Modifier.height(100.dp))
+      }
     }
   }
 
