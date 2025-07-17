@@ -13,8 +13,7 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +46,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,8 +60,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -83,6 +83,7 @@ import com.vinnovateit.autonetconnector.ui.theme.Purple40
 import com.vinnovateit.autonetconnector.ui.theme.PurpleGrey40
 import kotlinx.coroutines.delay
 import kotlin.math.atan2
+import kotlin.math.floor
 import kotlin.math.max
 
 private val CardLightColorScheme = lightColorScheme(
@@ -111,7 +112,6 @@ fun SessionCard(
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val scrollState = rememberScrollState()
 
-    // Auto-collapse timer
     LaunchedEffect(isGraphExpanded, lastInteractionTime) {
         if (isGraphExpanded) {
             delay(5000)
@@ -165,7 +165,6 @@ fun SessionCard(
                                     .clickable { isGraphExpanded = true },
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Simplified preview graph
                                 SessionRateGraph(
                                     modifier = Modifier.fillMaxSize(),
                                     rateHistory = session.history.takeLast(60),
@@ -223,31 +222,46 @@ private fun SessionRateGraph(
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
+    var zoomLevel by remember { mutableFloatStateOf(1f) }
 
-    val transformableState = rememberTransformableState { zoomChange, _, _ ->
-        if (isInteractive) {
-            scale = (scale * zoomChange).coerceIn(1f, 10f)
-            onInteraction()
+    val hapticFeedbackTrigger by remember {
+        derivedStateOf {
+            floor(zoomLevel / 0.5f)
         }
     }
 
-    var lastScrollValue by remember { mutableIntStateOf(0) }
+    LaunchedEffect(hapticFeedbackTrigger) {
+        if (zoomLevel > 1f && zoomLevel < 10f) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
 
-    LaunchedEffect(rateHistory.size) {
-        if (isInteractive && rateHistory.size > 1) {
-            val pointWidth = with(density) { (POINT_SPACING * scale).toPx() }
-            val targetScroll = scrollState.value + pointWidth.toInt()
-            if (!scrollState.isScrollInProgress) {
-                scrollState.animateScrollTo(targetScroll.coerceAtMost(scrollState.maxValue))
-                lastScrollValue = scrollState.value
-            }
+    val boundaryHapticTrigger by remember {
+        derivedStateOf {
+            zoomLevel == 1f || zoomLevel == 10f
+        }
+    }
+
+    LaunchedEffect(boundaryHapticTrigger) {
+        if (boundaryHapticTrigger) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
     }
 
     BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(CARD_CORNER_RADIUS))
-            .then(if (isInteractive) Modifier.transformable(transformableState) else Modifier)
+            .pointerInput(Unit) {
+                if (isInteractive) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        val newZoomLevel = zoomLevel * zoom
+                        zoomLevel = newZoomLevel.coerceIn(1f, 10f)
+                        scale = zoomLevel
+                        onInteraction()
+                    }
+                }
+            }
     ) {
         val visibleMaxSpeedData by remember(rateHistory, scrollState.value, scale) {
             derivedStateOf {
@@ -341,8 +355,6 @@ private fun SessionRateGraph(
         }
     }
 }
-
-// --- Other Helper Composables (No Changes) ---
 
 @Composable
 private fun BoxScope.FadedEdge(alignment: Alignment) {
@@ -450,9 +462,9 @@ fun DataUsageCircle(
 
         val (valueStr, unitStr) = remember(dataUsage, displayMode) {
             val bytes = when (displayMode) {
-                DisplayMode.TOTAL    -> totalBytes
+                DisplayMode.TOTAL -> totalBytes
                 DisplayMode.DOWNLOAD -> dataUsage.rxBytes
-                DisplayMode.UPLOAD   -> dataUsage.txBytes
+                DisplayMode.UPLOAD -> dataUsage.txBytes
             }
             formatBytes(bytes)
         }
@@ -460,13 +472,13 @@ fun DataUsageCircle(
         AnimatedContent(targetState = displayMode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "DataCircleContent") { mode ->
             val icon = when (mode) {
                 DisplayMode.DOWNLOAD -> Icons.Default.ArrowDownward
-                DisplayMode.UPLOAD   -> Icons.Default.ArrowUpward
-                else                 -> null
+                DisplayMode.UPLOAD -> Icons.Default.ArrowUpward
+                else -> null
             }
             val tint = when (mode) {
                 DisplayMode.DOWNLOAD -> dlColor
-                DisplayMode.UPLOAD   -> ulColor
-                else                 -> MaterialTheme.colorScheme.onSurface
+                DisplayMode.UPLOAD -> ulColor
+                else -> MaterialTheme.colorScheme.onSurface
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (icon != null) {
