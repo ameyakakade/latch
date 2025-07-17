@@ -1,10 +1,7 @@
 package com.vinnovateit.autonetconnector.functionality
 
-import android.Manifest
 import android.app.Application
 import android.content.Context
-import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -17,21 +14,20 @@ import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
 import androidx.core.content.edit
-import androidx.core.location.LocationManagerCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -51,12 +47,11 @@ object WifiStatsManager {
   private const val TAG = "WifiStatsManager"
   private const val PREFS_NAME = "wifi_stats_prefs"
   private const val KEY_SESSIONS = "session_summaries"
-  private const val POLLING_INTERVAL_MS = 1000L
+  private const val POLLING_INTERVAL_MS = 2000L // Increased polling interval
   private val gson = Gson()
 
   private var applicationContext: Application? = null
   private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-  private var loggingJob: Job? = null
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
   private val mainHandler = Handler(Looper.getMainLooper())
   private val isInitialized = AtomicBoolean(false)
@@ -77,9 +72,11 @@ object WifiStatsManager {
   private val _sessionSummaries = MutableStateFlow<List<SessionSummary>>(emptyList())
   val sessionSummaries = _sessionSummaries.asStateFlow()
 
-  // NEW: Status flow to communicate issues like disabled location to the UI
   private val _systemStatus = MutableStateFlow<String?>(null)
   val systemStatus = _systemStatus.asStateFlow()
+
+  // Debounced network capability changes
+  private val networkCapabilitiesFlow = MutableStateFlow<Pair<Network, NetworkCapabilities>?>(null)
 
   fun initialize(context: Application) {
     if (isInitialized.getAndSet(true)) return
@@ -87,6 +84,7 @@ object WifiStatsManager {
     showToast("WifiStatsManager Initialized")
     loadSessions()
     registerNetworkCallback()
+    observeNetworkCapabilityChanges()
   }
 
   fun cleanup() {
@@ -99,7 +97,7 @@ object WifiStatsManager {
     } catch (e: Exception) {
       Log.e(TAG, "Error unregistering network callback", e)
     }
-    managerScope.cancel(CancellationException("WifiStatsManager cleaned up"))
+    managerScope.cancel()
     applicationContext = null
     networkCallback = null
   }
@@ -128,8 +126,12 @@ object WifiStatsManager {
       override fun onAvailable(network: Network) {
         super.onAvailable(network)
         showToast("Wi-Fi network available")
-        handleWifiConnection(connectivityManager, network)
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        if (capabilities != null) {
+          networkCapabilitiesFlow.value = network to capabilities
+        }
       }
+
       override fun onLost(network: Network) {
         super.onLost(network)
         showToast("Wi-Fi network lost")
@@ -137,75 +139,55 @@ object WifiStatsManager {
           stopLogging()
         }
       }
+
       @RequiresApi(Build.VERSION_CODES.Q)
       override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
         super.onCapabilitiesChanged(network, networkCapabilities)
-        if (networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-          Log.d(TAG, "Wi-Fi capabilities changed.")
-          handleWifiConnection(connectivityManager, network)
-        }
+        networkCapabilitiesFlow.value = network to networkCapabilities
       }
     }
     connectivityManager.registerNetworkCallback(networkRequest, networkCallback!!)
     showToast("Network callback registered")
   }
 
-  @RequiresApi(Build.VERSION_CODES.Q)
-  private fun handleWifiConnection(cm: ConnectivityManager, network: Network) {
-    val context = applicationContext ?: return
-
-    // 1. Check for required location permission
-    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-      _systemStatus.value = "Location permission is required to get the Wi-Fi name."
-      Log.w(TAG, "Location permission not granted.")
-      return
-    }
-
-    // 2. Check if Location Services are enabled on the device
-    if (!isLocationEnabled(context)) {
-      _systemStatus.value = "Please turn on Location Services to see the Wi-Fi name."
-      Log.w(TAG, "Location services are turned off.")
-      if (_liveStatus.value?.ssid != "Location Off") {
-        stopLogging()
-        startLogging("Location Off")
+  private fun observeNetworkCapabilityChanges() {
+    networkCapabilitiesFlow
+      .debounce(500) // Debounce to avoid rapid changes
+      .distinctUntilChanged()
+      .onEach { networkInfo ->
+        networkInfo?.let { (network, capabilities) ->
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            handleWifiConnection(applicationContext?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager, network, capabilities)
+          }
+        }
       }
-      return
-    }
+      .launchIn(managerScope)
+  }
 
-    // If we reach here, permissions and settings are okay. Clear any status message.
-    _systemStatus.value = null
-
-    // 3. Get NetworkCapabilities to access WifiInfo safely
-    val capabilities = cm.getNetworkCapabilities(network)
-    val wifiInfo = capabilities?.transportInfo as? WifiInfo
-
+  @RequiresApi(Build.VERSION_CODES.Q)
+  private fun handleWifiConnection(cm: ConnectivityManager, network: Network, capabilities: NetworkCapabilities) {
+    val wifiInfo = capabilities.transportInfo as? WifiInfo
     if (wifiInfo == null) {
       Log.w(TAG, "WifiInfo is null. Cannot retrieve SSID yet.")
-      return // The callback will be triggered again when it's ready.
+      return
     }
 
     val ssid = wifiInfo.ssid?.replace("\"", "")
-
-    if (ssid != null && ssid != "<unknown ssid>") {
+    if (ssid != null && ssid.lowercase().contains("vit")) {
       if (_liveStatus.value?.ssid != ssid) {
         stopLogging()
         startLogging(ssid)
       }
     } else {
-      Log.w(TAG, "Could not retrieve a valid SSID. Current value: $ssid")
+      Log.w(TAG, "Could not retrieve a valid SSID or not a VIT network. Current value: $ssid")
+      if (_liveStatus.value != null) {
+        stopLogging()
+      }
     }
-  }
-
-  private fun isLocationEnabled(context: Context): Boolean {
-    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    return LocationManagerCompat.isLocationEnabled(locationManager)
   }
 
   private fun startLogging(ssid: String) {
-    if (loggingJob?.isActive == true) {
-      if (_liveStatus.value?.ssid == ssid) return // Already logging for the same network
-      stopLogging() // Stop previous session
-    }
+    if (_liveStatus.value != null) return
 
     showToast("Starting stats for: $ssid")
     startRxBytes = TrafficStats.getTotalRxBytes()
@@ -227,8 +209,8 @@ object WifiStatsManager {
       liveData = listOf(LiveDataPoint(startTime, DataUsage(0, 0)))
     )
 
-    loggingJob = managerScope.launch {
-      while (isActive) {
+    managerScope.launch {
+      while (_liveStatus.value != null) {
         delay(POLLING_INTERVAL_MS)
         val currentRxBytes = TrafficStats.getTotalRxBytes()
         val currentTxBytes = TrafficStats.getTotalTxBytes()
@@ -250,9 +232,8 @@ object WifiStatsManager {
   }
 
   private fun stopLogging() {
-    loggingJob?.cancel()
-    loggingJob = null
     val session = _liveStatus.value ?: return
+    _liveStatus.value = null
     showToast("Stopping stats for: ${session.ssid}")
 
     val duration = System.currentTimeMillis() - session.startTimeMillis
@@ -261,7 +242,6 @@ object WifiStatsManager {
 
     if (duration < 5000 && totalRx < 1024 && totalTx < 1024) {
       Log.d(TAG, "Trivial session discarded for SSID: ${session.ssid}")
-      _liveStatus.value = null
       return
     }
 
@@ -277,8 +257,6 @@ object WifiStatsManager {
     _sessionSummaries.value = updatedHistory
     _lastSession.value = summary
     saveSessions()
-
-    _liveStatus.value = null
   }
 
   private fun saveSessions() {
