@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:background="#0B1956">
+
+    <TextView
+        android:id="@+id/lets_get_st"
+        android:layout_width="240dp"
+        android:layout_height="65dp"
+        android:text="@string/lets_get_st"
+        android:textAppearance="@style/lets_get_st"
+        android:gravity="top"
+        />
+
+    <TextView
+        android:id="@+id/create_your"
+        android:layout_width="181dp"
+        android:layout_height="25dp"
+        android:text="@string/create_your"
+        android:textAppearance="@style/create_your"
+        android:gravity="top"
+        android:layout_marginTop="20dp"/>
+
+    <EditText
+        android:id="@+id/user_id_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:hint="Username"
+        android:inputType="textPersonName"
+        android:textColor="#FAF3EB"
+        android:textColorHint="#CCCCCC"
+        android:backgroundTint="#FAF3EB"
+        android:drawableRight="@drawable/ic_username"/>
+
+    <EditText
+        android:id="@+id/password_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:hint="Password"
+        android:inputType="textPassword"
+        android:textColor="#FAF3EB"
+        android:textColorHint="#CCCCCC"
+        android:backgroundTint="#FAF3EB"
+        android:drawableRight="@drawable/ic_password"/>
+
+    <Button
+        android:id="@+id/save_credentials_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:text="Save Credentials"
+        android:textColor="#0B1956"
+        android:background="@drawable/rounded_button"
+        android:textStyle="bold"
+        android:textSize="15sp"/>
+
+</LinearLayout> 
