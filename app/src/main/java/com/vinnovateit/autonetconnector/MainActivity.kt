@@ -24,7 +24,6 @@ import com.vinnovateit.autonetconnector.funtionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
 
-// this is just a sample ui for debugging purposes
 
 class MainActivity : ComponentActivity() {
 

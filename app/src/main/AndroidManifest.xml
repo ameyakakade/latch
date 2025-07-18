@@ -43,10 +43,7 @@
             android:name=".functionality2.background.MyForegroundService"
             android:foregroundServiceType="connectedDevice"
             android:exported="false" />
-
-
-
-    </application>
+        <activity android:name=".NewPageActivity" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
