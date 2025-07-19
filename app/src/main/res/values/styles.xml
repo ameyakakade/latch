@@ -1,7 +1,8 @@
 <resources>
     <style name="lets_get_st">
-        <item name="android:textSize">31sp</item>
+        <item name="android:textSize">26sp</item>
         <item name="android:textColor">#FAF3EB</item>
+        <item name="android:gravity">center</item>
     </style>
     <style name="create_your">
         <item name="android:textSize">20sp</item>
