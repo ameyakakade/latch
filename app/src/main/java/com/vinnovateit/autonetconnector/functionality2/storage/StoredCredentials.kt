@@ -1,15 +1,18 @@
 package com.vinnovateit.autonetconnector.functionality2.storage
 
-object StoredCredentials {
+import android.content.Context
 
+object StoredCredentials {
     /**
-     * Returns dummy userId and password for testing login.
+     * Returns the saved userId and password from Room database, or null if not found.
      */
-    fun getUserId(): String {
-        return "23BCI"  // Replace with your actual test ID
+    suspend fun getUserId(context: Context): String? {
+        val db = CredentialDatabase.getInstance(context)
+        return db.credentialDao().getCredential()?.registrationNumber
     }
 
-    fun getPassword(): String {
-        return "123"  // Replace with your actual test password
+    suspend fun getPassword(context: Context): String? {
+        val db = CredentialDatabase.getInstance(context)
+        return db.credentialDao().getCredential()?.password
     }
 }

@@ -10,10 +10,11 @@
         android:id="@+id/lets_get_st"
         android:layout_width="240dp"
         android:layout_height="65dp"
+        android:layout_centerHorizontal="true"
         android:text="@string/lets_get_st"
         android:textAppearance="@style/lets_get_st"
-        android:gravity="top"
-        />
+        android:gravity="center"
+        android:textAlignment="center"/>
 
     <TextView
         android:id="@+id/create_your"
