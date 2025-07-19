@@ -20,11 +20,10 @@ import androidx.compose.ui.unit.dp
 import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
-import com.vinnovateit.autonetconnector.funtionality.*
+import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
 
-// this is just a sample ui for debugging purposes
 
 class MainActivity : ComponentActivity() {
 
@@ -106,6 +105,26 @@ class MainActivity : ComponentActivity() {
                             permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                         }
                     )
+
+                    val context = LocalContext.current
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Place the Change Credentials button at the bottom right as a floating action button
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // ... existing main content ...
+
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(context, SecondPageActivity::class.java)
+                                intent.putExtra("editMode", true)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(24.dp)
+                        ) {
+                            Text("Change Credentials")
+                        }
+                    }
                 }
             }
         }
@@ -294,7 +313,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G")) // this is hardcoded for debugging... to be changed later
+                    saveUserCredentials(context, UserCredentials(regNo, password)) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."

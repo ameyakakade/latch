@@ -47,10 +47,10 @@ object LoginTestRunner {
 
         Log.d("LoginTest", "Captive portal detected. Proceeding to login...")
 
-        val userId = StoredCredentials.getUserId()
-        val password = StoredCredentials.getPassword()
+        val userId = StoredCredentials.getUserId(context)
+        val password = StoredCredentials.getPassword(context)
 
-        val success = AutoLoginManager.attemptLogin(userId, password)
+        val success = AutoLoginManager.attemptLogin(userId ?: "", password ?: "")
 
         if (success) {
             Log.d("LoginTest", "✅ Auto-login successful!")
