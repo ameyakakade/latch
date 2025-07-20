@@ -4,6 +4,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.NetworkInfo
+import android.os.Build
 import android.util.Log
 import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
 
@@ -13,14 +16,22 @@ class WiFiChangeReceiver : BroadcastReceiver() {
         Log.d("WiFiChangeReceiver", "Received broadcast: $action")
 
         if (ConnectivityManager.CONNECTIVITY_ACTION == action) {
-            val currentSSID = VITWiFiIdentifier.getCurrentSSID(context)
-            Log.d("WiFiChangeReceiver", "Detected SSID: $currentSSID")
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-            if (currentSSID != null && currentSSID.lowercase().contains("vit")) {
-                Log.d("WiFiChangeReceiver", "Connected to VIT Wi-Fi: $currentSSID. Scheduling login...")
-                AutoLoginScheduler.scheduleAutoLogin(context)
+            val isWifiConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val network = cm.activeNetwork
+                val capabilities = cm.getNetworkCapabilities(network)
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
             } else {
-                Log.d("WiFiChangeReceiver", "Not a VIT Wi-Fi. Skipping login.")
+                val networkInfo: NetworkInfo? = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+                networkInfo?.isConnected == true
+            }
+
+            if (isWifiConnected) {
+                Log.d("WiFiChangeReceiver", "Wi-Fi is connected. Delegating to WiFiMonitor.")
+                WiFiMonitor.startMonitoring(context)
+            } else {
+                Log.d("WiFiChangeReceiver", "Wi-Fi not connected.")
             }
         }
     }
