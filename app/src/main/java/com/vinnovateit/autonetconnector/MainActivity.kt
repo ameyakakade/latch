@@ -1,23 +1,15 @@
 package com.vinnovateit.autonetconnector
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -29,12 +21,10 @@ import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
 
-
 class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
 
-    @OptIn(ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wifiScanner = WifiScanner(this)
@@ -56,12 +46,6 @@ class MainActivity : ComponentActivity() {
         } else {
             startService(serviceIntent)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
-
 
         setContent {
             AutoNetConnectorTheme {
@@ -108,15 +92,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     */
-                  
+
                     // ✅ FINAL UI: HomeScreen with AutoLogin Button
                     HomeScreen(
-                      isConnected = false,
-                      networkName = "Vit S-block 2.4",
-                      networkSpeed = "6 mbps",
-                      animatedVisibilityScope = TODO(),
-                      sharedTransitionScope = TODO(),
-                      navController = TODO()
+                        isConnected = false,
+                        networkName = "Vit S-block 2.4",
+                        networkSpeed = "6 mbps"
                     )
 
                     val context = LocalContext.current
@@ -152,12 +133,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-
-
-}
 }
