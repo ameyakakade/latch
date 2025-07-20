@@ -16,7 +16,10 @@ import androidx.compose.ui.unit.dp
 import com.vinnovateit.autonetconnector.functionality.WifiScanner
 import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
+import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -96,6 +99,26 @@ class MainActivity : ComponentActivity() {
                         networkName = "Vit S-block 2.4",
                         networkSpeed = "6 mbps"
                     )
+
+                    val context = LocalContext.current
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Place the Change Credentials button at the bottom right as a floating action button
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // ... existing main content ...
+
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(context, SecondPageActivity::class.java)
+                                intent.putExtra("editMode", true)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(24.dp)
+                        ) {
+                            Text("Change Credentials")
+                        }
+                    }
                 }
             }
         }
