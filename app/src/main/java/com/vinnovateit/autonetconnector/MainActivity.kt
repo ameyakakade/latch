@@ -65,34 +65,9 @@ import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundSe
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.screen.stats.StatsScreen
+import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
-
-@Composable
-fun AutoLoginTestScreen(onRequestPermission: () -> Unit) {
-    val context = LocalContext.current
-    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = status, style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(onClick = {
-            status = "Running auto-login test..."
-            scope.launch {
-                LoginTestRunner.run(context.applicationContext)
-                status = "Test finished. Check logcat for output."
-            }
-        }) {
-            Text("Run Auto-Login Test")
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -207,6 +182,34 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
+                        }
+                    }
+                    */
+
+                    // Auto-Login Debugging
+                    AutoLoginTestScreen(
+                        onRequestPermission = {
+                            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+                    )
+
+                    val context = LocalContext.current
+                    Spacer(modifier = Modifier.height(16.dp))
+                    // Place the Change Credentials button at the bottom right as a floating action button
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // ... existing main content ...
+
+                        OutlinedButton(
+                            onClick = {
+                                val intent = Intent(context, SecondPageActivity::class.java)
+                                intent.putExtra("editMode", true)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(24.dp)
+                        ) {
+                            Text("Change Credentials")
                         }
                     }
                 }
@@ -380,7 +383,7 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         Button(
             onClick = {
                 if (regNo.isNotBlank() && password.isNotBlank()) {
-                    saveUserCredentials(context, UserCredentials(regNo, password, "DANX5G"))
+                    saveUserCredentials(context, UserCredentials(regNo, password)) // this is hardcoded for debugging... to be changed later
                     message = "Credentials saved!"
                 } else {
                     message = "Please enter registration number, password."
