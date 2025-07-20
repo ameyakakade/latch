@@ -1,91 +1,172 @@
 package com.vinnovateit.autonetconnector
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat.checkSelfPermission
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vinnovateit.autonetconnector.functionality.StatsViewModel
+import com.vinnovateit.autonetconnector.functionality.StatsViewModelFactory
+import com.vinnovateit.autonetconnector.functionality.UserCredentials
+import com.vinnovateit.autonetconnector.functionality.WifiEntry
+import com.vinnovateit.autonetconnector.functionality.WifiScanner
+import com.vinnovateit.autonetconnector.functionality.getUserCredentials
+import com.vinnovateit.autonetconnector.functionality.saveUserCredentials
 import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
+import com.vinnovateit.autonetconnector.screen.stats.StatsScreen
 import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
 
+        Spacer(modifier = Modifier.height(16.dp))
 
+        Button(onClick = onRequestPermission) {
+            Text("Grant Location Permission")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
+    private lateinit var permissionLauncher: ActivityResultLauncher<Array<String>>
     private lateinit var wifiScanner: WifiScanner
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         wifiScanner = WifiScanner(this)
 
-        requestLocationPermissionIfNeeded()
-        WiFiMonitor.startMonitoring(applicationContext)
+        val permissionsToRequest = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.CHANGE_WIFI_STATE
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionsToRequest.add(Manifest.permission.NEARBY_WIFI_DEVICES)
+        }
 
-
-        val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(this, "Location permission is required for WiFi scanning", Toast.LENGTH_LONG).show()
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            val allPermissionsGranted = permissions.entries.all { it.value }
+            if (!allPermissionsGranted) {
+                Toast.makeText(this, "Permissions required for full functionality.", Toast.LENGTH_LONG).show()
             }
         }
 
-        val serviceIntent = Intent(this, MyForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+        val permissionsNotGranted = permissionsToRequest.filter {
+            checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (permissionsNotGranted.isNotEmpty()) {
+            permissionLauncher.launch(permissionsNotGranted.toTypedArray())
         }
 
+        fun requestLocationPermissionIfNeeded() {
+            val permissionLauncher = registerForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (!isGranted) {
+                    Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+                }
+            }
+
+            if (checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }
+        requestLocationPermissionIfNeeded()
+        WiFiMonitor.startMonitoring(applicationContext)
+        val serviceIntent = Intent(this, MyForegroundService::class.java)
+        startForegroundService(serviceIntent)
 
         setContent {
             AutoNetConnectorTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    val statsViewModel: StatsViewModel = viewModel(factory = StatsViewModelFactory(application))
 
-                    // 🔒️ Commented out teammate's tab-based UI (preserved for later)
-                    /*
-                    var selectedTab by remember { mutableStateOf(0) }
-                    val tabs = listOf("WiFi Scanner", "Credentials Debug")
+                    var selectedTab by remember { mutableIntStateOf(0) }
+                    val tabs = listOf("WiFis", "Creds", "Stats", "Login")
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .statusBarsPadding()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        TabRow(selectedTabIndex = selectedTab) {
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                             tabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedTab == index,
+                                SegmentedButton(
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = tabs.size),
                                     onClick = { selectedTab = index },
-                                    text = { Text(title) }
-                                )
+                                    selected = selectedTab == index
+                                ) {
+                                    Text(title)
+                                }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            when (selectedTab) {
+                        Crossfade(targetState = selectedTab) { tabIndex ->
+                            when (tabIndex) {
                                 0 -> WifiScannerScreen(
                                     onRequestPermission = {
-                                        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                        permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION))
                                     },
                                     onScanRequest = { callback ->
                                         wifiScanner.scanWifiNetworks(callback)
@@ -94,12 +175,18 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize()
                                 )
                                 1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
+                                2 -> StatsScreen(viewModel = statsViewModel)
+                                3 -> AutoLoginTestScreen(
+                                    onRequestPermission = {
+                                        permissionLauncher.launch(permissionsToRequest.toTypedArray())
+                                    }
+                                )
                             }
                         }
                     }
                     */
 
-                    // ✅ TEMPORARY UI for Auto-Login Debugging
+                    // Auto-Login Debugging
                     AutoLoginTestScreen(
                         onRequestPermission = {
                             permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -129,23 +216,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun requestLocationPermissionIfNeeded() {
-        val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
-            }
-        }
-
-        if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
-
 }
 
 @Composable
@@ -363,38 +433,3 @@ fun CredentialsScreen(modifier: Modifier = Modifier) {
         }
     }
 }
-
-@Composable
-fun AutoLoginTestScreen(onRequestPermission: () -> Unit) {
-    val context = LocalContext.current
-    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = status, style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(onClick = {
-            status = "Running auto-login test..."
-            scope.launch {
-                LoginTestRunner.run(context.applicationContext)
-                status = "Test finished. Check logcat for output."
-            }
-        }) {
-            Text("Run Auto-Login Test")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onRequestPermission) {
-            Text("Grant Location Permission")
-        }
-    }
-}
-

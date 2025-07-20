@@ -15,7 +15,7 @@ fun getUserCredentials(context: Context): UserCredentials? {
     val pass = prefs.getString(KEY_PASSWORD, null)
 
     return if (reg != null && pass != null) {
-        UserCredentials(registrationNumber = reg, password = pass)
+        UserCredentials(registrationNumber = reg, password = pass, string = "DANX5G")
     } else {
         Log.d("CredentialsStorage", "No credentials found in cache or wifiName missing")
         null
