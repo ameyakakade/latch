@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/landing_pag"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:clipToOutline="true"
+  android:background="#0B1956">
+
+    <TextView
+        android:id="@+id/vinnovateit_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="VinnovateIT"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp" />
+
+    <LinearLayout
+        android:id="@+id/center_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:layout_centerInParent="true">
+
+        <TextView
+            android:id="@+id/welcome_back_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/welcome_back"
+            android:textColor="@color/white"
+            android:textSize="35sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp"/>
+
+        <Button
+            android:id="@+id/get_started_button"
+            android:layout_width="300dp"
+            android:layout_height="wrap_content"
+            android:text="@string/get_started"
+            android:textColor="#0B1956"
+            android:background="@drawable/rounded_button"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_marginTop="30dp"/>
+    </LinearLayout>
+
+</RelativeLayout> 

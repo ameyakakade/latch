@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Auto Net Connector</string>
+    <string name="welcome_back">Welcome back</string>
+    <string name="get_started">Get Started</string>
+    <string name="lets_get_st">Lets Get Started</string>
+    <string name="create_your">Enter Credentials</string>
 </resources>
