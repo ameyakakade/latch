@@ -28,6 +28,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -41,46 +42,31 @@ android {
 }
 
 dependencies {
-    // Core and Lifecycle
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
-
-
-    // Compose (using BOM)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
-
-    // Data
-    implementation(libs.androidx.datastore.preferences)
-    implementation(libs.firebase.crashlytics.buildtools)
-
-    // Tooling and Preview
-    debugImplementation(libs.androidx.ui.tooling)
     implementation(libs.androidx.ui.tooling.preview)
-
-    // Testing
+    implementation(libs.androidx.material3)
+    implementation("com.google.code.gson:gson:2.10.1")
     implementation(libs.protolite.well.known.types)
     implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.2")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.activity.compose)
-    implementation("com.google.code.gson:gson:2.11.0")
     implementation ("androidx.compose.material3:material3:1.1.2")
     implementation ("androidx.compose.material:material-icons-extended:1.5.4")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.room:room-runtime:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.room:room-runtime:2.7.2")
+    kapt("androidx.room:room-compiler:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
     implementation("androidx.appcompat:appcompat:1.6.1")
 }
