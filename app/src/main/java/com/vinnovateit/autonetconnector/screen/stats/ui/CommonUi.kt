@@ -1,4 +1,3 @@
-// path: com/vinnovateit/autonetconnector/screen/stats/ui/CommonUi.kt
 package com.vinnovateit.autonetconnector.screen.stats.ui
 
 import androidx.compose.foundation.background

@@ -111,7 +111,6 @@ class StatsViewModel(application: Application) : ViewModel() {
 
   override fun onCleared() {
     super.onCleared()
-    WifiStatsManager.cleanup()
   }
 }
 

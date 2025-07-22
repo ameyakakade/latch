@@ -182,7 +182,7 @@ fun SessionCard(
 }
 
 @Composable
-private fun ExpandedGraphCard(
+internal fun ExpandedGraphCard(
     rateHistory: List<LiveDataPoint>,
     onInteraction: () -> Unit,
     onDismiss: () -> Unit,
