@@ -1,4 +1,3 @@
-// path: com/vinnovateit/autonetconnector/screen/stats/components/HistorySection.kt
 package com.vinnovateit.autonetconnector.screen.stats.components
 
 import androidx.compose.animation.AnimatedContent
@@ -24,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +58,6 @@ import androidx.compose.ui.unit.dp
 import com.vinnovateit.autonetconnector.functionality.DataUsage
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
-import com.vinnovateit.autonetconnector.screen.stats.ui.StatItem
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDate
 import kotlinx.coroutines.delay
@@ -81,6 +81,7 @@ fun HistorySection(history: List<SessionSummary>) {
             "History",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
@@ -306,7 +307,11 @@ fun Bar(
             }
         }
         Spacer(Modifier.height(4.dp))
-        Text(dayLabel, style = MaterialTheme.typography.labelSmall)
+        Text(
+            dayLabel,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground // FIX: Added theme color
+        )
     }
 }
 
@@ -355,21 +360,37 @@ fun StatDetailRow(data: Pair<DataUsage, String>) {
             Text(
                 "$v $u",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground // FIX: Added theme color
             )
         }
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) // FIX: Added theme color with alpha
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            AnimatedContent(dlFmt, label = "DLStat") {
-                StatItem(Icons.Default.ArrowDownward, it, Color(0xFF0089D0))
+            // FIX: Re-implemented StatItem logic to control the text color directly.
+            AnimatedContent(dlFmt, label = "DLStat") { (value, unit) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFF0089D0), modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("$value $unit",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    )
+                }
             }
-            AnimatedContent(ulFmt, label = "ULStat") {
-                StatItem(Icons.Default.ArrowUpward, it, Color(0xFFFFA500))
+            AnimatedContent(ulFmt, label = "ULStat") { (value, unit) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ArrowUpward, null, tint = Color(0xFFFFA500), modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("$value $unit",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
