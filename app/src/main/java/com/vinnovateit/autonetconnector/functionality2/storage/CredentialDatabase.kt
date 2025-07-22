@@ -5,7 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [CredentialEntity::class], version = 1)
+@Database(entities = [CredentialEntity::class], version = 2) // Updated version to 2
 abstract class CredentialDatabase : RoomDatabase() {
     abstract fun credentialDao(): CredentialDao
 
@@ -19,10 +19,12 @@ abstract class CredentialDatabase : RoomDatabase() {
                     context.applicationContext,
                     CredentialDatabase::class.java,
                     "credential_db"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // This line avoids crashes on schema change during development
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
     }
-} 
+}

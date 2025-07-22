@@ -2,60 +2,168 @@ package com.vinnovateit.autonetconnector
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialEntity
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
 
-class SecondPageActivity : AppCompatActivity() {
+class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val editMode = intent.getBooleanExtra("editMode", false)
-        val db = CredentialDatabase.getInstance(applicationContext)
-        lifecycleScope.launch {
-            val existing = db.credentialDao().getCredential()
-            if (existing != null && !editMode) {
-                // Credentials already exist and not in edit mode, go to MainActivity
-                val intent = Intent(this@SecondPageActivity, MainActivity::class.java)
-                startActivity(intent)
-                finish()
-            } else {
-                // Show the UI (for new or edit mode)
-                runOnUiThread {
-                    setContentView(R.layout.second_page)
-                    val saveCredentialsButton = findViewById<Button>(R.id.save_credentials_button)
-                    val userIdInput = findViewById<EditText>(R.id.user_id_input)
-                    val passwordInput = findViewById<EditText>(R.id.password_input)
-                    // Pre-fill fields if editing
-                    if (existing != null) {
-                        userIdInput.setText(existing.registrationNumber)
-                        passwordInput.setText(existing.password)
-                    }
-                    saveCredentialsButton.setOnClickListener {
-                        val regNo = userIdInput.text.toString()
-                        val password = passwordInput.text.toString()
-                        android.util.Log.d("SecondPageActivity", "Attempting to save credentials: userId=$regNo, password=$password")
-                        Toast.makeText(this@SecondPageActivity, "Saving: userId=$regNo, password=$password", Toast.LENGTH_SHORT).show()
-                        if (regNo.isNotBlank() && password.isNotBlank()) {
-                            lifecycleScope.launch {
-                                db.credentialDao().insertCredential(CredentialEntity(regNo, password))
-                                runOnUiThread {
-                                    Toast.makeText(this@SecondPageActivity, "Credentials saved!", Toast.LENGTH_SHORT).show()
-                                    val intent = Intent(this@SecondPageActivity, MainActivity::class.java)
-                                    startActivity(intent)
-                                    finish()
-                                }
-                            }
-                        } else {
-                            Toast.makeText(this@SecondPageActivity, "Please enter User ID and Password", Toast.LENGTH_SHORT).show()
-                        }
-                    }
+        setContent {
+            CredentialsScreen(
+                editMode = editMode,
+                onCredentialsSaved = {
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
                 }
+            )
+        }
+    }
+}
+
+@Composable
+fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var regNo by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var loaded by remember { mutableStateOf(false) }
+
+    // Load from DB
+    LaunchedEffect(Unit) {
+        val db = CredentialDatabase.getInstance(context)
+        val existing = db.credentialDao().getCredential()
+        if (existing != null && !editMode) {
+            onCredentialsSaved()
+        } else if (existing != null && !loaded) {
+            regNo = existing.registrationNumber
+            password = existing.password
+            loaded = true
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0B1956))
+            .padding(24.dp)
+    ) {
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Let's Get Started",
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFFAF3EB)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Enter credentials",
+                fontSize = 20.sp,
+                color = Color(0xFFFAF3EB),
+                fontWeight = FontWeight.Medium
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            OutlinedTextField(
+                value = regNo,
+                onValueChange = { regNo = it },
+                label = { Text("Username") },
+                singleLine = true,
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_username),
+                        contentDescription = "Username Icon"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+            )
+
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                leadingIcon = {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_password),
+                        contentDescription = "Password Icon"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+            )
+
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Button(
+                onClick = {
+                    if (regNo.isNotBlank() && password.isNotBlank()) {
+                        scope.launch {
+                            val db = CredentialDatabase.getInstance(context)
+                            db.credentialDao().insertCredential(
+                                CredentialEntity(id = "singleton", registrationNumber = regNo, password = password)
+                            )
+
+                            Toast.makeText(context, "Credentials saved!", Toast.LENGTH_SHORT).show()
+                            onCredentialsSaved()
+                        }
+                    } else {
+                        message = "Please enter User ID and Password"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF0B1956)
+                )
+            ) {
+                Text(
+                    text = if (editMode) "Update Credentials" else "Save Credentials",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            if (message.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = message, color = Color.Red)
             }
         }
     }
-} 
+}
