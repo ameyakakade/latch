@@ -20,6 +20,7 @@ import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
 
 class MainActivity : ComponentActivity() {
 
