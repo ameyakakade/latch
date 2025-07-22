@@ -1,5 +1,6 @@
 package com.vinnovateit.autonetconnector
 
+import android.app.Application
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -10,9 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality.WifiScanner
 import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
@@ -21,6 +24,10 @@ import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.autonetconnector.functionality.StatsViewModel
+import com.vinnovateit.autonetconnector.functionality.StatsViewModelFactory
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -50,63 +57,36 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AutoNetConnectorTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
+                val viewModel: StatsViewModel = viewModel(
+                    factory = StatsViewModelFactory(LocalContext.current.applicationContext as Application)
+                )
+                val sessionToShow by viewModel.sessionToShow.collectAsStateWithLifecycle()
+                val context = LocalContext.current
 
-                    // 🔒️ Commented out teammate's tab-based UI (preserved for later)
-                    /*
-                    var selectedTab by remember { mutableStateOf(0) }
-                    val tabs = listOf("WiFi Scanner", "Credentials Debug")
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.Top,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        TabRow(selectedTabIndex = selectedTab) {
-                            tabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    text = { Text(title) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            when (selectedTab) {
-                                0 -> WifiScannerScreen(
-                                    onRequestPermission = {
-                                        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                                    },
-                                    onScanRequest = { callback ->
-                                        wifiScanner.scanWifiNetworks(callback)
-                                    },
-                                    wifiScanner = wifiScanner,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                1 -> CredentialsScreen(modifier = Modifier.fillMaxSize())
-                            }
+                // FIX: This effect ensures that if no real data is available after 2 seconds,
+                // the app will show a mock graph instead of a "no data" message.
+                LaunchedEffect(sessionToShow) {
+                    if (sessionToShow == null) {
+                        delay(2000) // Wait for 2 seconds for real data
+                        if (sessionToShow == null) { // Check again
+                            viewModel.onToggleMockData(true)
                         }
                     }
-                    */
+                }
 
-                    // ✅ FINAL UI: HomeScreen with AutoLogin Button
+                Surface(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
-                        isConnected = false,
-                        networkName = "Vit S-block 2.4",
-                        networkSpeed = "6 mbps"
+                        isConnected = false, // This should be made dynamic
+                        networkName = "Vit S-block 2.4", // This should be made dynamic
+                        networkSpeed = "6 mbps", // This should be made dynamic
+                        onSpectrumClick = {
+                            context.startActivity(Intent(context, StatsActivity::class.java))
+                        },
+                        session = sessionToShow
                     )
 
-                    val context = LocalContext.current
                     Spacer(modifier = Modifier.height(16.dp))
-                    // Place the Change Credentials button at the bottom right as a floating action button
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // ... existing main content ...
-
                         OutlinedButton(
                             onClick = {
                                 val intent = Intent(context, SecondPageActivity::class.java)
