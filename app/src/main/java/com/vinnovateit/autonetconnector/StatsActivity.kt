@@ -1,6 +1,9 @@
-package com.vinnovateit.autonetconnector.screen.stats
+package com.vinnovateit.autonetconnector
 
 import android.app.Application
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +47,18 @@ import com.vinnovateit.autonetconnector.screen.stats.components.HistorySection
 import com.vinnovateit.autonetconnector.screen.stats.components.SessionCard
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+
+class StatsActivity : ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    setContent {
+      AutoNetConnectorTheme {
+        StatsScreen()
+      }
+    }
+  }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
