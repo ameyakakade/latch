@@ -2,7 +2,10 @@
 
 package com.vinnovateit.autonetconnector
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -22,19 +26,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
+import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
+import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
+import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
 import kotlinx.coroutines.launch
-import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner;
-import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier;
 
 // Define Satoshi font family
 val SatoshiFontFamily = FontFamily(
-    Font(R.font.satoshi_regular_bold, FontWeight.Normal),
-    Font(R.font.satoshi_regular_bold, FontWeight.Medium),
-    Font(R.font.satoshi_regular_bold, FontWeight.SemiBold),
-    Font(R.font.satoshi_regular_bold, FontWeight.Bold)
+    Font(R.font.satoshi_regular, FontWeight.Normal),
+    Font(R.font.satoshi_regular, FontWeight.Medium),
+    Font(R.font.satoshi_regular, FontWeight.SemiBold),
+    Font(R.font.satoshi_regular, FontWeight.Bold)
 )
 
 @Composable
@@ -42,14 +48,15 @@ fun HomeScreen(
     isConnected: Boolean = false,
     networkName: String = "",
     networkSpeed: String = "6 mbps",
-    onSpectrumClick: () -> Unit = {}
+    onSpectrumClick: () -> Unit = {},
+    session: SessionSummary?
 )
- {
-     val context = LocalContext.current
-     val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context).toString() }
-     val scope = rememberCoroutineScope()
-     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
-     Box(
+{
+    val context = LocalContext.current
+    val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context)?.toString() ?: "Not Connected" }
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1A237E)) // Deep blue background
@@ -224,19 +231,22 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Spectrum chart placeholder
+                    // FIX: Using a simple .clickable modifier now that the child graph is not scrollable.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(200.dp)
-                            .background(
-                                Color.Transparent,
-                                RoundedCornerShape(16.dp)
-                            )
-                            .padding(16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                try {
+                                    Log.d("HomeScreen", "Spectrum card tapped, navigating...")
+                                    onSpectrumClick()
+                                } catch (e: Exception) {
+                                    Log.e("HomeScreen", "Error during navigation", e)
+                                }
+                            }
                     ) {
-                        Column {
-                            // Chart header
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -249,38 +259,37 @@ fun HomeScreen(
                                     fontWeight = FontWeight.SemiBold,
                                     fontFamily = SatoshiFontFamily
                                 )
-                                IconButton(
-                                    onClick = onSpectrumClick,
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.ArrowForward,
-                                        contentDescription = "Expand",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
+                                Icon(
+                                    Icons.Default.ArrowForward,
+                                    contentDescription = "Expand",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // Chart area - placeholder for spectrum graph
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp)
-                                    .background(
-                                        Color.White.copy(alpha = 0.1f),
-                                        RoundedCornerShape(8.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Spectrum Graph Placeholder",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp,
-                                    fontFamily = SatoshiFontFamily
+                            if (session != null && session.history.isNotEmpty()) {
+                                HomeScreenGraph(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    rateHistory = session.history
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No data available for graph",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 14.sp,
+                                        fontFamily = SatoshiFontFamily
+                                    )
+                                }
                             }
                         }
                     }
@@ -354,7 +363,8 @@ fun HomeScreenPreview() {
         isConnected = false,
         networkName = "Vit S-block 2.4",
         networkSpeed = "6 mbps",
-        onSpectrumClick = { }
+        onSpectrumClick = { },
+        session = null
     )
 }
 
@@ -365,6 +375,7 @@ fun HomeScreenOnlinePreview() {
         isConnected = true,
         networkName = "Vit S-block 2.4",
         networkSpeed = "12 mbps",
-        onSpectrumClick = { }
+        onSpectrumClick = { },
+        session = null
     )
 }
