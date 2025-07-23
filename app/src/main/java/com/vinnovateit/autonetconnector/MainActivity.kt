@@ -23,6 +23,7 @@ import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.functionality.*
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlinx.coroutines.launch
+import androidx.compose.ui.Alignment
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.autonetconnector.functionality.StatsViewModel
 import com.vinnovateit.autonetconnector.functionality.StatsViewModelFactory
