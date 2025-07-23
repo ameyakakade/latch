@@ -2,10 +2,7 @@
 
 package com.vinnovateit.autonetconnector
 
-import android.content.Context
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,16 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -35,15 +28,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.coroutines.launch
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner;
 import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier;
-import kotlin.math.cos
-import kotlin.math.sin
 
 // Define Satoshi font family
 val SatoshiFontFamily = FontFamily(
-    Font(R.font.satoshi_regular, FontWeight.Normal),
-    Font(R.font.satoshi_regular, FontWeight.Medium),
-    Font(R.font.satoshi_regular, FontWeight.SemiBold),
-    Font(R.font.satoshi_regular, FontWeight.Bold)
+    Font(R.font.satoshi_regular_bold, FontWeight.Normal),
+    Font(R.font.satoshi_regular_bold, FontWeight.Medium),
+    Font(R.font.satoshi_regular_bold, FontWeight.SemiBold),
+    Font(R.font.satoshi_regular_bold, FontWeight.Bold)
 )
 
 @Composable
