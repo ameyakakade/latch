@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,11 +23,23 @@ import androidx.compose.ui.unit.sp
 class LandingPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            LandingPageScreen(onGetStarted = {
-                val intent = Intent(this, SecondPageActivity::class.java)
+
+        lifecycleScope.launch {
+            val db = com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase.getInstance(this@LandingPageActivity)
+            val existing = db.credentialDao().getCredential()
+            if (existing != null) {
+                // Credentials exist, go straight to MainActivity
+                val intent = Intent(this@LandingPageActivity, MainActivity::class.java)
                 startActivity(intent)
-            })
+                finish()
+            } else {
+                setContent {
+                    LandingPageScreen(onGetStarted = {
+                        val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
+                        startActivity(intent)
+                    })
+                }
+            }
         }
     }
 }
