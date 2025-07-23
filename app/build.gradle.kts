@@ -92,4 +92,7 @@ dependencies {
 
     // AppCompat (deduplicate)
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.compose.material3:material3:1.1.2")
+    implementation ("androidx.compose.material:material-icons-extended")
+
 }
