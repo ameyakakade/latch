@@ -37,15 +37,14 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             .fillMaxSize()
             .background(Color(0xFF0B1956))
     ) {
-        // Top right VinnovateIT
-        Text(
-            text = "VinnovateIT",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
+        // Top right VinnovateIT logo
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
+            contentDescription = "VinnovateIT Logo",
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 16.dp)
+                .padding(top = 16.dp, end = 20.dp)
+                .size(90.dp)
         )
         // Centered column
         Column(
