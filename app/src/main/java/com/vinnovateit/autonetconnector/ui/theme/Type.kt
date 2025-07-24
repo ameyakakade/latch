@@ -11,7 +11,7 @@ import com.vinnovateit.autonetconnector.R
 
 val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_light, FontWeight.Light, FontStyle.Normal),
-    Font(R.font.satoshi_regular, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.satoshi_bold, FontWeight.Normal, FontStyle.Normal),
     Font(R.font.satoshi_medium, FontWeight.Medium, FontStyle.Normal),
     Font(R.font.satoshi_bold, FontWeight.Bold, FontStyle.Normal)
 )
