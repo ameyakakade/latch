@@ -3,6 +3,7 @@ package com.vinnovateit.autonetconnector.screen.stats.components
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -123,7 +124,7 @@ fun SessionCard(
 
     MaterialTheme(colorScheme = CardLightColorScheme) {
         AnimatedContent(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            // Removed outer padding from here. It's now handled by the parent container.
             targetState = isGraphExpanded,
             transitionSpec = {
                 fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
@@ -188,6 +189,19 @@ internal fun ExpandedGraphCard(
     onDismiss: () -> Unit,
     scrollState: ScrollState
 ) {
+    // This effect triggers the auto-scroll animation when the card is expanded.
+    LaunchedEffect(scrollState.maxValue) {
+        if (scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(
+                scrollState.maxValue,
+                animationSpec = tween(
+                    durationMillis = (scrollState.maxValue * 10).toInt(), // Duration scales with graph width
+                    easing = LinearEasing
+                )
+            )
+        }
+    }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()

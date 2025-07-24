@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -96,32 +97,28 @@ fun StatsScreen(
           )
         },
         actions = {
-          // This Icon replaces the button and switch from the bottom bar.
           Icon(
             imageVector = Icons.Default.Refresh,
             contentDescription = "Reset Stats or Toggle Mock Data",
             modifier = Modifier
               .padding(end = 8.dp)
-              .clip(RoundedCornerShape(50)) // Makes the ripple effect circular
+              .clip(RoundedCornerShape(50))
               .combinedClickable(
                 onClick = {
-                  // Single tap shows the reset dialog.
                   if (!showMockData) {
                     showResetDialog = true
                   }
                 },
                 onLongClick = {
-                  // Long press toggles mock data.
                   haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                   viewModel.onToggleMockData(!showMockData)
                 }
               )
-              .padding(8.dp) // Adds padding for a larger touch target
+              .padding(8.dp)
           )
         }
       )
     },
-    // The bottom bar is now empty.
     bottomBar = {}
   ) { padding ->
     LazyColumn(
@@ -133,18 +130,19 @@ fun StatsScreen(
     ) {
       item {
         if (sessionToShow != null) {
-          SessionCard(
-            timeframe = currentTimeframe,
-            session = sessionToShow!!,
-            isLive = isLive
-          )
+          Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SessionCard(
+              timeframe = currentTimeframe,
+              session = sessionToShow!!,
+              isLive = isLive
+            )
+          }
         } else {
           NoDataCard("No Wi-Fi session data available.")
         }
       }
       item { HistorySection(history = historyToShow) }
 
-      // **THE FIX IS HERE:** Adds empty space at the bottom of the list.
       item {
         Spacer(modifier = Modifier.height(100.dp))
       }
