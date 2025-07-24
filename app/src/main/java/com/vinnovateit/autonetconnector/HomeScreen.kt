@@ -45,21 +45,19 @@ val SatoshiFontFamily = FontFamily(
 
 @Composable
 fun HomeScreen(
-    isConnected: Boolean = false,
-    networkName: String = "",
-    networkSpeed: String = "6 mbps",
-    onSpectrumClick: () -> Unit = {},
-    session: SessionSummary?
-)
-{
+    isConnected: Boolean,
+    networkSpeed: String,
+    onSpectrumClick: () -> Unit,
+    session: SessionSummary?,
+    ssid: String,
+    onConnectClick: () -> Unit
+) {
     val context = LocalContext.current
-    val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context)?.toString() ?: "Not Connected" }
-    val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A237E)) // Deep blue background
+            .background(Color(0xFF1A237E))
     ) {
         // Top hamburger menu
         Box(
@@ -67,9 +65,7 @@ fun HomeScreen(
                 .align(Alignment.TopEnd)
                 .padding(top = 24.dp, end = 24.dp)
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 repeat(3) {
                     Box(
                         modifier = Modifier
@@ -85,15 +81,12 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top white section - reduced weight from 0.6f to 0.45f
+            // White top section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.45f)
-                    .background(
-                        Color.White,
-                        RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-                    )
+                    .background(Color.White, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
             ) {
                 Column(
                     modifier = Modifier
@@ -101,73 +94,43 @@ fun HomeScreen(
                         .padding(horizontal = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(80.dp)) // Reduced from 120.dp
+                    Spacer(modifier = Modifier.height(80.dp))
 
-                    // Large power button with shadow
+                    // Power button
                     Button(
                         onClick = {
-                            status = "Running auto-login test..."
-                            scope.launch {
-                                LoginTestRunner.run(context.applicationContext)
-                                status = "Test finished. Check logcat for output."
-                            }
+                            status = "Authenticating..."
+                            onConnectClick()
                         },
                         modifier = Modifier
-                            .size(120.dp) // Reduced from 140.dp
-                            .graphicsLayer {
-                                clip = true
-                                shape = CircleShape
-                            }
+                            .size(120.dp)
+                            .graphicsLayer { clip = true; shape = CircleShape }
                             .drawBehind {
-                                // Shadow
-                                val shadowColor = Color.Black.copy(alpha = 0.3f)
-                                val radius = size.minDimension / 2
-                                drawCircle(
-                                    color = shadowColor,
-                                    radius = radius,
-                                    center = Offset(
-                                        x = size.width / 2 + 6.dp.toPx(),
-                                        y = size.height / 2 + 10.dp.toPx()
-                                    )
-                                )
+                                val shadow = Color.Black.copy(alpha = 0.3f)
+                                val r = size.minDimension / 2
+                                drawCircle(shadow, radius = r, center = Offset(size.width/2 + 6.dp.toPx(), size.height/2 + 10.dp.toPx()))
                             },
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1D6F)),
                         elevation = ButtonDefaults.buttonElevation(0.dp)
                     ) {
-                        Canvas(modifier = Modifier.size(56.dp)) { // Reduced from 64.dp
-                            val strokeWidth = 6.dp.toPx()
-                            val arcRadius = size.minDimension / 2.2f
-                            val arcTopLeft = Offset(
-                                (size.width - arcRadius * 2) / 2f,
-                                (size.height - arcRadius * 2) / 2f
-                            )
-
-                            // Inverted Arc (curves upward)
-                            drawArc(
-                                color = Color.White,
-                                startAngle = -135f,         // Inverted start
-                                sweepAngle = -270f,         // Sweep in negative direction
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                                size = Size(arcRadius * 2, arcRadius * 2),
-                                topLeft = arcTopLeft
-                            )
-
-                            // Line pointing downward from arc center
-                            val centerX = size.width / 2
-                            val centerY = size.height / 2
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(centerX, centerY - arcRadius * 1.2f),
-                                end = Offset(centerX, centerY - arcRadius * 0.6f),
-                                strokeWidth = strokeWidth,
-                                cap = StrokeCap.Round
-                            )
+                        Canvas(modifier = Modifier.size(56.dp)) {
+                            val stroke = 6.dp.toPx()
+                            val arcR = size.minDimension / 2.2f
+                            val topLeft = Offset((size.width - arcR*2)/2f, (size.height - arcR*2)/2f)
+                            drawArc(Color.White, startAngle = -135f, sweepAngle = -270f,
+                                useCenter = false, style = Stroke(width = stroke, cap = StrokeCap.Round),
+                                size = Size(arcR*2, arcR*2), topLeft = topLeft)
+                            val cx = size.width/2
+                            val cy = size.height/2
+                            drawLine(Color.White,
+                                start = Offset(cx, cy - arcR*1.2f),
+                                end   = Offset(cx, cy - arcR*0.6f),
+                                strokeWidth = stroke, cap = StrokeCap.Round)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp)) // Reduced from 32.dp
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Text(
                         text = status,
@@ -176,9 +139,8 @@ fun HomeScreen(
                         fontFamily = SatoshiFontFamily
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp)) // Added small spacer
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // Status text
                     Text(
                         text = if (isConnected) "You're Online" else "You're Offline",
                         color = Color(0xFF1A237E),
@@ -189,7 +151,7 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom blue section - increased weight from 0.4f to 0.55f
+            // Blue bottom section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -201,47 +163,27 @@ fun HomeScreen(
                         .fillMaxSize()
                         .padding(horizontal = 32.dp, vertical = 24.dp)
                 ) {
-                    // Ping button aligned to the right
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
+                    // Ping button
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         Button(
                             onClick = { /* Handle ping */ },
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
-                            ),
+                            modifier = Modifier.size(width = 120.dp, height = 48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                             shape = RoundedCornerShape(24.dp)
                         ) {
-                            Text(
-                                text = "Ping",
-                                color = Color(0xFF1A237E),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = SatoshiFontFamily
-                            )
+                            Text("Ping", color = Color(0xFF1A237E), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = SatoshiFontFamily)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Reduced from 24.dp
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Spectrum graph section
+                    // Spectrum graph
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp) // Reduced from 200.dp
+                            .height(160.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                try {
-                                    Log.d("HomeScreen", "Spectrum card tapped, navigating...")
-                                    onSpectrumClick()
-                                } catch (e: Exception) {
-                                    Log.e("HomeScreen", "Error during navigation", e)
-                                }
-                            }
+                            .clickable { onSpectrumClick() }
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(
@@ -249,83 +191,41 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "Spectrum",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = SatoshiFontFamily
-                                )
-                                Icon(
-                                    Icons.Default.ArrowForward,
-                                    contentDescription = "Expand",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Text("Spectrum", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = SatoshiFontFamily)
+                                Icon(Icons.Default.ArrowForward, contentDescription = "Expand", tint = Color.White, modifier = Modifier.size(20.dp))
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp)) // Reduced from 16.dp
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             if (session != null && session.history.isNotEmpty()) {
                                 HomeScreenGraph(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(96.dp), // Reduced from 120.dp
+                                    modifier = Modifier.fillMaxWidth().height(96.dp),
                                     rateHistory = session.history
                                 )
                             } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(96.dp), // Reduced from 120.dp
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No data available for graph",
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 14.sp,
-                                        fontFamily = SatoshiFontFamily
-                                    )
+                                Box(modifier = Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
+                                    Text("No data available for graph", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, fontFamily = SatoshiFontFamily)
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Added fixed spacer
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Bottom status bar - now has guaranteed space
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Status dot - changes color based on connection
+                    // Bottom status bar
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(
                                 modifier = Modifier
                                     .size(12.dp)
-                                    .background(
-                                        if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
-                                        CircleShape
-                                    )
+                                    .background(if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E), CircleShape)
                             )
 
-                            Text(
-                                text = resolvedNetworkName,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontFamily = SatoshiFontFamily
-                            )
+                            Text(text = ssid, color = Color.White, fontSize = 14.sp, fontFamily = SatoshiFontFamily)
 
                             Box(
                                 modifier = Modifier
-                                    .background(
-                                        if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
-                                        RoundedCornerShape(4.dp)
-                                    )
+                                    .background(if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E), RoundedCornerShape(4.dp))
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
@@ -352,15 +252,17 @@ fun HomeScreen(
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     HomeScreen(
         isConnected = false,
-        networkName = "Vit S-block 2.4",
         networkSpeed = "6 mbps",
         onSpectrumClick = { },
-        session = null
+        session = null,
+        ssid = "Not Connected",
+        onConnectClick = { }        // ← stub lambda for preview
     )
 }
 
@@ -369,9 +271,11 @@ fun HomeScreenPreview() {
 fun HomeScreenOnlinePreview() {
     HomeScreen(
         isConnected = true,
-        networkName = "Vit S-block 2.4",
         networkSpeed = "12 mbps",
         onSpectrumClick = { },
-        session = null
+        session = null,
+        ssid = "VIT-WiFi",
+        onConnectClick = { }        // ← stub lambda for preview
     )
 }
+
