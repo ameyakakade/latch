@@ -61,25 +61,6 @@ fun HomeScreen(
             .fillMaxSize()
             .background(Color(0xFF1A237E)) // Deep blue background
     ) {
-        // Top hamburger menu
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 24.dp, end = 24.dp)
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                repeat(3) {
-                    Box(
-                        modifier = Modifier
-                            .width(24.dp)
-                            .height(3.dp)
-                            .background(Color(0xFF1A237E), RoundedCornerShape(2.dp))
-                    )
-                }
-            }
-        }
 
         Column(
             modifier = Modifier.fillMaxSize(),
