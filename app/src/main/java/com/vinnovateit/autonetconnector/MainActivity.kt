@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         session = sessionToShow
                     )
 
-                    // Place the Change Credentials button at the top right
+                    // Place the Change Credentials button at the bottom center
                     Box(modifier = Modifier.fillMaxSize()) {
                         OutlinedButton(
                             onClick = {
@@ -93,8 +93,8 @@ class MainActivity : ComponentActivity() {
                                 context.startActivity(intent)
                             },
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 24.dp, end = 24.dp)
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 32.dp)
                         ) {
                             Text("Change Credentials")
                         }
