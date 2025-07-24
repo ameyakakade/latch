@@ -25,25 +25,31 @@ object WiFiMonitor {
                 Log.d("WiFiMonitor", "✅ Wi-Fi connected")
 
                 CoroutineScope(Dispatchers.IO).launch {
-                    // Bind process to Wi-Fi even if mobile data is active
-                    cm.bindProcessToNetwork(network)
+                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-                    // Retry to detect VIT Wi-Fi
-                    repeat(3) { attempt ->
-                        delay(2000)
-                        if (VITWiFiIdentifier.isConnectedToVITWiFi(context)) {
-                            Log.d("WiFiMonitor", "✅ VIT Wi-Fi detected. Running login.")
-                            LoginTestRunner.run(context)
-                            return@launch
-                        } else {
-                            Log.d("WiFiMonitor", "⏳ Attempt ${attempt + 1}: SSID not VIT.")
+                    // Bind process to WiFi
+                    cm.bindProcessToNetwork(network)
+                    Log.d("WiFiMonitor", "🔗 Bound process to VIT WiFi network for captive portal login.")
+
+                    try {
+                        repeat(3) { attempt ->
+                            delay(2000)
+                            if (VITWiFiIdentifier.isConnectedToVITWiFi(context)) {
+                                Log.d("WiFiMonitor", "✅ VIT Wi-Fi detected. Running login.")
+                                LoginTestRunner.run(context)
+                                return@launch
+                            } else {
+                                Log.d("WiFiMonitor", "⏳ Attempt ${attempt + 1}: SSID not VIT.")
+                            }
                         }
+                        Log.d("WiFiMonitor", "❌ Failed to detect VIT Wi-Fi after retries.")
+                    } finally {
+                        // Unbind AFTER login attempt
+                        cm.bindProcessToNetwork(null)
+                        Log.d("WiFiMonitor", "🔗 Unbound process from WiFi network.")
                     }
-                    Log.d("WiFiMonitor", "❌ Failed to detect VIT Wi-Fi after retries.")
                 }
             }
-
-            // Removed onLost override and scan logic
         })
     }
 }

@@ -85,11 +85,11 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Top white section
+            // Top white section - reduced weight from 0.6f to 0.45f
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.6f)
+                    .weight(0.45f)
                     .background(
                         Color.White,
                         RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
@@ -101,7 +101,7 @@ fun HomeScreen(
                         .padding(horizontal = 32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(120.dp))
+                    Spacer(modifier = Modifier.height(80.dp)) // Reduced from 120.dp
 
                     // Large power button with shadow
                     Button(
@@ -113,7 +113,7 @@ fun HomeScreen(
                             }
                         },
                         modifier = Modifier
-                            .size(140.dp)
+                            .size(120.dp) // Reduced from 140.dp
                             .graphicsLayer {
                                 clip = true
                                 shape = CircleShape
@@ -135,7 +135,7 @@ fun HomeScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1D6F)),
                         elevation = ButtonDefaults.buttonElevation(0.dp)
                     ) {
-                        Canvas(modifier = Modifier.size(64.dp)) {
+                        Canvas(modifier = Modifier.size(56.dp)) { // Reduced from 64.dp
                             val strokeWidth = 6.dp.toPx()
                             val arcRadius = size.minDimension / 2.2f
                             val arcTopLeft = Offset(
@@ -165,13 +165,9 @@ fun HomeScreen(
                                 cap = StrokeCap.Round
                             )
                         }
-
                     }
 
-
-
-
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(20.dp)) // Reduced from 32.dp
 
                     Text(
                         text = status,
@@ -179,6 +175,8 @@ fun HomeScreen(
                         fontSize = 14.sp,
                         fontFamily = SatoshiFontFamily
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp)) // Added small spacer
 
                     // Status text
                     Text(
@@ -191,18 +189,17 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom blue section
+            // Bottom blue section - increased weight from 0.4f to 0.55f
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f)
+                    .weight(0.55f)
                     .background(Color(0xFF1A237E))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 32.dp, vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 32.dp, vertical = 24.dp)
                 ) {
                     // Ping button aligned to the right
                     Row(
@@ -229,13 +226,13 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp)) // Reduced from 24.dp
 
-                    // FIX: Using a simple .clickable modifier now that the child graph is not scrollable.
+                    // Spectrum graph section
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
+                            .height(160.dp) // Reduced from 200.dp
                             .clip(RoundedCornerShape(16.dp))
                             .clickable {
                                 try {
@@ -267,20 +264,20 @@ fun HomeScreen(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp)) // Reduced from 16.dp
 
                             if (session != null && session.history.isNotEmpty()) {
                                 HomeScreenGraph(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(120.dp),
+                                        .height(96.dp), // Reduced from 120.dp
                                     rateHistory = session.history
                                 )
                             } else {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(120.dp),
+                                        .height(96.dp), // Reduced from 120.dp
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -294,9 +291,9 @@ fun HomeScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(16.dp)) // Added fixed spacer
 
-                    // Bottom status bar
+                    // Bottom status bar - now has guaranteed space
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -322,7 +319,6 @@ fun HomeScreen(
                                 fontSize = 14.sp,
                                 fontFamily = SatoshiFontFamily
                             )
-
 
                             Box(
                                 modifier = Modifier

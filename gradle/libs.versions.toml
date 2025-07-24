@@ -1,5 +1,5 @@
 [versions]
-agp = "8.6.0"
+agp = "8.11.1"
 androidxComposeBom = "2025.07.00"
 appcompatVersion = "1.7.1"
 composeBomVersion = "2024.05.00"
