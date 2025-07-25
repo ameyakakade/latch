@@ -5,13 +5,15 @@ package com.vinnovateit.autonetconnector
 import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,18 +31,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vinnovateit.autonetconnector.functionality.PingUtility
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
+import com.vinnovateit.autonetconnector.screen.stats.ui.Tag
 import kotlinx.coroutines.launch
 
 // Define Satoshi font family
 val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_regular, FontWeight.Normal),
-    Font(R.font.satoshi_regular, FontWeight.Medium),
-    Font(R.font.satoshi_regular, FontWeight.SemiBold),
-    Font(R.font.satoshi_regular, FontWeight.Bold)
+    Font(R.font.satoshi_medium, FontWeight.Medium),
+    Font(R.font.satoshi_bold, FontWeight.Bold)
 )
 
 @Composable
@@ -50,37 +53,23 @@ fun HomeScreen(
     networkSpeed: String = "6 mbps",
     onSpectrumClick: () -> Unit = {},
     session: SessionSummary?
-)
-{
+) {
     val context = LocalContext.current
     val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context)?.toString() ?: "Not Connected" }
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    var pingStatus by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        pingStatus = "Pinging..."
+        pingStatus = PingUtility.getPing()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1A237E)) // Deep blue background
     ) {
-        // Top hamburger menu
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 24.dp, end = 24.dp)
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                repeat(3) {
-                    Box(
-                        modifier = Modifier
-                            .width(24.dp)
-                            .height(3.dp)
-                            .background(Color(0xFF1A237E), RoundedCornerShape(2.dp))
-                    )
-                }
-            }
-        }
-
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -89,7 +78,7 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.6f)
+                    .weight(0.60325f)
                     .background(
                         Color.White,
                         RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
@@ -165,11 +154,7 @@ fun HomeScreen(
                                 cap = StrokeCap.Round
                             )
                         }
-
                     }
-
-
-
 
                     Spacer(modifier = Modifier.height(32.dp))
 
@@ -191,114 +176,96 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom blue section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f)
+                    .weight(0.39675f)
                     .background(Color(0xFF1A237E))
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp, vertical = 24.dp),
+                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Ping button aligned to the right
+                    // Ping Pill
+                    pingStatus?.let {
+                        Tag(
+                            text = it,
+                            color = Color.White,
+                            modifier = Modifier.padding(top = 20.dp),
+                            onClick = {
+                                scope.launch {
+                                    pingStatus = "Pinging..."
+                                    pingStatus = PingUtility.getPing()
+                                }
+                            }
+                        )
+                    }
+
+                    // Spectrum Title and Navigation
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { /* Handle ping */ },
+                        Text(
+                            text = "Spectrum",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = SatoshiFontFamily
+                        )
+                        Box(
                             modifier = Modifier
-                                .width(120.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(24.dp)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = onSpectrumClick),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Ping",
-                                color = Color(0xFF1A237E),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = SatoshiFontFamily
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Navigate to Spectrum",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
 
-                    // FIX: Using a simple .clickable modifier now that the child graph is not scrollable.
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                try {
-                                    Log.d("HomeScreen", "Spectrum card tapped, navigating...")
-                                    onSpectrumClick()
-                                } catch (e: Exception) {
-                                    Log.e("HomeScreen", "Error during navigation", e)
-                                }
-                            }
+                            .weight(1f)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        if (session != null && session.history.isNotEmpty()) {
+                            HomeScreenGraph(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                rateHistory = session.history,
+                                scrollState = rememberScrollState()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Spectrum",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    text = "No data available for graph",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 14.sp,
                                     fontFamily = SatoshiFontFamily
                                 )
-                                Icon(
-                                    Icons.Default.ArrowForward,
-                                    contentDescription = "Expand",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            if (session != null && session.history.isNotEmpty()) {
-                                HomeScreenGraph(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp),
-                                    rateHistory = session.history
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "No data available for graph",
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 14.sp,
-                                        fontFamily = SatoshiFontFamily
-                                    )
-                                }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
-
                     // Bottom status bar
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -322,7 +289,6 @@ fun HomeScreen(
                                 fontSize = 14.sp,
                                 fontFamily = SatoshiFontFamily
                             )
-
 
                             Box(
                                 modifier = Modifier
@@ -355,6 +321,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
