@@ -15,8 +15,29 @@ data class GraphData(
     val uploadPath: Path,
     val lineDownloadPath: Path,
     val lineUploadPath: Path,
-    val labels: List<Pair<String, Float>>
-)
+    val labels: List<Pair<String, Float>>,
+    private val startTime: Long,
+    private val duration: Long,
+    private val width: Float,
+    private val height: Float,
+    private val maxRate: Float,
+    private val graphHeightScale: Float
+) {
+    fun xAtTimestamp(timestamp: Long): Float {
+        val elapsedTime = (timestamp - startTime).toFloat()
+        return (elapsedTime / duration) * width
+    }
+
+    fun yAtRate(rate: Long): Float {
+        val usageFraction = (rate.toFloat() / maxRate).coerceIn(0f, 1f)
+        return height - (usageFraction * height * graphHeightScale)
+    }
+
+    fun timestampAtX(x: Float): Long {
+        return startTime + ((x / width) * duration).toLong()
+    }
+}
+
 
 fun formatBytes(bytes: Long): Pair<String, String> = when {
     bytes < 1_024L                    -> bytes.toString() to "B"
@@ -59,10 +80,10 @@ fun createGraphPaths(
     width: Float,
     height: Float,
     maxRate: Float,
-    graphHeightScale: Float
+    graphHeightScale: Float = 0.6f
 ): GraphData {
     if (history.size < 2) {
-        return GraphData(Path(), Path(), Path(), Path(), emptyList())
+        return GraphData(Path(), Path(), Path(), Path(), emptyList(), 0, 0, 0f, 0f, 0f, 0f)
     }
 
     val effectiveMaxRate = maxRate.coerceAtLeast(1f)
@@ -125,5 +146,5 @@ fun createGraphPaths(
         emptyList()
     }
 
-    return GraphData(fillDL, fillUL, lineDL, lineUL, labels)
+    return GraphData(fillDL, fillUL, lineDL, lineUL, labels, startTime, duration, width, height, effectiveMaxRate, graphHeightScale)
 }

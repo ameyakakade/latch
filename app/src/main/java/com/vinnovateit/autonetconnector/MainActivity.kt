@@ -38,7 +38,7 @@ import kotlinx.coroutines.delay
 class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
-    private lateinit var wifiStatusViewModel: WiFiStatusViewModel // <- make it field-scoped
+    private lateinit var wifiStatusViewModel: WiFiStatusViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,19 +77,18 @@ class MainActivity : ComponentActivity() {
 
                 val context = LocalContext.current
 
-                LaunchedEffect(sessionToShow) {
-                    if (sessionToShow == null) {
-                        delay(2000)
-                        statsViewModel.onToggleMockData(true)
-                    }
-                }
-
                 Surface(modifier = Modifier.fillMaxSize()) {
+                    val currentSpeedBytesPerSecond = (sessionToShow?.history?.lastOrNull()?.usage?.rxBytes ?: 0L) / 2
+                    val formattedSpeed = com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes(currentSpeedBytesPerSecond)
+                    val networkSpeedString = "${formattedSpeed.first} ${formattedSpeed.second}/s"
+
                     HomeScreen(
                         isConnected = isConnected,
-                        networkSpeed = "6 mbps",
+                        networkSpeed = networkSpeedString,
                         onSpectrumClick = {
-                            context.startActivity(Intent(context, StatsActivity::class.java))
+                            val intent = Intent(context, StatsActivity::class.java)
+                            intent.putExtra("CURRENT_SSID", ssid)
+                            context.startActivity(intent)
                         },
                         session = sessionToShow,
                         ssid = ssid,
@@ -138,4 +137,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

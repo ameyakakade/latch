@@ -5,7 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -35,9 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,11 +49,14 @@ import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class StatsActivity : ComponentActivity() {
+  private var currentSsid: String? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    currentSsid = intent.getStringExtra("CURRENT_SSID")
     setContent {
       AutoNetConnectorTheme {
-        StatsScreen()
+        StatsScreen(overrideSsid = currentSsid)
       }
     }
   }
@@ -67,17 +68,16 @@ fun StatsScreen(
   modifier: Modifier = Modifier,
   viewModel: StatsViewModel = viewModel(
     factory = StatsViewModelFactory(LocalContext.current.applicationContext as Application)
-  )
+  ),
+  overrideSsid: String?
 ) {
-  val showMockData by viewModel.showMockData.collectAsStateWithLifecycle()
   var showResetDialog by remember { mutableStateOf(false) }
 
   val sessionToShow by viewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by viewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by viewModel.liveStatus.collectAsStateWithLifecycle()
-  val haptic = LocalHapticFeedback.current
 
-  val isLive = remember(liveStatus, showMockData) { liveStatus != null && !showMockData }
+  val isLive = remember(liveStatus) { liveStatus != null }
   val currentTimeframe = if (isLive) Timeframe.LIVE else Timeframe.LAST
 
   Scaffold(
@@ -99,21 +99,11 @@ fun StatsScreen(
         actions = {
           Icon(
             imageVector = Icons.Default.Refresh,
-            contentDescription = "Reset Stats or Toggle Mock Data",
+            contentDescription = "Reset Stats",
             modifier = Modifier
               .padding(end = 8.dp)
               .clip(RoundedCornerShape(50))
-              .combinedClickable(
-                onClick = {
-                  if (!showMockData) {
-                    showResetDialog = true
-                  }
-                },
-                onLongClick = {
-                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                  viewModel.onToggleMockData(!showMockData)
-                }
-              )
+              .clickable { showResetDialog = true }
               .padding(8.dp)
           )
         }
@@ -134,7 +124,8 @@ fun StatsScreen(
             SessionCard(
               timeframe = currentTimeframe,
               session = sessionToShow!!,
-              isLive = isLive
+              isLive = isLive,
+              overrideSsid = overrideSsid
             )
           }
         } else {
