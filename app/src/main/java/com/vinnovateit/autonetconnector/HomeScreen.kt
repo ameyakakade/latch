@@ -2,18 +2,15 @@
 
 package com.vinnovateit.autonetconnector
 
-import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,8 +28,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
+import com.vinnovateit.autonetconnector.functionality.PingUtility
+import kotlinx.coroutines.launch
 
 // Define Satoshi font family
 val SatoshiFontFamily = FontFamily(
@@ -52,6 +52,16 @@ fun HomeScreen(
 ) {
   val context = LocalContext.current
   var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+  var pingResult by remember { mutableStateOf("Ping") }
+  val coroutineScope = rememberCoroutineScope()
+
+  // --- State Lifted Up for the Graph ---
+  var selectedDataPoint by remember { mutableStateOf<LiveDataPoint?>(null) }
+  var pausedRateHistory by remember { mutableStateOf<List<LiveDataPoint>?>(null) }
+
+  // Determine which history list to show: the frozen one or the live one.
+  val historyToShow = pausedRateHistory ?: session?.history ?: emptyList()
+
   Box(
     modifier = Modifier
       .fillMaxSize()
@@ -83,7 +93,7 @@ fun HomeScreen(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .weight(0.45f)
+          .weight(0.5325f)
           .background(Color.White, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
       ) {
         Column(
@@ -161,34 +171,58 @@ fun HomeScreen(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .weight(0.55f)
+          .weight(0.4675f)
           .background(Color(0xFF1A237E))
       ) {
+        // Content of the blue section
         Column(
           modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp, vertical = 24.dp)
+            .padding(vertical = 24.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
         ) {
           // Ping button
-          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 32.dp),
+            horizontalArrangement = Arrangement.End
+          ) {
             Button(
-              onClick = { /* Handle ping */ },
-              modifier = Modifier.size(width = 120.dp, height = 48.dp),
+              onClick = {
+                coroutineScope.launch {
+                  pingResult = "Pinging..."
+                  pingResult = PingUtility.getPing()
+                }
+              },
+              modifier = Modifier.size(width = 140.dp, height = 48.dp),
               colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-              shape = RoundedCornerShape(24.dp)
+              shape = RoundedCornerShape(24.dp),
+              contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
-              Text(
-                "Ping",
-                color = Color(0xFF1A237E),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                fontFamily = SatoshiFontFamily
-              )
+              Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+              ) {
+                Icon(
+                  imageVector = Icons.Default.Refresh,
+                  contentDescription = "Ping Refresh",
+                  tint = Color(0xFF1A237E),
+                  modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  pingResult,
+                  color = Color(0xFF1A237E),
+                  fontSize = 16.sp,
+                  fontWeight = FontWeight.SemiBold,
+                  fontFamily = SatoshiFontFamily
+                )
+              }
             }
           }
 
           Spacer(modifier = Modifier.height(16.dp))
-
 
           // Spectrum Title and Navigation
           Row(
@@ -207,7 +241,7 @@ fun HomeScreen(
             )
             Box(
               modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .clickable(onClick = onSpectrumClick),
               contentAlignment = Alignment.Center
@@ -221,23 +255,20 @@ fun HomeScreen(
             }
           }
 
-
           Box(
             modifier = Modifier
               .fillMaxWidth()
               .weight(1f)
+              .padding(bottom = 24.dp)
           ) {
             if (session != null && session.history.isNotEmpty()) {
               HomeScreenGraph(
-                modifier = Modifier
-                  .fillMaxSize(),
-                rateHistory = session.history,
-                scrollState = rememberScrollState()
+                modifier = Modifier.fillMaxSize(),
+                rateHistory = historyToShow,
               )
             } else {
               Box(
-                modifier = Modifier
-                  .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
               ) {
                 Text(
@@ -250,11 +281,13 @@ fun HomeScreen(
             }
           }
 
-          Spacer(modifier = Modifier.height(16.dp))
+          Spacer(modifier = Modifier.height(8.dp))
 
           // Bottom status bar
           Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 32.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
@@ -270,14 +303,12 @@ fun HomeScreen(
                     CircleShape
                   )
               )
-
               Text(
                 text = ssid,
                 color = Color.White,
                 fontSize = 14.sp,
                 fontFamily = SatoshiFontFamily
               )
-
               Box(
                 modifier = Modifier
                   .background(
@@ -295,7 +326,6 @@ fun HomeScreen(
                 )
               }
             }
-
             Text(
               text = networkSpeed,
               color = Color.White,
@@ -320,7 +350,7 @@ fun HomeScreenPreview() {
     onSpectrumClick = { },
     session = null,
     ssid = "Not Connected",
-    onConnectClick = { }        // ← stub lambda for preview
+    onConnectClick = { }
   )
 }
 
@@ -333,6 +363,6 @@ fun HomeScreenOnlinePreview() {
     onSpectrumClick = { },
     session = null,
     ssid = "VIT-WiFi",
-    onConnectClick = { }        // ← stub lambda for preview
+    onConnectClick = { }
   )
 }

@@ -107,7 +107,8 @@ private val CARD_CORNER_RADIUS = 24.dp
 fun SessionCard(
     timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean
+    isLive: Boolean,
+    overrideSsid: String? = null
 ) {
     var isGraphExpanded by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -146,7 +147,7 @@ fun SessionCard(
                     colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(Modifier.padding(24.dp)) {
-                        SessionCardHeader(timeframe, session, isLive)
+                        SessionCardHeader(timeframe, session, isLive, overrideSsid)
                         Spacer(Modifier.height(16.dp))
                         Row(
                             modifier = Modifier
@@ -390,7 +391,8 @@ private fun BoxScope.FadedEdge(alignment: Alignment) {
 fun SessionCardHeader(
     timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean
+    isLive: Boolean,
+    overrideSsid: String? = null
 ) {
     var duration by remember(session.startTimestamp) {
         mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
@@ -414,7 +416,7 @@ fun SessionCardHeader(
     ) {
         Column(Modifier.weight(1f, fill = false)) {
             Text(
-                text = session.ssid,
+                text = overrideSsid ?: session.ssid,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
