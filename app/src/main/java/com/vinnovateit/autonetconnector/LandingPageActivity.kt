@@ -67,7 +67,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             contentDescription = "VinnovateIT Logo",
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 20.dp)
+                .padding(end = 20.dp)
                 .size(120.dp)
         )
         // Centered column
@@ -90,7 +90,6 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                 contentDescription = "Latch Logo",
                 modifier = Modifier
                     .size(120.dp)
-                    .padding(bottom = 6.dp)
             )
             
             Text(
@@ -104,8 +103,8 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier
-                    .width(400.dp)
-                    .padding(top = 10.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(5.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,

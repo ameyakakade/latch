@@ -12,12 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -57,6 +59,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var loaded by remember { mutableStateOf(false) }
+    var regNoFocused by remember { mutableStateOf(false) }
+    var passwordFocused by remember { mutableStateOf(false) }
 
     // Load from DB
     LaunchedEffect(Unit) {
@@ -101,42 +105,72 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            OutlinedTextField(
+            TextField(
                 value = regNo,
                 onValueChange = { regNo = it },
-                label = { Text("Username") },
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text("Username") } } else null,
                 singleLine = true,
-                leadingIcon = {
+                trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_username),
                         contentDescription = "Username Icon"
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        regNoFocused = focusState.isFocused
+                    },
+                textStyle = TextStyle(
+                    color = Color(0xFFFAF3EB),
+                    fontSize = 18.sp
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color(0xFFFAF3EB),
+                    focusedIndicatorColor = Color.White
+                )
             )
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = if (password.isEmpty() && !passwordFocused) { { Text("Password") } } else null,
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
-                leadingIcon = {
+                trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_password),
                         contentDescription = "Password Icon"
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        passwordFocused = focusState.isFocused
+                    },
+                textStyle = TextStyle(
+                    color = Color(0xFFFAF3EB),
+                    fontSize = 18.sp
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color(0xFFFAF3EB),
+                    focusedIndicatorColor = Color.White
+                )
             )
-
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -156,7 +190,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         message = "Please enter User ID and Password"
                     }
                 },
-                modifier = Modifier.width(400.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 40.dp),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(5.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
@@ -165,6 +201,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             ) {
                 Text(
                     text = if (editMode) "Update Credentials" else "Save Credentials",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = OutfitFontFamily,
                 )
