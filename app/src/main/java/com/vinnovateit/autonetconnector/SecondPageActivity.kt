@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -25,6 +27,11 @@ import com.vinnovateit.autonetconnector.functionality2.storage.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
+
+// Define Outfit font family
+val OutfitFontFamily = FontFamily(
+    Font(R.font.outfit_regular, FontWeight.Normal),
+)
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,8 +83,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
         ) {
             Text(
                 text = "Let's Get Started",
-                fontSize = 36.sp,
+                fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
+                fontFamily = OutfitFontFamily,
                 color = Color(0xFFFAF3EB)
             )
 
@@ -85,9 +93,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             Text(
                 text = "Enter credentials",
-                fontSize = 20.sp,
+                fontSize = 30.sp,
                 color = Color(0xFFFAF3EB),
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontFamily = OutfitFontFamily
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -147,8 +156,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         message = "Please enter User ID and Password"
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                modifier = Modifier.width(400.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(5.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = Color(0xFF0B1956)
@@ -156,7 +165,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             ) {
                 Text(
                     text = if (editMode) "Update Credentials" else "Save Credentials",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = OutfitFontFamily,
                 )
             }
 
