@@ -12,19 +12,38 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.paint
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+
+// Define Outfit font family
+val OutfitFontFamily = FontFamily(
+    Font(R.font.outfit_regular, FontWeight.Normal),
+)
+
+// Define Satoshi font family
+val SatoshiRegularFontFamily = FontFamily(
+    Font(R.font.satoshi_regular, FontWeight.Normal),
+)
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +69,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var loaded by remember { mutableStateOf(false) }
+    var regNoFocused by remember { mutableStateOf(false) }
+    var passwordFocused by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     // Load from DB
     LaunchedEffect(Unit) {
@@ -67,67 +89,121 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(Color(0xFFFDF0D5))
+            .paint(
+                painter = painterResource(id = R.drawable.backgroundline),
+                contentScale = ContentScale.FillBounds
+            )
             .padding(24.dp)
     ) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-40).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Let's Get Started",
-                fontSize = 36.sp,
+                fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFFAF3EB)
+                fontFamily = OutfitFontFamily,
+                color = Color(0xFFC01221)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Enter credentials",
                 fontSize = 20.sp,
-                color = Color(0xFFFAF3EB),
-                fontWeight = FontWeight.Medium
+                color = Color(0xFFC01221),
+                fontWeight = FontWeight.Medium,
+                fontFamily = OutfitFontFamily
             )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            OutlinedTextField(
+            TextField(
                 value = regNo,
                 onValueChange = { regNo = it },
-                label = { Text("Username") },
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text("Registration Number", color = Color(0xFFC01221)) } } else null,
                 singleLine = true,
-                leadingIcon = {
+                trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_username),
-                        contentDescription = "Username Icon"
+                        contentDescription = "Username Icon",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221))
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        regNoFocused = focusState.isFocused
+                    },
+                textStyle = TextStyle(
+                    color = Color(0xFFC01221),
+                    fontSize = 18.sp,
+                    fontFamily = SatoshiRegularFontFamily
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color(0xFFC01221),
+                    focusedIndicatorColor = Color(0xFFC01221),
+                    selectionColors = TextSelectionColors(
+                        handleColor = Color(0xFFC01221),
+                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
+                    )
+                )
             )
-
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedTextField(
+            TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password") },
+                label = if (password.isEmpty() && !passwordFocused) { { Text("Password", color = Color(0xFFC01221)) } } else null,
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                leadingIcon = {
+                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_password),
-                        contentDescription = "Password Icon"
+                        contentDescription = "Password Icon",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221)),
+                        modifier = Modifier.clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { passwordVisible = !passwordVisible }
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        passwordFocused = focusState.isFocused
+                    },
+                textStyle = TextStyle(
+                    color = Color(0xFFC01221),
+                    fontSize = 18.sp,
+                    fontFamily = SatoshiRegularFontFamily
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                ),
+                colors = TextFieldDefaults.colors(
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color(0xFFC01221),
+                    focusedIndicatorColor = Color(0xFFC01221),
+                    selectionColors = TextSelectionColors(
+                        handleColor = Color(0xFFC01221),
+                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
+                    )
+                )
             )
-
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -147,16 +223,20 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         message = "Please enter User ID and Password"
                     }
                 },
-                modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 40.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = Color(0xFFC01221),
+                    contentColor = Color(0xFFFDF0D5)
                 )
             ) {
                 Text(
                     text = if (editMode) "Update Credentials" else "Save Credentials",
-                    fontWeight = FontWeight.Bold
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = OutfitFontFamily,
                 )
             }
 
