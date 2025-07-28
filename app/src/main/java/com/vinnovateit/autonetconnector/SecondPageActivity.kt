@@ -34,6 +34,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 // Define Outfit font family
 val OutfitFontFamily = FontFamily(
@@ -50,13 +52,15 @@ class SecondPageActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val editMode = intent.getBooleanExtra("editMode", false)
         setContent {
-            CredentialsScreen(
-                editMode = editMode,
-                onCredentialsSaved = {
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                }
-            )
+            AutoNetConnectorTheme {
+                CredentialsScreen(
+                    editMode = editMode,
+                    onCredentialsSaved = {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
+                    }
+                )
+            }
         }
     }
 }
@@ -89,7 +93,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFDF0D5))
+          .background(MaterialTheme.colorScheme.background)
             .paint(
                 painter = painterResource(id = R.drawable.backgroundline),
                 contentScale = ContentScale.FillBounds
@@ -107,7 +111,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = OutfitFontFamily,
-                color = Color(0xFFC01221)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -115,9 +119,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             Text(
                 text = "Enter credentials",
                 fontSize = 20.sp,
-                color = Color(0xFFC01221),
-                fontWeight = FontWeight.Medium,
-                fontFamily = OutfitFontFamily
+                fontFamily = OutfitFontFamily,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Medium
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -148,16 +152,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = androidx.compose.ui.text.input.ImeAction.Next
                 ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color(0xFFC01221),
-                    focusedIndicatorColor = Color(0xFFC01221),
-                    selectionColors = TextSelectionColors(
-                        handleColor = Color(0xFFC01221),
-                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
-                    )
-                )
+              colors = TextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                focusedContainerColor = MaterialTheme.colorScheme.background,
+                unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                cursorColor = MaterialTheme.colorScheme.onBackground,
+                focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+              ),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -193,16 +198,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     keyboardType = KeyboardType.Password,
                     imeAction = androidx.compose.ui.text.input.ImeAction.Done
                 ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color(0xFFC01221),
-                    focusedIndicatorColor = Color(0xFFC01221),
-                    selectionColors = TextSelectionColors(
-                        handleColor = Color(0xFFC01221),
-                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
-                    )
-                )
+              colors = TextFieldDefaults.colors(
+                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                focusedContainerColor = MaterialTheme.colorScheme.background,
+                unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                cursorColor = MaterialTheme.colorScheme.onBackground,
+                focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+              ),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -228,8 +234,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     .padding(horizontal = 40.dp),
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC01221),
-                    contentColor = Color(0xFFFDF0D5)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
@@ -242,7 +248,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             if (message.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = message, color = Color.Red)
+                Text(text = message, color = MaterialTheme.colorScheme.error)
             }
         }
     }

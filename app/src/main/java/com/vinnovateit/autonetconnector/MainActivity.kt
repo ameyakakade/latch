@@ -26,7 +26,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality.WifiScanner
-import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
+import com.vinnovateit.autonetconnector.functionality2.background.ForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.functionality.StatsViewModel
 import com.vinnovateit.autonetconnector.functionality.StatsViewModelFactory
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
         WiFiMonitor.startMonitoring(applicationContext)
 
         // Start foreground service
-        val serviceIntent = Intent(this, MyForegroundService::class.java)
+        val serviceIntent = Intent(this, ForegroundService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
         } else {
