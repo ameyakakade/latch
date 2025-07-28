@@ -44,12 +44,12 @@ object WifiStatsManager {
   private const val TAG = "WifiStatsManager"
   private const val PREFS_NAME = "wifi_stats_prefs"
   private const val KEY_SESSIONS = "session_summaries"
+  private const val KEY_LIVE_SESSION = "live_session_status" // Key for saving ongoing session
   private const val POLLING_INTERVAL_MS = 2000L
   private val gson = Gson()
 
   private var applicationContext: Application? = null
   private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-  private var networkCallback: ConnectivityManager.NetworkCallback? = null
   private var loggingJob: Job? = null
   private val mainHandler = Handler(Looper.getMainLooper())
   private val isInitialized = AtomicBoolean(false)
@@ -74,24 +74,8 @@ object WifiStatsManager {
   fun initialize(context: Application) {
     if (isInitialized.getAndSet(true)) return
     applicationContext = context
-    showToast("WifiStatsManager Initialized")
     loadSessions()
-    registerNetworkCallback()
-  }
-
-  fun cleanup() {
-    if (!isInitialized.getAndSet(false)) return
-    val context = applicationContext ?: return
-    showToast("WifiStatsManager Cleaned Up")
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-    try {
-      networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
-    } catch (e: Exception) {
-      Log.e(TAG, "Error unregistering network callback", e)
-    }
-    managerScope.cancel()
-    applicationContext = null
-    networkCallback = null
+    resumeLiveSession() // Attempt to resume a session on initialization
   }
 
   fun clearHistory() {
@@ -104,56 +88,8 @@ object WifiStatsManager {
     }
   }
 
-  private fun registerNetworkCallback() {
-    val context = applicationContext ?: return
-    if (networkCallback != null) return
-
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val networkRequest = NetworkRequest.Builder()
-      .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-      .build()
-
-    networkCallback = object : ConnectivityManager.NetworkCallback() {
-      @RequiresApi(Build.VERSION_CODES.Q)
-      override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
-        super.onCapabilitiesChanged(network, networkCapabilities)
-        val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-
-        if (hasInternet && loggingJob?.isActive != true) {
-          Log.d(TAG, "Internet connection validated. Starting stats.")
-          showToast("Internet Connected")
-          startLogging(network) // Pass the network object
-        } else if (!hasInternet && loggingJob?.isActive == true) {
-          Log.d(TAG, "Internet connection lost. Stopping stats.")
-          showToast("Internet Disconnected")
-          stopLogging()
-        }
-      }
-
-      override fun onLost(network: Network) {
-        super.onLost(network)
-        Log.d(TAG, "Wi-Fi network lost completely. Stopping stats.")
-        showToast("Wi-Fi network lost")
-        if (loggingJob?.isActive == true) {
-          stopLogging()
-        }
-      }
-    }
-    connectivityManager.registerNetworkCallback(networkRequest, networkCallback!!)
-    showToast("Network callback registered")
-  }
-
-  @RequiresApi(Build.VERSION_CODES.Q)
-  private fun startLogging(network: Network) { // Accept network object
+  fun startLogging(ssid: String) {
     if (loggingJob?.isActive == true) return
-
-    val context = applicationContext ?: return
-    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-    // New, non-deprecated way to get SSID
-    val capabilities = connectivityManager.getNetworkCapabilities(network)
-    val wifiInfo = capabilities?.transportInfo as? WifiInfo
-    val ssid = wifiInfo?.ssid?.replace("\"", "") ?: "Unknown Wi-Fi"
 
     showToast("Starting stats for: $ssid")
     startRxBytes = TrafficStats.getTotalRxBytes()
@@ -166,12 +102,14 @@ object WifiStatsManager {
     }
 
     val startTime = System.currentTimeMillis()
-
-    _liveStatus.value = LiveConnectionStatus(
+    val initialStatus = LiveConnectionStatus(
       startTimeMillis = startTime,
       ssid = ssid,
       liveData = listOf(LiveDataPoint(startTime, DataUsage(0, 0)))
     )
+    _liveStatus.value = initialStatus
+    saveLiveSessionState(initialStatus) // Save initial state immediately
+
     var lastTimestampRxBytes = startRxBytes
     var lastTimestampTxBytes = startTxBytes
 
@@ -197,7 +135,7 @@ object WifiStatsManager {
     }
   }
 
-  private fun stopLogging() {
+  fun stopLogging() {
     loggingJob?.cancel()
     loggingJob = null
     val session = _liveStatus.value ?: return
@@ -210,6 +148,7 @@ object WifiStatsManager {
 
     if (duration < 5000 && totalRx < 1024 && totalTx < 1024) {
       Log.d(TAG, "Trivial session discarded for SSID: ${session.ssid}")
+      clearLiveSessionState()
       return
     }
 
@@ -225,6 +164,7 @@ object WifiStatsManager {
     _sessionSummaries.value = updatedHistory
     _lastSession.value = summary
     saveSessions()
+    clearLiveSessionState() // Clear the live session state after saving the final summary
   }
 
   private fun saveSessions() {
@@ -255,6 +195,51 @@ object WifiStatsManager {
         }
       } catch (e: Exception) {
         Log.e(TAG, "Failed to load sessions", e)
+      }
+    }
+  }
+
+  private fun saveLiveSessionState(liveStatus: LiveConnectionStatus) {
+    val context = applicationContext ?: return
+    managerScope.launch {
+      try {
+        val json = gson.toJson(liveStatus)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+          putString(KEY_LIVE_SESSION, json)
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to save live session state", e)
+      }
+    }
+  }
+
+  private fun resumeLiveSession() {
+    val context = applicationContext ?: return
+    managerScope.launch {
+      try {
+        val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_LIVE_SESSION, null)
+        if (json != null) {
+          val type = object : TypeToken<LiveConnectionStatus>() {}.type
+          val resumedSession: LiveConnectionStatus = gson.fromJson(json, type)
+          Log.d(TAG, "Resuming interrupted session for ${resumedSession.ssid}")
+          showToast("Resuming session for ${resumedSession.ssid}")
+
+          // To resume, we essentially just restart the logging with the original start time
+          // A more complex implementation could try to reconstruct the lost data points
+          startLogging(resumedSession.ssid)
+        }
+      } catch (e: Exception) {
+        Log.e(TAG, "Failed to resume live session", e)
+      }
+    }
+  }
+
+
+  private fun clearLiveSessionState() {
+    val context = applicationContext ?: return
+    managerScope.launch {
+      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+        remove(KEY_LIVE_SESSION)
       }
     }
   }

@@ -1,56 +1,47 @@
 package com.vinnovateit.autonetconnector.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    background = Color(0xFF0B1957),
-    tertiary = Pink80
+private val AppColorScheme = lightColorScheme(
+    primary = ContainerPrimary,
+    onPrimary = TextOnInteractive,
+    background = AppBackground,
+    onBackground = TextPrimary,
+    surface = SurfaceContainer,
+    onSurface = TextPrimary,
+    onSurfaceVariant = TextPrimary.copy(alpha = 0.7f),
+    outline = TextPrimary.copy(alpha = 0.5f),
+    error = TextPrimary,
+    surfaceContainer = SurfaceContainer,
+    primaryContainer = ContainerPrimary,
+    onPrimaryContainer = TextOnInteractive
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    background = Color(0xFF03A9F4),
-    tertiary = Pink40
+/**
+ * Custom color extension for Tooltip container color.
+ */
+val ColorScheme.tooltipContainer: Color
+    @Composable
+    get() = TooltipContainer
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+/**
+ * Custom color extension for Tooltip content color.
+ */
+val ColorScheme.tooltipContent: Color
+    @Composable
+    get() = TooltipContent
+
 
 @Composable
 fun AutoNetConnectorTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // The darkTheme parameter is removed to enforce a single theme.
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = AppColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

@@ -3,7 +3,6 @@ package com.vinnovateit.autonetconnector.screen.stats.components
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -36,12 +35,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -79,24 +77,14 @@ import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDurationDynamic
-import com.vinnovateit.autonetconnector.ui.theme.Pink40
-import com.vinnovateit.autonetconnector.ui.theme.Purple40
-import com.vinnovateit.autonetconnector.ui.theme.PurpleGrey40
+import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
+import com.vinnovateit.autonetconnector.ui.theme.LastTag
+import com.vinnovateit.autonetconnector.ui.theme.LiveTag
 import kotlinx.coroutines.delay
 import kotlin.math.atan2
 import kotlin.math.floor
 import kotlin.math.max
-
-private val CardLightColorScheme = lightColorScheme(
-    surface = Color.White,
-    onSurface = Color.Black,
-    surfaceVariant = Color(0xFFF1F1F1),
-    onSurfaceVariant = Color(0xFF49454F),
-    background = Color.White,
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-)
 
 private const val GRAPH_HEIGHT_SCALE = 0.7f
 private val POINT_SPACING = 6.dp
@@ -116,65 +104,68 @@ fun SessionCard(
 
     LaunchedEffect(isGraphExpanded, lastInteractionTime) {
         if (isGraphExpanded) {
-            delay(5000)
-            if (System.currentTimeMillis() - lastInteractionTime >= 5000) {
-                isGraphExpanded = false
+            while (true) {
+                delay(1000)
+                if (System.currentTimeMillis() - lastInteractionTime >= 5000) {
+                    isGraphExpanded = false
+                }
             }
         }
     }
 
-    MaterialTheme(colorScheme = CardLightColorScheme) {
-        AnimatedContent(
-            // Removed outer padding from here. It's now handled by the parent container.
-            targetState = isGraphExpanded,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-            },
-            label = "SessionCardAnimation"
-        ) { expanded ->
-            if (expanded) {
-                ExpandedGraphCard(
-                    rateHistory = session.history,
-                    onInteraction = { lastInteractionTime = System.currentTimeMillis() },
-                    onDismiss = { isGraphExpanded = false },
-                    scrollState = scrollState
-                )
-            } else {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(Modifier.padding(24.dp)) {
-                        SessionCardHeader(timeframe, session, isLive, overrideSsid)
-                        Spacer(Modifier.height(16.dp))
-                        Row(
+    AnimatedContent(
+        targetState = isGraphExpanded,
+        transitionSpec = {
+            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+        },
+        label = "SessionCardAnimation"
+    ) { expanded ->
+        if (expanded) {
+            ExpandedGraphCard(
+                rateHistory = session.history,
+                onInteraction = { lastInteractionTime = System.currentTimeMillis() },
+                onDismiss = { isGraphExpanded = false },
+                scrollState = scrollState,
+                lastInteractionTime = lastInteractionTime
+            )
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(CARD_CORNER_RADIUS),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    SessionCardHeader(timeframe, session, isLive, overrideSsid)
+                    Spacer(Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        DataUsageCircle(
+                            modifier = Modifier.size(80.dp),
+                            dataUsage = session.totalData
+                        )
+                        Spacer(Modifier.width(24.dp))
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable {
+                                    isGraphExpanded = true
+                                    lastInteractionTime = System.currentTimeMillis()
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
-                            DataUsageCircle(
-                                modifier = Modifier.size(80.dp),
-                                dataUsage = session.totalData
+                            SessionRateGraph(
+                                modifier = Modifier.fillMaxSize(),
+                                rateHistory = session.history.takeLast(60),
+                                isInteractive = false
                             )
-                            Spacer(Modifier.width(24.dp))
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clickable { isGraphExpanded = true },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                SessionRateGraph(
-                                    modifier = Modifier.fillMaxSize(),
-                                    rateHistory = session.history.takeLast(60),
-                                    isInteractive = false
-                                )
-                                FadedEdge(alignment = Alignment.CenterStart)
-                                FadedEdge(alignment = Alignment.CenterEnd)
-                            }
+                            FadedEdge(alignment = Alignment.CenterStart)
+                            FadedEdge(alignment = Alignment.CenterEnd)
                         }
                     }
                 }
@@ -184,26 +175,14 @@ fun SessionCard(
 }
 
 @Composable
-internal fun ExpandedGraphCard(
+private fun ExpandedGraphCard(
     rateHistory: List<LiveDataPoint>,
     onInteraction: () -> Unit,
     onDismiss: () -> Unit,
-    scrollState: ScrollState
+    scrollState: ScrollState,
+    lastInteractionTime: Long
 ) {
-    // This effect triggers the auto-scroll animation when the card is expanded.
-    LaunchedEffect(scrollState.maxValue) {
-        if (scrollState.maxValue > 0) {
-            scrollState.animateScrollTo(
-                scrollState.maxValue,
-                animationSpec = tween(
-                    durationMillis = (scrollState.maxValue * 10).toInt(), // Duration scales with graph width
-                    easing = LinearEasing
-                )
-            )
-        }
-    }
-
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)
@@ -214,14 +193,15 @@ internal fun ExpandedGraphCard(
             ),
         elevation = CardDefaults.cardElevation(8.dp),
         shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         SessionRateGraph(
             modifier = Modifier.fillMaxSize(),
             rateHistory = rateHistory,
             isInteractive = true,
             scrollState = scrollState,
-            onInteraction = onInteraction
+            onInteraction = onInteraction,
+            lastInteractionTime = lastInteractionTime
         )
     }
 }
@@ -233,31 +213,34 @@ private fun SessionRateGraph(
     rateHistory: List<LiveDataPoint>,
     isInteractive: Boolean,
     scrollState: ScrollState = rememberScrollState(),
-    onInteraction: () -> Unit = {}
+    onInteraction: () -> Unit = {},
+    lastInteractionTime: Long = System.currentTimeMillis()
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     val density = LocalDensity.current
     val haptic = LocalHapticFeedback.current
     var zoomLevel by remember { mutableFloatStateOf(1f) }
 
-    val hapticFeedbackTrigger by remember {
-        derivedStateOf {
-            floor(zoomLevel / 0.5f)
-        }
+    var isYAxisVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(lastInteractionTime) {
+        isYAxisVisible = true
+        delay(5000)
+        isYAxisVisible = false
     }
+    val yAxisAlpha by animateFloatAsState(
+        targetValue = if (isYAxisVisible) 1f else 0f,
+        animationSpec = tween(500),
+        label = "YAxisAlpha"
+    )
 
+    val hapticFeedbackTrigger by remember { derivedStateOf { floor(zoomLevel / 0.5f) } }
     LaunchedEffect(hapticFeedbackTrigger) {
         if (zoomLevel > 1f && zoomLevel < 10f) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
 
-    val boundaryHapticTrigger by remember {
-        derivedStateOf {
-            zoomLevel == 1f || zoomLevel == 10f
-        }
-    }
-
+    val boundaryHapticTrigger by remember { derivedStateOf { zoomLevel == 1f || zoomLevel == 10f } }
     LaunchedEffect(boundaryHapticTrigger) {
         if (boundaryHapticTrigger) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -280,17 +263,20 @@ private fun SessionRateGraph(
     ) {
         val visibleMaxSpeedData by remember(rateHistory, scrollState.value, scale) {
             derivedStateOf {
-                if (!isInteractive || rateHistory.isEmpty()) {
+                if (rateHistory.isEmpty()) {
+                    0L to true
+                } else if (!isInteractive) {
                     val maxRx = rateHistory.maxOfOrNull { it.usage.rxBytes } ?: 0L
                     val maxTx = rateHistory.maxOfOrNull { it.usage.txBytes } ?: 0L
                     max(maxRx, maxTx) to (maxRx >= maxTx)
                 } else {
                     val pointWidthPx = with(density) { (POINT_SPACING * scale).toPx() }
                     val viewportWidthPx = with(density) { maxWidth.toPx() }
-                    val startPointIndex = (scrollState.value / pointWidthPx).toInt().coerceAtMost(rateHistory.size - 1)
-                    val visiblePointsCount = (viewportWidthPx / pointWidthPx).toInt() + 2
+                    val startPointIndex = (scrollState.value / pointWidthPx).toInt().coerceIn(0, rateHistory.size - 1)
+                    val visiblePointsCount = (viewportWidthPx / pointWidthPx).toInt().coerceAtLeast(2)
                     val endPointIndex = (startPointIndex + visiblePointsCount).coerceAtMost(rateHistory.size)
-                    val sublist = rateHistory.subList(startPointIndex, endPointIndex)
+                    val sublist = if (startPointIndex < endPointIndex) rateHistory.subList(startPointIndex, endPointIndex) else emptyList()
+
                     val maxRx = sublist.maxOfOrNull { it.usage.rxBytes } ?: 0L
                     val maxTx = sublist.maxOfOrNull { it.usage.txBytes } ?: 0L
                     max(maxRx, maxTx) to (maxRx >= maxTx)
@@ -314,9 +300,7 @@ private fun SessionRateGraph(
             }
         }
 
-        val dlColor = Color(0xFF0089D0)
-        val ulColor = Color(0xFFFFA500)
-        val axisColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(0.5f)
+        val axisColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
 
         Box(
             modifier = Modifier
@@ -328,13 +312,13 @@ private fun SessionRateGraph(
                 val axisAreaHeight = if (isInteractive) AXIS_LABEL_HEIGHT.toPx() else 0f
                 val graphAreaHeight = size.height - axisAreaHeight
 
-                val dlBrush = Brush.verticalGradient(listOf(dlColor.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
-                val ulBrush = Brush.verticalGradient(listOf(ulColor.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
+                val dlBrush = Brush.verticalGradient(listOf(GraphDownload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
+                val ulBrush = Brush.verticalGradient(listOf(GraphUpload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
 
                 drawPath(graphData.downloadPath, brush = dlBrush)
                 drawPath(graphData.uploadPath, brush = ulBrush)
-                drawPath(graphData.lineDownloadPath, dlColor, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-                drawPath(graphData.lineUploadPath, ulColor, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(graphData.lineDownloadPath, GraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(graphData.lineUploadPath, GraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
 
                 if (isInteractive) {
                     val axisY = graphAreaHeight
@@ -342,8 +326,9 @@ private fun SessionRateGraph(
                         color = axisColor.toArgb()
                         textAlign = Paint.Align.CENTER
                         textSize = 10.sp.toPx()
+                        alpha = (yAxisAlpha * 255).toInt()
                     }
-                    drawLine(axisColor, Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
+                    drawLine(axisColor.copy(alpha = yAxisAlpha), Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
 
                     val labelMinSpacing = 70.dp.toPx()
                     val maxLabels = (size.width / labelMinSpacing).toInt().coerceAtLeast(2)
@@ -359,7 +344,7 @@ private fun SessionRateGraph(
 
         if (isInteractive && maxSpeed > 0) {
             val (value, unit) = formatBytes(maxSpeed)
-            val tagColor = if (isDownloadMax) dlColor else ulColor
+            val tagColor = if (isDownloadMax) GraphDownload else GraphUpload
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -371,9 +356,10 @@ private fun SessionRateGraph(
     }
 }
 
+
 @Composable
 private fun BoxScope.FadedEdge(alignment: Alignment) {
-    val colors = listOf(MaterialTheme.colorScheme.surface, Color.Transparent)
+    val colors = listOf(MaterialTheme.colorScheme.primary, Color.Transparent)
     Box(
         modifier = Modifier
             .fillMaxHeight()
@@ -392,7 +378,7 @@ fun SessionCardHeader(
     timeframe: Timeframe,
     session: SessionSummary,
     isLive: Boolean,
-    overrideSsid: String? = null
+    overrideSsid: String?
 ) {
     var duration by remember(session.startTimestamp) {
         mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
@@ -420,17 +406,18 @@ fun SessionCardHeader(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Text(
                 text = formatDurationDynamic(duration),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
             )
         }
         Tag(
-            text = timeframe.name,
-            color = if (timeframe == Timeframe.LIVE) Color.Red else Color.Gray
+            text = if (isLive) "LIVE" else "LAST",
+            color = if (isLive) LiveTag else LastTag
         )
     }
 }
@@ -456,9 +443,6 @@ fun DataUsageCircle(
         label = "DownloadFraction"
     )
 
-    val dlColor = Color(0xFF0089D0)
-    val ulColor = Color(0xFFFFA500)
-
     Box(
         modifier = modifier.pointerInput(Unit) {
             detectTapGestures { tap ->
@@ -472,8 +456,8 @@ fun DataUsageCircle(
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 10.dp.toPx()
-            drawArc(color = ulColor, -90f, 360f, useCenter = false, style = Stroke(stroke))
-            drawArc(dlColor, -90f, downloadFraction * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(color = GraphUpload, -90f, 360f, useCenter = false, style = Stroke(stroke))
+            drawArc(GraphDownload, -90f, downloadFraction * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round))
         }
 
         val (valueStr, unitStr) = remember(dataUsage, displayMode) {
@@ -492,17 +476,26 @@ fun DataUsageCircle(
                 else -> null
             }
             val tint = when (mode) {
-                DisplayMode.DOWNLOAD -> dlColor
-                DisplayMode.UPLOAD -> ulColor
-                else -> MaterialTheme.colorScheme.onSurface
+                DisplayMode.DOWNLOAD -> GraphDownload
+                DisplayMode.UPLOAD -> GraphUpload
+                else -> MaterialTheme.colorScheme.onPrimary
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (icon != null) {
                     Icon(icon, mode.name, tint = tint, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.height(2.dp))
                 }
-                Text(valueStr, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(unitStr, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = .7f))
+                Text(
+                    valueStr,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Text(
+                    unitStr,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                )
             }
         }
     }

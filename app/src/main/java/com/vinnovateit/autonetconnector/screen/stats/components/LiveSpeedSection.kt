@@ -6,29 +6,56 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipState
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBitsPerSecond
 import com.vinnovateit.autonetconnector.ui.theme.DownloadReportButton
 import com.vinnovateit.autonetconnector.ui.theme.TextOnDanger
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiveSpeedSection(session: SessionSummary?) {
   val latestDataPoint = session?.history?.lastOrNull()
-
-  // The polling interval is 2 seconds, so we divide by 2 to get bytes/sec
   val downloadBps = latestDataPoint?.usage?.rxBytes ?: 0L
   val uploadBps = latestDataPoint?.usage?.txBytes ?: 0L
+  val density = LocalDensity.current
 
   Column(
     modifier = Modifier
@@ -38,21 +65,38 @@ fun LiveSpeedSection(session: SessionSummary?) {
     verticalArrangement = Arrangement.spacedBy(24.dp)
   ) {
     // Download Report Button
-    Button(
-      onClick = { /* TODO: Implement report generation logic */ },
-      shape = RoundedCornerShape(12.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = DownloadReportButton),
-      modifier = Modifier
-        .fillMaxWidth()
-        .height(50.dp)
+    TooltipBox(
+      positionProvider = object : PopupPositionProvider {
+        override fun calculatePosition(
+          anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize
+        ): IntOffset {
+          return IntOffset(
+            x = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2,
+            y = anchorBounds.bottom + with(density) { 4.dp.roundToPx() }
+          )
+        }
+      },
+      tooltip = {
+        PlainTooltip { Text("Download a CSV report of the session") }
+      },
+      state = remember { TooltipState() }
     ) {
-      Icon(
-        imageVector = Icons.Default.Download,
-        contentDescription = "Download Report",
-        tint = TextOnDanger
-      )
-      Spacer(modifier = Modifier.width(8.dp))
-      Text("Download report", color = TextOnDanger, fontWeight = FontWeight.Bold)
+      Button(
+        onClick = { /* TODO: Implement report generation logic */ },
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.buttonColors(containerColor = DownloadReportButton),
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(50.dp)
+      ) {
+        Icon(
+          imageVector = Icons.Default.Download,
+          contentDescription = "Download Report",
+          tint = TextOnDanger
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Download report", color = TextOnDanger, fontWeight = FontWeight.Bold)
+      }
     }
 
     // Live Speeds
@@ -64,7 +108,7 @@ fun LiveSpeedSection(session: SessionSummary?) {
       SpeedIndicator(label = "Download", bytesPerSecond = downloadBps)
       VerticalDivider(
         modifier = Modifier
-          .height(80.dp) // Give the divider a fixed height
+          .height(80.dp)
           .width(1.dp),
         color = MaterialTheme.colorScheme.outline
       )

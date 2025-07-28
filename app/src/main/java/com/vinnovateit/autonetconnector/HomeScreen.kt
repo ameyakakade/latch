@@ -32,6 +32,10 @@ import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
 import com.vinnovateit.autonetconnector.functionality.PingUtility
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.ShadowColor
+import com.vinnovateit.autonetconnector.ui.theme.StatusConnected
+import com.vinnovateit.autonetconnector.ui.theme.StatusDisconnected
 import kotlinx.coroutines.launch
 
 // Define Satoshi font family
@@ -56,16 +60,14 @@ fun HomeScreen(
   val coroutineScope = rememberCoroutineScope()
 
   // --- State Lifted Up for the Graph ---
-  var selectedDataPoint by remember { mutableStateOf<LiveDataPoint?>(null) }
-  var pausedRateHistory by remember { mutableStateOf<List<LiveDataPoint>?>(null) }
+  val historyToShow = session?.history ?: emptyList()
+  val historyForHomeScreen = historyToShow.takeLast(150) // Take last 5 minutes (150 points at 2s interval)
 
-  // Determine which history list to show: the frozen one or the live one.
-  val historyToShow = pausedRateHistory ?: session?.history ?: emptyList()
 
   Box(
     modifier = Modifier
       .fillMaxSize()
-      .background(Color(0xFF1A237E))
+      .background(MaterialTheme.colorScheme.background)
   ) {
     // Top hamburger menu
     Box(
@@ -79,7 +81,7 @@ fun HomeScreen(
             modifier = Modifier
               .width(24.dp)
               .height(3.dp)
-              .background(Color(0xFF1A237E), RoundedCornerShape(2.dp))
+              .background(MaterialTheme.colorScheme.background, RoundedCornerShape(2.dp))
           )
         }
       }
@@ -94,7 +96,7 @@ fun HomeScreen(
         modifier = Modifier
           .fillMaxWidth()
           .weight(0.5325f)
-          .background(Color.White, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+          .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
       ) {
         Column(
           modifier = Modifier
@@ -114,31 +116,32 @@ fun HomeScreen(
               .size(120.dp)
               .graphicsLayer { clip = true; shape = CircleShape }
               .drawBehind {
-                val shadow = Color.Black.copy(alpha = 0.3f)
                 val r = size.minDimension / 2
                 drawCircle(
-                  shadow,
+                  ShadowColor,
                   radius = r,
                   center = Offset(size.width / 2 + 6.dp.toPx(), size.height / 2 + 10.dp.toPx())
                 )
               },
             shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1D6F)),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onSurface),
             elevation = ButtonDefaults.buttonElevation(0.dp)
           ) {
+            // Hoist the color outside the Canvas
+            val powerIconColor = MaterialTheme.colorScheme.surface
             Canvas(modifier = Modifier.size(56.dp)) {
               val stroke = 6.dp.toPx()
               val arcR = size.minDimension / 2.2f
               val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
               drawArc(
-                Color.White, startAngle = -135f, sweepAngle = -270f,
+                color = powerIconColor, startAngle = -135f, sweepAngle = -270f,
                 useCenter = false, style = Stroke(width = stroke, cap = StrokeCap.Round),
                 size = Size(arcR * 2, arcR * 2), topLeft = topLeft
               )
               val cx = size.width / 2
               val cy = size.height / 2
               drawLine(
-                Color.White,
+                color = powerIconColor,
                 start = Offset(cx, cy - arcR * 1.2f),
                 end = Offset(cx, cy - arcR * 0.6f),
                 strokeWidth = stroke, cap = StrokeCap.Round
@@ -150,7 +153,7 @@ fun HomeScreen(
 
           Text(
             text = status,
-            color = Color(0xFF1A237E),
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 14.sp,
             fontFamily = SatoshiFontFamily
           )
@@ -159,7 +162,7 @@ fun HomeScreen(
 
           Text(
             text = if (isConnected) "You're Online" else "You're Offline",
-            color = Color(0xFF1A237E),
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 28.sp,
             fontWeight = FontWeight.SemiBold,
             fontFamily = SatoshiFontFamily
@@ -172,7 +175,7 @@ fun HomeScreen(
         modifier = Modifier
           .fillMaxWidth()
           .weight(0.4675f)
-          .background(Color(0xFF1A237E))
+          .background(MaterialTheme.colorScheme.background)
       ) {
         // Content of the blue section
         Column(
@@ -196,7 +199,7 @@ fun HomeScreen(
                 }
               },
               modifier = Modifier.size(width = 140.dp, height = 48.dp),
-              colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+              colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
               shape = RoundedCornerShape(24.dp),
               contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
             ) {
@@ -207,13 +210,13 @@ fun HomeScreen(
                 Icon(
                   imageVector = Icons.Default.Refresh,
                   contentDescription = "Ping Refresh",
-                  tint = Color(0xFF1A237E),
+                  tint = MaterialTheme.colorScheme.onSurface,
                   modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                   pingResult,
-                  color = Color(0xFF1A237E),
+                  color = MaterialTheme.colorScheme.onSurface,
                   fontSize = 16.sp,
                   fontWeight = FontWeight.SemiBold,
                   fontFamily = SatoshiFontFamily
@@ -228,13 +231,13 @@ fun HomeScreen(
           Row(
             modifier = Modifier
               .fillMaxWidth()
-              .padding(horizontal = 32.dp, vertical = 8.dp),
+              .padding(horizontal = 32.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
           ) {
             Text(
               text = "Spectrum",
-              color = Color.White,
+              color = MaterialTheme.colorScheme.onBackground,
               fontSize = 18.sp,
               fontWeight = FontWeight.SemiBold,
               fontFamily = SatoshiFontFamily
@@ -249,7 +252,7 @@ fun HomeScreen(
               Icon(
                 Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = "Navigate to Spectrum",
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.size(24.dp)
               )
             }
@@ -258,13 +261,13 @@ fun HomeScreen(
           Box(
             modifier = Modifier
               .fillMaxWidth()
-              .weight(1f)
+              .weight(0.8f)
               .padding(bottom = 24.dp)
           ) {
             if (session != null && session.history.isNotEmpty()) {
               HomeScreenGraph(
                 modifier = Modifier.fillMaxSize(),
-                rateHistory = historyToShow,
+                rateHistory = historyForHomeScreen,
               )
             } else {
               Box(
@@ -273,7 +276,7 @@ fun HomeScreen(
               ) {
                 Text(
                   text = "No data available for graph",
-                  color = Color.White.copy(alpha = 0.7f),
+                  color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                   fontSize = 14.sp,
                   fontFamily = SatoshiFontFamily
                 )
@@ -299,27 +302,27 @@ fun HomeScreen(
                 modifier = Modifier
                   .size(12.dp)
                   .background(
-                    if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
+                    if (isConnected) StatusConnected else StatusDisconnected,
                     CircleShape
                   )
               )
               Text(
                 text = ssid,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 14.sp,
                 fontFamily = SatoshiFontFamily
               )
               Box(
                 modifier = Modifier
                   .background(
-                    if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
+                    if (isConnected) StatusConnected else StatusDisconnected,
                     RoundedCornerShape(4.dp)
                   )
                   .padding(horizontal = 8.dp, vertical = 2.dp)
               ) {
                 Text(
                   text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                  color = Color.White,
+                  color = MaterialTheme.colorScheme.onBackground,
                   fontSize = 10.sp,
                   fontWeight = FontWeight.Bold,
                   fontFamily = SatoshiFontFamily
@@ -328,7 +331,7 @@ fun HomeScreen(
             }
             Text(
               text = networkSpeed,
-              color = Color.White,
+              color = MaterialTheme.colorScheme.onBackground,
               fontSize = 16.sp,
               fontWeight = FontWeight.Medium,
               fontFamily = SatoshiFontFamily
@@ -344,25 +347,29 @@ fun HomeScreen(
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-  HomeScreen(
-    isConnected = false,
-    networkSpeed = "6 mbps",
-    onSpectrumClick = { },
-    session = null,
-    ssid = "Not Connected",
-    onConnectClick = { }
-  )
+  AutoNetConnectorTheme() {
+    HomeScreen(
+      isConnected = false,
+      networkSpeed = "6 mbps",
+      onSpectrumClick = { },
+      session = null,
+      ssid = "Not Connected",
+      onConnectClick = { }
+    )
+  }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenOnlinePreview() {
-  HomeScreen(
-    isConnected = true,
-    networkSpeed = "12 mbps",
-    onSpectrumClick = { },
-    session = null,
-    ssid = "VIT-WiFi",
-    onConnectClick = { }
-  )
+  AutoNetConnectorTheme() {
+    HomeScreen(
+      isConnected = true,
+      networkSpeed = "12 mbps",
+      onSpectrumClick = { },
+      session = null,
+      ssid = "VIT-WiFi",
+      onConnectClick = { }
+    )
+  }
 }
