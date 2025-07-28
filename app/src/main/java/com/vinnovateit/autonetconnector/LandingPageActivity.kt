@@ -17,8 +17,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+// Define Inter font family
+val InterFontFamily = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Bold),
+)
+val satoshiFont = FontFamily(
+    Font(R.font.satoshi_bold, FontWeight.Bold),
+)
 
 class LandingPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,48 +59,58 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(Color(0xFFFDF0D5))
     ) {
-        // Top right VinnovateIT logo
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
-            contentDescription = "VinnovateIT Logo",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 16.dp, end = 20.dp)
-                .size(90.dp)
-        )
         // Centered column
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .offset(y = (-40).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Welcome back",
-                color = Color.White,
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 24.dp)
+
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.latchlogo),
+                contentDescription = "Latch Logo",
+                modifier = Modifier
+                    .size(120.dp)
+            )
+            // Latch logo
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = R.drawable.latch),
+                contentDescription = "Latch Logo",
+                modifier = Modifier
+                    .size(120.dp)
             )
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier
                     .width(300.dp)
-                    .padding(top = 30.dp),
-                shape = RoundedCornerShape(24.dp),
+                    .padding(horizontal = 32.dp),
+                shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = Color(0xFFC01221),
+                    contentColor = Color(0xFFFDF0D5)
                 )
             ) {
                 Text(
                     text = "Get Started",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = satoshiFont
                 )
             }
         }
+        
+        // Bottom center VinnovateIT logo
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
+            contentDescription = "VinnovateIT Logo",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 20.dp)
+                .size(120.dp)
+        )
     }
 } 
