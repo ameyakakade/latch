@@ -1,5 +1,6 @@
 package com.vinnovateit.autonetconnector
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
@@ -16,21 +17,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,17 +39,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.compose.ui.window.PopupPositionProvider
+import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality.StatsViewModel
@@ -58,78 +56,8 @@ import com.vinnovateit.autonetconnector.screen.stats.components.HistorySection
 import com.vinnovateit.autonetconnector.screen.stats.components.LiveSpeedSection
 import com.vinnovateit.autonetconnector.screen.stats.components.SessionCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
+import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-
-//================================================================================
-// Reusable Tooltip Composable (Final Corrected Version)
-//================================================================================
-
-/**
- * A simple, reliable PopupPositionProvider that ALWAYS places the tooltip
- * below the anchor, adjusting horizontally to stay on screen.
- */
-val SimpleBelowTooltipPositionProvider = object : PopupPositionProvider {
-  override fun calculatePosition(
-    anchorBounds: IntRect,
-    windowSize: IntSize,
-    layoutDirection: LayoutDirection,
-    popupContentSize: IntSize
-  ): IntOffset {
-    // Define margins directly in pixels.
-    val screenEdgeMargin = 24 // ~8.dp
-    val verticalMargin = 12   // ~4.dp
-
-    // Calculate the centered horizontal position of the tooltip.
-    val centeredX = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
-
-    // Force the Y position to be below the anchor, adding the margin.
-    val y = anchorBounds.bottom + verticalMargin
-
-    // Adjust the X position to stay within the screen bounds.
-    val x = centeredX.coerceIn(
-      minimumValue = screenEdgeMargin,
-      maximumValue = windowSize.width - popupContentSize.width - screenEdgeMargin
-    )
-
-    return IntOffset(x, y)
-  }
-}
-
-/**
- * A wrapper around Material3's TooltipBox that reliably positions the tooltip
- * below the anchor content.
- *
- * @param tooltipText The simple text to be displayed inside the tooltip.
- * @param modifier The modifier to be applied to the TooltipBox.
- * @param content The composable that the tooltip will be anchored to.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TooltipHint(
-  tooltipText: String,
-  modifier: Modifier = Modifier,
-  content: @Composable () -> Unit
-) {
-  val tooltipState = rememberTooltipState()
-
-  TooltipBox(
-    positionProvider = SimpleBelowTooltipPositionProvider,
-    tooltip = {
-      PlainTooltip {
-        Text(tooltipText)
-      }
-    },
-    state = tooltipState,
-    modifier = modifier
-  ) {
-    content()
-  }
-}
-
-
-//================================================================================
-// StatsActivity Implementation
-//================================================================================
 
 class StatsActivity : ComponentActivity() {
   private var currentSsid: String? = null
@@ -145,6 +73,7 @@ class StatsActivity : ComponentActivity() {
   }
 }
 
+@SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun StatsScreen(
@@ -166,6 +95,12 @@ fun StatsScreen(
 
   val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
+  fun Color.darker(percent: Float): Color {
+    return Color(
+      ColorUtils.blendARGB(this.toArgb(), Color.Black.toArgb(), percent)
+    )
+  }
+
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     containerColor = MaterialTheme.colorScheme.background,
@@ -173,7 +108,7 @@ fun StatsScreen(
       LargeTopAppBar(
         colors = TopAppBarDefaults.largeTopAppBarColors(
           containerColor = MaterialTheme.colorScheme.background,
-          scrolledContainerColor = MaterialTheme.colorScheme.background,
+          scrolledContainerColor = MaterialTheme.colorScheme.background.darker(0.07f), // Darker color on collapse
           titleContentColor = MaterialTheme.colorScheme.onBackground,
           actionIconContentColor = MaterialTheme.colorScheme.onBackground,
           navigationIconContentColor = MaterialTheme.colorScheme.onBackground
@@ -191,12 +126,20 @@ fun StatsScreen(
           )
         },
         navigationIcon = {
-          TooltipHint(tooltipText = "Go back") {
-            IconButton(onClick = { context.finish() }) {
-              Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back"
-              )
+          Box(modifier = Modifier.padding(start = 8.dp)) {
+            TooltipHint(tooltipText = "Go back") {
+              FilledIconButton(
+                onClick = { context.finish() },
+                colors = IconButtonDefaults.filledIconButtonColors(
+                  containerColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f),
+                  contentColor = MaterialTheme.colorScheme.onBackground
+                )
+              ) {
+                Icon(
+                  imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                  contentDescription = "Back"
+                )
+              }
             }
           }
         },
