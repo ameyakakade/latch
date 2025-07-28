@@ -15,7 +15,7 @@ import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifie
 import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import kotlinx.coroutines.*
 
-class MyForegroundService : Service() {
+class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
