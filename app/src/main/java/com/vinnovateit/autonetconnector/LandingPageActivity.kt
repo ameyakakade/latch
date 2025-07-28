@@ -4,21 +4,24 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import kotlinx.coroutines.launch
 
 class LandingPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,10 +37,12 @@ class LandingPageActivity : ComponentActivity() {
                 finish()
             } else {
                 setContent {
-                    LandingPageScreen(onGetStarted = {
-                        val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
-                        startActivity(intent)
-                    })
+                    AutoNetConnectorTheme {
+                        LandingPageScreen(onGetStarted = {
+                            val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
+                            startActivity(intent)
+                        })
+                    }
                 }
             }
         }
@@ -49,18 +54,16 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top right VinnovateIT logo
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
+        Image(
+            painter = painterResource(id = R.drawable.vinnovate),
             contentDescription = "VinnovateIT Logo",
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = 16.dp, end = 20.dp)
                 .size(90.dp)
         )
-        // Centered column
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -69,7 +72,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
         ) {
             Text(
                 text = "Welcome back",
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 24.dp)
@@ -81,8 +84,8 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                     .padding(top = 30.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
@@ -93,4 +96,4 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             }
         }
     }
-} 
+}
