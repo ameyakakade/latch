@@ -1,9 +1,9 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+
 
 package com.vinnovateit.autonetconnector
 
-import android.content.Context
-import android.util.Log
+
+import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -18,271 +18,292 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.Image
+
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality.SessionSummary
-import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
-import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
-import kotlinx.coroutines.launch
 
-// Define Satoshi font family
 val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_regular, FontWeight.Normal),
     Font(R.font.satoshi_regular, FontWeight.Medium),
     Font(R.font.satoshi_regular, FontWeight.SemiBold),
-    Font(R.font.satoshi_regular, FontWeight.Bold)
+    Font(R.font.satoshi_bold, FontWeight.Bold)
 )
+
+
+
+val SakingFontFamily = FontFamily(
+    Font(R.font.saking_regular, FontWeight.Normal)
+)
+
+
+
 
 @Composable
 fun HomeScreen(
-    isConnected: Boolean = false,
-    networkName: String = "",
-    networkSpeed: String = "6 mbps",
-    onSpectrumClick: () -> Unit = {},
-    session: SessionSummary?
-)
-{
+    isConnected: Boolean,
+    networkSpeed: String,
+    onSpectrumClick: () -> Unit,
+    session: SessionSummary?,
+    ssid: String,
+    onConnectClick: () -> Unit,
+) {
     val context = LocalContext.current
-    val resolvedNetworkName = remember { VITWiFiIdentifier.getCurrentSSID(context)?.toString() ?: "Not Connected" }
-    val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
+    var showMenu by remember { mutableStateOf(false) }
+
+
+
+    val density = context.resources.displayMetrics.density
+
+    val widthDp = (406.4951171875f / density).dp
+    val heightDp = (531f / density).dp
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A237E)) // Deep blue background
+            .background(Color(0xFFFDF0D5))
     ) {
-        // Top hamburger menu
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 24.dp, end = 24.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            // Beige top section
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.6f)
+                    .background(Color(0xFFFDF0D5))
             ) {
-                repeat(3) {
+                // Background pattern
+                Image(
+                    painter = painterResource(id = R.drawable.latch_background_home),
+                    contentDescription = "Background Pattern",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 49.dp, start = 23.dp, end = 23.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Logo
+                    Icon(
+                        painter = painterResource(id = R.drawable.latch_logo),
+                        contentDescription = "LATCH Logo",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .size(width = 49.33.dp, height = 36.dp)
+                    )
+
+                    // LATCH Text centered
                     Box(
                         modifier = Modifier
-                            .width(24.dp)
-                            .height(3.dp)
-                            .background(Color(0xFF1A237E), RoundedCornerShape(2.dp))
-                    )
-                }
-            }
-        }
+                            .height(36.dp)
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "LATCH",
+                            color = Color(0xFFC01221),
+                            fontSize = 28.97.sp,
+                            fontFamily = SakingFontFamily,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = (28.97 * 0.02).sp,
+                            lineHeight = (28.97 * 1.0).sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Top white section - reduced weight from 0.6f to 0.45f
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(0.45f)
-                    .background(
-                        Color.White,
-                        RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(80.dp)) // Reduced from 120.dp
-
-                    // Large power button with shadow
-                    Button(
-                        onClick = {
-                            status = "Running auto-login test..."
-                            scope.launch {
-                                LoginTestRunner.run(context.applicationContext)
-                                status = "Test finished. Check logcat for output."
-                            }
-                        },
+                    // Hamburger Menu
+                    Box(
                         modifier = Modifier
-                            .size(120.dp) // Reduced from 140.dp
-                            .graphicsLayer {
-                                clip = true
-                                shape = CircleShape
-                            }
-                            .drawBehind {
-                                // Shadow
-                                val shadowColor = Color.Black.copy(alpha = 0.3f)
-                                val radius = size.minDimension / 2
-                                drawCircle(
-                                    color = shadowColor,
-                                    radius = radius,
-                                    center = Offset(
-                                        x = size.width / 2 + 6.dp.toPx(),
-                                        y = size.height / 2 + 10.dp.toPx()
-                                    )
-                                )
-                            },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0A1D6F)),
-                        elevation = ButtonDefaults.buttonElevation(0.dp)
+                            .size(width = 27.dp, height = 24.dp)
+                            .clickable { showMenu = !showMenu }
                     ) {
-                        Canvas(modifier = Modifier.size(56.dp)) { // Reduced from 64.dp
-                            val strokeWidth = 6.dp.toPx()
-                            val arcRadius = size.minDimension / 2.2f
-                            val arcTopLeft = Offset(
-                                (size.width - arcRadius * 2) / 2f,
-                                (size.height - arcRadius * 2) / 2f
-                            )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 0.dp)
+                        ) {
+                            repeat(3) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(20.dp)
+                                        .height(2.8.dp)
+                                        .background(Color(0xFFC01221))
+                                )
+                            }
+                        }
 
-                            // Inverted Arc (curves upward)
-                            drawArc(
-                                color = Color.White,
-                                startAngle = -135f,         // Inverted start
-                                sweepAngle = -270f,         // Sweep in negative direction
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                                size = Size(arcRadius * 2, arcRadius * 2),
-                                topLeft = arcTopLeft
-                            )
-
-                            // Line pointing downward from arc center
-                            val centerX = size.width / 2
-                            val centerY = size.height / 2
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(centerX, centerY - arcRadius * 1.2f),
-                                end = Offset(centerX, centerY - arcRadius * 0.6f),
-                                strokeWidth = strokeWidth,
-                                cap = StrokeCap.Round
+                        // Dropdown Menu
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier
+                                .background(Color.White, shape = RoundedCornerShape(8.dp))
+                                .padding(vertical = 4.dp)
+                                .width(200.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Change Credentials") },
+                                onClick = {
+                                    showMenu = false
+                                    val intent = Intent(context, SecondPageActivity::class.java)
+                                    intent.putExtra("editMode", true)
+                                    context.startActivity(intent)
+                                }
                             )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(20.dp)) // Reduced from 32.dp
+
+                // Connection status and speed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp)
+                        .padding(top = 200.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = ssid,
+                            color = Color(0xFFC01221),
+                            fontSize = 16.sp,
+                            fontFamily = SatoshiFontFamily,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                    }
 
                     Text(
-                        text = status,
-                        color = Color(0xFF1A237E),
-                        fontSize = 14.sp,
-                        fontFamily = SatoshiFontFamily
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp)) // Added small spacer
-
-                    // Status text
-                    Text(
-                        text = if (isConnected) "You're Online" else "You're Offline",
-                        color = Color(0xFF1A237E),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = networkSpeed,
+                        color = Color(0xFFC01221),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
                         fontFamily = SatoshiFontFamily
                     )
                 }
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+                    .padding(top = 170.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically)
+                {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                if (isConnected) Color(0xFFC01221) else Color(0xFFE53E3E),
+                                RoundedCornerShape(4.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SatoshiFontFamily
+                        )
+                    }
+                }
             }
 
-            // Bottom blue section - increased weight from 0.4f to 0.55f
+            // Red bottom section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.55f)
-                    .background(Color(0xFF1A237E))
+                    .height(260.dp)
             ) {
+                Image(
+                    painter = painterResource(id = R.drawable.home_red_bg),
+                    contentDescription = "Red Background",
+                    modifier = Modifier
+                        .width(widthDp)
+                        .scale(2.7f)
+                        .offset(y = (-35).dp)
+                        .height(heightDp)
+                        .align(Alignment.BottomCenter),
+                    contentScale = ContentScale.FillBounds
+                )
+
+
+
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 32.dp, vertical = 24.dp)
+                        .padding(horizontal = 32.dp, vertical = 0.dp)
                 ) {
-                    // Ping button aligned to the right
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            onClick = { /* Handle ping */ },
-                            modifier = Modifier
-                                .width(120.dp)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        ) {
-                            Text(
-                                text = "Ping",
-                                color = Color(0xFF1A237E),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                fontFamily = SatoshiFontFamily
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.height(0.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp)) // Reduced from 24.dp
-
-                    // Spectrum graph section
+                    // Spectrum graph
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp) // Reduced from 200.dp
+                            .height(200.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .clickable {
-                                try {
-                                    Log.d("HomeScreen", "Spectrum card tapped, navigating...")
-                                    onSpectrumClick()
-                                } catch (e: Exception) {
-                                    Log.e("HomeScreen", "Error during navigation", e)
-                                }
-                            }
+                            .background(Color(0xFFFDF0D5))
+                            .clickable { onSpectrumClick() }
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier
+                            .padding(16.dp)
+                            ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                horizontalArrangement = Arrangement.End,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "Spectrum",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFamily = SatoshiFontFamily
-                                )
                                 Icon(
                                     Icons.Default.ArrowForward,
                                     contentDescription = "Expand",
-                                    tint = Color.White,
+                                    tint = Color(0xFFC01221),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp)) // Reduced from 16.dp
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             if (session != null && session.history.isNotEmpty()) {
                                 HomeScreenGraph(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(96.dp), // Reduced from 120.dp
+                                    modifier = Modifier.fillMaxWidth().height(140.dp),
                                     rateHistory = session.history
                                 )
                             } else {
                                 Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(96.dp), // Reduced from 120.dp
+                                    modifier = Modifier.fillMaxWidth().height(140.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "No data available for graph",
-                                        color = Color.White.copy(alpha = 0.7f),
+                                        "No data available for graph",
+                                        color = Color(0xFFC01221).copy(alpha = 0.7f),
                                         fontSize = 14.sp,
                                         fontFamily = SatoshiFontFamily
                                     )
@@ -290,65 +311,76 @@ fun HomeScreen(
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp)) // Added fixed spacer
-
-                    // Bottom status bar - now has guaranteed space
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Status dot - changes color based on connection
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(
-                                        if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
-                                        CircleShape
-                                    )
-                            )
-
-                            Text(
-                                text = resolvedNetworkName,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontFamily = SatoshiFontFamily
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        if (isConnected) Color(0xFF4CAF50) else Color(0xFFE53E3E),
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = SatoshiFontFamily
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = networkSpeed,
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = SatoshiFontFamily
-                        )
-                    }
                 }
             }
         }
+
+        // Power button
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-7).dp)
+                .size(210.dp)
+                .drawBehind {
+                    val shadowColor = Color.Black.copy(alpha = 0.7f)
+                    val radius = size.minDimension / 2
+
+                    val paint = Paint().asFrameworkPaint().apply {
+                        isAntiAlias = true
+                        color = shadowColor.toArgb()
+                        maskFilter = android.graphics.BlurMaskFilter(20f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                    }
+
+                    drawContext.canvas.nativeCanvas.drawCircle(
+                        center.x,
+                        center.y + 20f,
+                        radius,
+                        paint
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Button(
+                onClick = {
+                    status = "Authenticating..."
+                    onConnectClick()
+                },
+                modifier = Modifier
+                    .size(210.dp)
+                    .clip(CircleShape),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC01221)),
+                elevation = ButtonDefaults.buttonElevation(0.dp)
+            ) {
+                Canvas(modifier = Modifier.size(66.dp)) {
+                    val stroke = 7.dp.toPx()
+                    val arcR = size.minDimension / 2.2f
+                    val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
+
+                    drawArc(
+                        Color.White,
+                        startAngle = -135f,
+                        sweepAngle = -270f,
+                        useCenter = false,
+                        style = Stroke(width = stroke, cap = StrokeCap.Round),
+                        size = Size(arcR * 2, arcR * 2),
+                        topLeft = topLeft
+                    )
+
+                    val cx = size.width / 2
+                    val cy = size.height / 2
+                    drawLine(
+                        Color.White,
+                        start = Offset(cx, cy - arcR * 1.2f),
+                        end = Offset(cx, cy - arcR * 0.6f),
+                        strokeWidth = stroke,
+                        cap = StrokeCap.Round
+                    )
+                }
+            }
+        }
+
+
     }
 }
 
@@ -357,10 +389,11 @@ fun HomeScreen(
 fun HomeScreenPreview() {
     HomeScreen(
         isConnected = false,
-        networkName = "Vit S-block 2.4",
         networkSpeed = "6 mbps",
         onSpectrumClick = { },
-        session = null
+        session = null,
+        ssid = "AndroidWifi",
+        onConnectClick = { }
     )
 }
 
@@ -369,9 +402,10 @@ fun HomeScreenPreview() {
 fun HomeScreenOnlinePreview() {
     HomeScreen(
         isConnected = true,
-        networkName = "Vit S-block 2.4",
-        networkSpeed = "12 mbps",
+        networkSpeed = "6 mbps",
         onSpectrumClick = { },
-        session = null
+        session = null,
+        ssid = "Vit S-block 2.4",
+        onConnectClick = { }
     )
 }

@@ -73,7 +73,6 @@
             android:name=".functionality2.background.MyForegroundService"
             android:foregroundServiceType="connectedDevice"
             android:exported="false" />
-        <activity android:name=".NewPageActivity" />
 
     </application>
 </manifest>

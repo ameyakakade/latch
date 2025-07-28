@@ -85,20 +85,20 @@ class MainActivity : ComponentActivity() {
                     )
 
                     // Place the Change Credentials button at the top right
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(context, SecondPageActivity::class.java)
-                                intent.putExtra("editMode", true)
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(top = 24.dp, end = 24.dp)
-                        ) {
-                            Text("Change Credentials")
-                        }
-                    }
+//                    Box(modifier = Modifier.fillMaxSize()) {
+//                        OutlinedButton(
+//                            onClick = {
+//                                val intent = Intent(context, SecondPageActivity::class.java)
+//                                intent.putExtra("editMode", true)
+//                                context.startActivity(intent)
+//                            },
+//                            modifier = Modifier
+//                                .align(Alignment.TopEnd)
+//                                .padding(top = 24.dp, end = 24.dp)
+//                        ) {
+//                            Text("Change Credentials")
+//                        }
+//                    }
                 }
             }
         }
