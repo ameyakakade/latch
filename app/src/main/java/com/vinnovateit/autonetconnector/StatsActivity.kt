@@ -5,8 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,9 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,11 +49,14 @@ import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class StatsActivity : ComponentActivity() {
+  private var currentSsid: String? = null
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    currentSsid = intent.getStringExtra("CURRENT_SSID")
     setContent {
       AutoNetConnectorTheme {
-        StatsScreen()
+        StatsScreen(overrideSsid = currentSsid)
       }
     }
   }
@@ -66,17 +68,16 @@ fun StatsScreen(
   modifier: Modifier = Modifier,
   viewModel: StatsViewModel = viewModel(
     factory = StatsViewModelFactory(LocalContext.current.applicationContext as Application)
-  )
+  ),
+  overrideSsid: String?
 ) {
-  val showMockData by viewModel.showMockData.collectAsStateWithLifecycle()
   var showResetDialog by remember { mutableStateOf(false) }
 
   val sessionToShow by viewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by viewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by viewModel.liveStatus.collectAsStateWithLifecycle()
-  val haptic = LocalHapticFeedback.current
 
-  val isLive = remember(liveStatus, showMockData) { liveStatus != null && !showMockData }
+  val isLive = remember(liveStatus) { liveStatus != null }
   val currentTimeframe = if (isLive) Timeframe.LIVE else Timeframe.LAST
 
   Scaffold(
@@ -96,32 +97,18 @@ fun StatsScreen(
           )
         },
         actions = {
-          // This Icon replaces the button and switch from the bottom bar.
           Icon(
             imageVector = Icons.Default.Refresh,
-            contentDescription = "Reset Stats or Toggle Mock Data",
+            contentDescription = "Reset Stats",
             modifier = Modifier
               .padding(end = 8.dp)
-              .clip(RoundedCornerShape(50)) // Makes the ripple effect circular
-              .combinedClickable(
-                onClick = {
-                  // Single tap shows the reset dialog.
-                  if (!showMockData) {
-                    showResetDialog = true
-                  }
-                },
-                onLongClick = {
-                  // Long press toggles mock data.
-                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                  viewModel.onToggleMockData(!showMockData)
-                }
-              )
-              .padding(8.dp) // Adds padding for a larger touch target
+              .clip(RoundedCornerShape(50))
+              .clickable { showResetDialog = true }
+              .padding(8.dp)
           )
         }
       )
     },
-    // The bottom bar is now empty.
     bottomBar = {}
   ) { padding ->
     LazyColumn(
@@ -133,18 +120,20 @@ fun StatsScreen(
     ) {
       item {
         if (sessionToShow != null) {
-          SessionCard(
-            timeframe = currentTimeframe,
-            session = sessionToShow!!,
-            isLive = isLive
-          )
+          Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+            SessionCard(
+              timeframe = currentTimeframe,
+              session = sessionToShow!!,
+              isLive = isLive,
+              overrideSsid = overrideSsid
+            )
+          }
         } else {
           NoDataCard("No Wi-Fi session data available.")
         }
       }
       item { HistorySection(history = historyToShow) }
 
-      // **THE FIX IS HERE:** Adds empty space at the bottom of the list.
       item {
         Spacer(modifier = Modifier.height(100.dp))
       }

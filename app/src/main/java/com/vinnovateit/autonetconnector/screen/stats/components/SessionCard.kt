@@ -3,6 +3,7 @@ package com.vinnovateit.autonetconnector.screen.stats.components
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -106,7 +107,8 @@ private val CARD_CORNER_RADIUS = 24.dp
 fun SessionCard(
     timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean
+    isLive: Boolean,
+    overrideSsid: String? = null
 ) {
     var isGraphExpanded by remember { mutableStateOf(false) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -123,7 +125,7 @@ fun SessionCard(
 
     MaterialTheme(colorScheme = CardLightColorScheme) {
         AnimatedContent(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            // Removed outer padding from here. It's now handled by the parent container.
             targetState = isGraphExpanded,
             transitionSpec = {
                 fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
@@ -145,7 +147,7 @@ fun SessionCard(
                     colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(Modifier.padding(24.dp)) {
-                        SessionCardHeader(timeframe, session, isLive)
+                        SessionCardHeader(timeframe, session, isLive, overrideSsid)
                         Spacer(Modifier.height(16.dp))
                         Row(
                             modifier = Modifier
@@ -188,6 +190,19 @@ internal fun ExpandedGraphCard(
     onDismiss: () -> Unit,
     scrollState: ScrollState
 ) {
+    // This effect triggers the auto-scroll animation when the card is expanded.
+    LaunchedEffect(scrollState.maxValue) {
+        if (scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(
+                scrollState.maxValue,
+                animationSpec = tween(
+                    durationMillis = (scrollState.maxValue * 10).toInt(), // Duration scales with graph width
+                    easing = LinearEasing
+                )
+            )
+        }
+    }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -376,7 +391,8 @@ private fun BoxScope.FadedEdge(alignment: Alignment) {
 fun SessionCardHeader(
     timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean
+    isLive: Boolean,
+    overrideSsid: String? = null
 ) {
     var duration by remember(session.startTimestamp) {
         mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
@@ -400,7 +416,7 @@ fun SessionCardHeader(
     ) {
         Column(Modifier.weight(1f, fill = false)) {
             Text(
-                text = session.ssid,
+                text = overrideSsid ?: session.ssid,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
