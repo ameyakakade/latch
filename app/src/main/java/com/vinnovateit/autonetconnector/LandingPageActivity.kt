@@ -59,22 +59,14 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(Color(0xFFFDF0D5))
     ) {
-        // Top right VinnovateIT logo
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
-            contentDescription = "VinnovateIT Logo",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 20.dp)
-                .size(120.dp)
-        )
         // Centered column
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .offset(y = (-40).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -91,33 +83,34 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                 modifier = Modifier
                     .size(120.dp)
             )
-            
-            Text(
-                text = "Welcome back",
-                color = Color.White,
-                fontSize = 35.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = InterFontFamily,
-                modifier = Modifier.padding(bottom = 14.dp)
-            )
             Button(
                 onClick = onGetStarted,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .width(300.dp)
                     .padding(horizontal = 32.dp),
-                shape = RoundedCornerShape(5.dp),
+                shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = Color(0xFFC01221),
+                    contentColor = Color(0xFFFDF0D5)
                 )
             ) {
                 Text(
                     text = "Get Started",
-                    fontSize = 25.sp,
+                    fontSize = 23.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = satoshiFont
                 )
             }
         }
+        
+        // Bottom center VinnovateIT logo
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
+            contentDescription = "VinnovateIT Logo",
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 20.dp)
+                .size(120.dp)
+        )
     }
 } 

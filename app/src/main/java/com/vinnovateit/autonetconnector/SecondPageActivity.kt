@@ -22,17 +22,27 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.draw.paint
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 
 // Define Outfit font family
 val OutfitFontFamily = FontFamily(
     Font(R.font.outfit_regular, FontWeight.Normal),
+)
+
+// Define Satoshi font family
+val SatoshiRegularFontFamily = FontFamily(
+    Font(R.font.satoshi_regular, FontWeight.Normal),
 )
 
 class SecondPageActivity : ComponentActivity() {
@@ -61,6 +71,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var loaded by remember { mutableStateOf(false) }
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     // Load from DB
     LaunchedEffect(Unit) {
@@ -78,11 +89,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(Color(0xFFFDF0D5))
+            .paint(
+                painter = painterResource(id = R.drawable.backgroundline),
+                contentScale = ContentScale.FillBounds
+            )
             .padding(24.dp)
     ) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-40).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -90,15 +107,15 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = OutfitFontFamily,
-                color = Color(0xFFFAF3EB)
+                color = Color(0xFFC01221)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Enter credentials",
-                fontSize = 30.sp,
-                color = Color(0xFFFAF3EB),
+                fontSize = 20.sp,
+                color = Color(0xFFC01221),
                 fontWeight = FontWeight.Medium,
                 fontFamily = OutfitFontFamily
             )
@@ -108,12 +125,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = regNo,
                 onValueChange = { regNo = it },
-                label = if (regNo.isEmpty() && !regNoFocused) { { Text("Username") } } else null,
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text("Registration Number", color = Color(0xFFC01221)) } } else null,
                 singleLine = true,
                 trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_username),
-                        contentDescription = "Username Icon"
+                        contentDescription = "Username Icon",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221))
                     )
                 },
                 modifier = Modifier
@@ -122,8 +140,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         regNoFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = Color(0xFFFAF3EB),
-                    fontSize = 18.sp
+                    color = Color(0xFFC01221),
+                    fontSize = 18.sp,
+                    fontFamily = SatoshiRegularFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -132,8 +151,12 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color(0xFFFAF3EB),
-                    focusedIndicatorColor = Color.White
+                    unfocusedIndicatorColor = Color(0xFFC01221),
+                    focusedIndicatorColor = Color(0xFFC01221),
+                    selectionColors = TextSelectionColors(
+                        handleColor = Color(0xFFC01221),
+                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
+                    )
                 )
             )
 
@@ -142,13 +165,18 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = if (password.isEmpty() && !passwordFocused) { { Text("Password") } } else null,
+                label = if (password.isEmpty() && !passwordFocused) { { Text("Password", color = Color(0xFFC01221)) } } else null,
                 singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
+                visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_password),
-                        contentDescription = "Password Icon"
+                        contentDescription = "Password Icon",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221)),
+                        modifier = Modifier.clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { passwordVisible = !passwordVisible }
                     )
                 },
                 modifier = Modifier
@@ -157,8 +185,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         passwordFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = Color(0xFFFAF3EB),
-                    fontSize = 18.sp
+                    color = Color(0xFFC01221),
+                    fontSize = 18.sp,
+                    fontFamily = SatoshiRegularFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -167,8 +196,12 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color(0xFFFAF3EB),
-                    focusedIndicatorColor = Color.White
+                    unfocusedIndicatorColor = Color(0xFFC01221),
+                    focusedIndicatorColor = Color(0xFFC01221),
+                    selectionColors = TextSelectionColors(
+                        handleColor = Color(0xFFC01221),
+                        backgroundColor = Color(0xFFC01221).copy(alpha = 0.3f)
+                    )
                 )
             )
 
@@ -193,10 +226,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 40.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(5.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = Color(0xFFC01221),
+                    contentColor = Color(0xFFFDF0D5)
                 )
             ) {
                 Text(
