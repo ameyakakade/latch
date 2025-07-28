@@ -34,7 +34,7 @@ object WiFiMonitor {
                     try {
                         repeat(3) { attempt ->
                             delay(2000)
-                            if (VITWiFiIdentifier.isConnectedToVITWiFi(context)) {
+                            if (VITWiFiIdentifier.isConnectedToVITWiFi(context, network)) {
                                 Log.d("WiFiMonitor", "✅ VIT Wi-Fi detected. Running login.")
                                 LoginTestRunner.run(context)
                                 return@launch

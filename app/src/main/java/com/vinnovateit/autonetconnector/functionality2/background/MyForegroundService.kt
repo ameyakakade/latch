@@ -68,7 +68,7 @@ class MyForegroundService : Service() {
                 Log.d("WiFiMonitor", "Wi-Fi connected")
 
                 serviceScope.launch {
-                    if (VITWiFiIdentifier.isConnectedToVITWiFi(applicationContext)) {
+                    if (VITWiFiIdentifier.isConnectedToVITWiFi(applicationContext, network)) {
                         Log.d("WiFiMonitor", "✅ VIT Wi-Fi detected. Running login.")
                         LoginTestRunner.run(applicationContext)
                     } else {
