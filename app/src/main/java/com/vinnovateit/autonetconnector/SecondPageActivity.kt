@@ -12,32 +12,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialEntity
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val editMode = intent.getBooleanExtra("editMode", false)
         setContent {
-            CredentialsScreen(
-                editMode = editMode,
-                onCredentialsSaved = {
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                }
-            )
+            AutoNetConnectorTheme {
+                CredentialsScreen(
+                    editMode = editMode,
+                    onCredentialsSaved = {
+                        startActivity(Intent(this, MainActivity::class.java))
+                        finish()
+                    }
+                )
+            }
         }
     }
 }
@@ -51,7 +53,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var message by remember { mutableStateOf("") }
     var loaded by remember { mutableStateOf(false) }
 
-    // Load from DB
     LaunchedEffect(Unit) {
         val db = CredentialDatabase.getInstance(context)
         val existing = db.credentialDao().getCredential()
@@ -67,7 +68,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B1956))
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp)
     ) {
         Column(
@@ -78,7 +79,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 text = "Let's Get Started",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFFAF3EB)
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -86,7 +87,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             Text(
                 text = "Enter credentials",
                 fontSize = 20.sp,
-                color = Color(0xFFFAF3EB),
+                color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Medium
             )
 
@@ -104,7 +105,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
             )
 
@@ -124,7 +135,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = TextStyle(color = Color(0xFFFAF3EB)),
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+                    focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                    focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
+                ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
 
@@ -148,10 +169,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color(0xFF0B1956)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
@@ -162,7 +183,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             if (message.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = message, color = Color.Red)
+                Text(text = message, color = MaterialTheme.colorScheme.error)
             }
         }
     }
