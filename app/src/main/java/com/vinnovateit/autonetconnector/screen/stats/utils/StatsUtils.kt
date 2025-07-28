@@ -6,6 +6,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.math.log10
+import kotlin.math.pow
 
 enum class DisplayMode { TOTAL, DOWNLOAD, UPLOAD }
 enum class Timeframe { LIVE, LAST }
@@ -59,6 +61,18 @@ fun formatBytes(bytes: Long): Pair<String, String> = when {
     }
     else                             -> "%.2f".format(bytes / 1_073_741_824f)    to "GB"
 }
+
+fun formatBitsPerSecond(bytesPerSecond: Long, includeUnit: Boolean = true): Pair<String, String> {
+    val bitsPerSecond = bytesPerSecond * 8
+    val (value, unit) = when {
+        bitsPerSecond < 1_000L -> bitsPerSecond.toString() to "bps"
+        bitsPerSecond < 1_000_000L -> "%.1f".format(bitsPerSecond / 1_000f) to "Kbps"
+        bitsPerSecond < 1_000_000_000L -> "%.1f".format(bitsPerSecond / 1_000_000f) to "Mbps"
+        else -> "%.2f".format(bitsPerSecond / 1_000_000_000f) to "Gbps"
+    }
+    return if (includeUnit) value to unit else value to ""
+}
+
 
 fun formatDurationDynamic(ms: Long): String {
     if (ms < 0) return "0s"

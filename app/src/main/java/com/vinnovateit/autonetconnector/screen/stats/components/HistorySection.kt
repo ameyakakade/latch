@@ -49,7 +49,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +59,8 @@ import com.vinnovateit.autonetconnector.functionality.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDate
+import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -85,12 +86,12 @@ fun HistorySection(history: List<SessionSummary>) {
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(bottom = 16.dp)
         )
         if (history.isNotEmpty()) {
             HistoryBarChart(sessions = history)
         } else {
-            NoDataCard("No history data yet.")
+            NoDataCard("Connect to a network to begin your session history.")
         }
     }
 }
@@ -150,7 +151,7 @@ fun HistoryBarChart(sessions: List<SessionSummary>) {
         val totalTx = sessions.sumOf { it.totalData.txBytes }
         DataUsage(totalRx, totalTx)
     }
-    val totalUsageLabel = "Total Data Usage" // Changed label
+    val totalUsageLabel = "Total Data Usage"
     var displayedData by remember { mutableStateOf(totalUsageData to totalUsageLabel) }
     var revertJob by remember { mutableStateOf<Job?>(null) }
 
@@ -270,8 +271,6 @@ fun Bar(
     )
 
     val ulPart = if (total > 0) usage.txBytes.toFloat() / total else 0f
-    val dlColor = Color(0xFF0089D0)
-    val ulColor = Color(0xFFFFA500)
 
     Column(
         modifier = modifier
@@ -301,13 +300,13 @@ fun Bar(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f - ulPart)
-                        .background(dlColor)
+                        .background(GraphDownload)
                 )
                 if (usage.txBytes > 0) Box(
                     Modifier
                         .fillMaxWidth()
                         .weight(ulPart)
-                        .background(ulColor)
+                        .background(GraphUpload)
                 )
             }
         }
@@ -315,7 +314,7 @@ fun Bar(
         Text(
             dayLabel,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -344,33 +343,33 @@ fun StatDetailRow(data: Pair<DataUsage, String>) {
                 "$v $u",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AnimatedContent(dlFmt, label = "DLStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFF0089D0), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowDownward, null, tint = GraphDownload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             AnimatedContent(ulFmt, label = "ULStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowUpward, null, tint = Color(0xFFFFA500), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowUpward, null, tint = GraphUpload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
