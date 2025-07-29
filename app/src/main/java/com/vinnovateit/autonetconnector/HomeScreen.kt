@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import com.vinnovateit.autonetconnector.ui.theme.PowerButtonShadow

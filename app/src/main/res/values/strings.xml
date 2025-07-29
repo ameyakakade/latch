@@ -4,4 +4,6 @@
     <string name="get_started">Get Started</string>
     <string name="lets_get_st">Lets Get Started</string>
     <string name="create_your">Enter Credentials</string>
+    <string name="loading">Loading Latch…</string>
+    <string name="latch_widget_description">Quick status and control for Latch AutoNet.</string>
 </resources>

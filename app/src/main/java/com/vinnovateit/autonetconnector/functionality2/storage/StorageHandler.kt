@@ -14,9 +14,9 @@ import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.vinnovateit.autonetconnector.functionality.DataUsage
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
