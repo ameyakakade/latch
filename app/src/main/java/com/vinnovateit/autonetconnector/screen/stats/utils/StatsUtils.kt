@@ -1,13 +1,11 @@
 package com.vinnovateit.autonetconnector.screen.stats.utils
 
 import androidx.compose.ui.graphics.Path
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import kotlin.math.log10
-import kotlin.math.pow
 
 enum class DisplayMode { TOTAL, DOWNLOAD, UPLOAD }
 enum class Timeframe { LIVE, LAST }

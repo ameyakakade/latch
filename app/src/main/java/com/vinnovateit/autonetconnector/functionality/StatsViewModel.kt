@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.WifiStatsManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,7 +30,9 @@ class StatsViewModel(application: Application) : ViewModel() {
           ssid = it.ssid,
           startTimestamp = it.startTimeMillis,
           endTimestamp = System.currentTimeMillis(),
-          totalData = DataUsage(it.liveData.sumOf { p -> p.usage.rxBytes }, it.liveData.sumOf { p -> p.usage.txBytes }),
+          totalData = DataUsage(
+            it.liveData.sumOf { p -> p.usage.rxBytes },
+            it.liveData.sumOf { p -> p.usage.txBytes }),
           history = it.liveData
         )
       } ?: last

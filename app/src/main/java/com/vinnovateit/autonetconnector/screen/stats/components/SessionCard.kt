@@ -68,19 +68,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.functionality.DataUsage
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.Tag
 import com.vinnovateit.autonetconnector.screen.stats.utils.DisplayMode
-import com.vinnovateit.autonetconnector.screen.stats.utils.Timeframe
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDurationDynamic
 import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
 import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
-import com.vinnovateit.autonetconnector.ui.theme.LastTag
-import com.vinnovateit.autonetconnector.ui.theme.LiveTag
 import kotlinx.coroutines.delay
 import kotlin.math.atan2
 import kotlin.math.floor
@@ -93,9 +90,7 @@ private val CARD_CORNER_RADIUS = 24.dp
 
 @Composable
 fun SessionCard(
-    timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean,
     overrideSsid: String? = null
 ) {
     var isGraphExpanded by remember { mutableStateOf(false) }
@@ -132,11 +127,11 @@ fun SessionCard(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Column(Modifier.padding(24.dp)) {
-                    SessionCardHeader(timeframe, session, isLive, overrideSsid)
+                    SessionCardHeader(session, overrideSsid)
                     Spacer(Modifier.height(16.dp))
                     Row(
                         modifier = Modifier
@@ -191,7 +186,7 @@ private fun ExpandedGraphCard(
                 interactionSource = remember { MutableInteractionSource() },
                 onClick = onDismiss
             ),
-        elevation = CardDefaults.cardElevation(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(CARD_CORNER_RADIUS),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
@@ -375,24 +370,18 @@ private fun BoxScope.FadedEdge(alignment: Alignment) {
 
 @Composable
 fun SessionCardHeader(
-    timeframe: Timeframe,
     session: SessionSummary,
-    isLive: Boolean,
     overrideSsid: String?
 ) {
     var duration by remember(session.startTimestamp) {
         mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
     }
 
-    if (isLive) {
-        LaunchedEffect(Unit) {
-            while (true) {
-                duration = System.currentTimeMillis() - session.startTimestamp
-                delay(1000)
-            }
+    LaunchedEffect(Unit) {
+        while (true) {
+            duration = System.currentTimeMillis() - session.startTimestamp
+            delay(1000)
         }
-    } else {
-        duration = session.endTimestamp - session.startTimestamp
     }
 
     Row(
@@ -415,10 +404,6 @@ fun SessionCardHeader(
                 color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
             )
         }
-        Tag(
-            text = if (isLive) "LIVE" else "LAST",
-            color = if (isLive) LiveTag else LastTag
-        )
     }
 }
 
