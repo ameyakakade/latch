@@ -55,8 +55,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.functionality.DataUsage
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDate
@@ -64,7 +64,6 @@ import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
 import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

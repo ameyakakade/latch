@@ -1,3 +1,4 @@
+// In autonetconnector/functionality2/manager/WiFiStatusViewModel.kt
 package com.vinnovateit.autonetconnector.functionality2.manager
 
 import android.app.Application
@@ -9,14 +10,13 @@ import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.vinnovateit.autonetconnector.functionality.WifiStatsManager
 import com.vinnovateit.autonetconnector.functionality2.detector.CaptivePortalDetector
 import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
 import com.vinnovateit.autonetconnector.functionality2.storage.StoredCredentials
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,8 +25,6 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     private val ctx = application.applicationContext
 
     private val _networkUp = MutableStateFlow(false)
-    val networkUp: StateFlow<Boolean> = _networkUp
-
     private val _isAuthenticated = MutableStateFlow(false)
 
     val isConnected: StateFlow<Boolean> = combine(_networkUp, _isAuthenticated) { net, auth ->
@@ -57,12 +55,11 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     private fun updateNetworkInfo() {
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val info: NetworkInfo? = cm.activeNetworkInfo
-
         val currentlyConnected = info?.isConnected == true
         _networkUp.value = currentlyConnected
 
         if (!currentlyConnected) {
-            WifiStatsManager.stopLogging() // Stop logging if network is down
+            WifiStatsManager.stopLogging(ctx)
         }
 
         _ssid.value = when {
@@ -72,8 +69,7 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
                     .orEmpty()
                     .ifBlank { "Unknown Wi‑Fi" }
             }
-            info?.type == ConnectivityManager.TYPE_MOBILE -> "Mobile Data"
-            else -> "Unknown Network"
+            else -> "Other Network"
         }
     }
 
@@ -81,18 +77,17 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch(Dispatchers.IO) {
             val currentSSID = _ssid.value
             if (currentSSID.contains("vit", ignoreCase = true)) {
-                val portalActive = CaptivePortalDetector.isCaptivePortalActive(ctx)
-                val authenticated = !portalActive
+                val authenticated = !CaptivePortalDetector.isCaptivePortalActive(ctx)
                 _isAuthenticated.value = authenticated
 
                 if (authenticated) {
-                    WifiStatsManager.startLogging(currentSSID) // Start logging on successful auth
+                    WifiStatsManager.startLogging(ctx, currentSSID)
                 } else {
-                    WifiStatsManager.stopLogging() // Stop if portal is detected
+                    WifiStatsManager.stopLogging(ctx)
                 }
             } else {
                 _isAuthenticated.value = false
-                WifiStatsManager.stopLogging() // Stop if not on VIT WiFi
+                WifiStatsManager.stopLogging(ctx)
             }
         }
     }
@@ -108,12 +103,11 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             _isAuthenticated.value = success
 
             if (success) {
-                WifiStatsManager.startLogging(currentSSID) // Start logging on successful auth
+                WifiStatsManager.startLogging(ctx, currentSSID)
             }
         }
     }
 
-    // 🔄 Public refresh trigger (call on resume)
     fun refreshStatus() {
         updateNetworkInfo()
         evaluateCurrentConnection()

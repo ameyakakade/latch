@@ -68,9 +68,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.functionality.DataUsage
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.Tag
 import com.vinnovateit.autonetconnector.screen.stats.utils.DisplayMode
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths

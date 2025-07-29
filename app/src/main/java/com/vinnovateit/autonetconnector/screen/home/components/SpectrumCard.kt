@@ -29,14 +29,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
 
 @Composable
 fun SpectrumCard(
   session: SessionSummary?,
   ssid: String,
-  historyForHomeScreen: List<com.vinnovateit.autonetconnector.functionality.LiveDataPoint>
+  historyForHomeScreen: List<LiveDataPoint>
 ) {
   val context = LocalContext.current
   Card(
