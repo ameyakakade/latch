@@ -9,6 +9,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.vinnovateit.autonetconnector.functionality.WifiStatsManager
 import com.vinnovateit.autonetconnector.functionality2.detector.CaptivePortalDetector
 import com.vinnovateit.autonetconnector.functionality2.detector.VITWiFiIdentifier
 import com.vinnovateit.autonetconnector.functionality2.storage.StoredCredentials
@@ -57,16 +58,21 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val info: NetworkInfo? = cm.activeNetworkInfo
 
-        _networkUp.value = info?.isConnected == true
+        val currentlyConnected = info?.isConnected == true
+        _networkUp.value = currentlyConnected
+
+        if (!currentlyConnected) {
+            WifiStatsManager.stopLogging() // Stop logging if network is down
+        }
 
         _ssid.value = when {
-            info?.isConnected != true -> "Not Connected"
-            info.type == ConnectivityManager.TYPE_WIFI -> {
+            !currentlyConnected -> "Not Connected"
+            info?.type == ConnectivityManager.TYPE_WIFI -> {
                 VITWiFiIdentifier.getCurrentSSID(ctx)
                     .orEmpty()
                     .ifBlank { "Unknown Wi‑Fi" }
             }
-            info.type == ConnectivityManager.TYPE_MOBILE -> "Mobile Data"
+            info?.type == ConnectivityManager.TYPE_MOBILE -> "Mobile Data"
             else -> "Unknown Network"
         }
     }
@@ -76,9 +82,17 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             val currentSSID = _ssid.value
             if (currentSSID.contains("vit", ignoreCase = true)) {
                 val portalActive = CaptivePortalDetector.isCaptivePortalActive(ctx)
-                _isAuthenticated.value = !portalActive
+                val authenticated = !portalActive
+                _isAuthenticated.value = authenticated
+
+                if (authenticated) {
+                    WifiStatsManager.startLogging(currentSSID) // Start logging on successful auth
+                } else {
+                    WifiStatsManager.stopLogging() // Stop if portal is detected
+                }
             } else {
                 _isAuthenticated.value = false
+                WifiStatsManager.stopLogging() // Stop if not on VIT WiFi
             }
         }
     }
@@ -92,6 +106,10 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             val pass = StoredCredentials.getPassword(ctx) ?: return@launch
             val success = AutoLoginManager.attemptLogin(user, pass)
             _isAuthenticated.value = success
+
+            if (success) {
+                WifiStatsManager.startLogging(currentSSID) // Start logging on successful auth
+            }
         }
     }
 

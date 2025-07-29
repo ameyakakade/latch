@@ -56,6 +56,7 @@ val GraphUpload = Color(0xFFFFA500)
 
 // --- UI Effects ---
 val ShadowColor = Color.Black.copy(alpha = 0.2f)
+val PowerButtonShadow = Color.Black.copy(alpha = 0.7f)
 
 // --- Tooltip Colors ---
 val TooltipContainer = Color(0xFF2D2F31)
@@ -63,3 +64,4 @@ val TooltipContent = Color(0xFFF5F5F5)
 
 // --- Misc ---
 val Transparent = Color.Transparent
+val CollapsedAppBar = Color(0xFFEEDFCA)
