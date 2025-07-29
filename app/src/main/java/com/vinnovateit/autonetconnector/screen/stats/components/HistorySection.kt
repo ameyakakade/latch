@@ -48,28 +48,36 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.functionality.DataUsage
-import com.vinnovateit.autonetconnector.functionality.SessionSummary
+import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDate
+import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+
+// Sealed class to represent different item types in the LazyRow
+sealed class HistoryChartItem {
+    data class BarData(val usage: DataUsage, val label: String, val timestamp: Long) : HistoryChartItem()
+    data class MonthSeparator(val monthName: String) : HistoryChartItem()
+}
 
 @Composable
 fun HistorySection(history: List<SessionSummary>) {
@@ -85,12 +93,12 @@ fun HistorySection(history: List<SessionSummary>) {
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(bottom = 16.dp)
         )
         if (history.isNotEmpty()) {
             HistoryBarChart(sessions = history)
         } else {
-            NoDataCard("No history data yet.")
+            NoDataCard("No session history available.")
         }
     }
 }
@@ -99,54 +107,76 @@ fun HistorySection(history: List<SessionSummary>) {
 @Composable
 fun HistoryBarChart(sessions: List<SessionSummary>) {
     val calendar = remember { Calendar.getInstance() }
-    val todayCal = remember { Calendar.getInstance().apply { time = Date() } }
 
-    val groupedByDay = remember(sessions) {
-        sessions.groupBy {
+    val chartItems = remember(sessions) {
+        if (sessions.isEmpty()) return@remember emptyList<HistoryChartItem>()
+
+        val groupedByDay = sessions.groupBy {
             calendar.timeInMillis = it.startTimestamp
-            formatDate(calendar.timeInMillis, "dd/MM/yyyy")
+            formatDate(calendar.timeInMillis, "yyyy-MM-dd")
         }.mapValues { (_, list) ->
             DataUsage(
                 rxBytes = list.sumOf { it.totalData.rxBytes },
                 txBytes = list.sumOf { it.totalData.txBytes }
             )
         }
-    }
 
-    val usableDays = remember(groupedByDay) {
-        (0..29).mapNotNull { i ->
-            calendar.time = Date()
-            calendar.add(Calendar.DAY_OF_YEAR, -i)
-            val dayTimestamp = calendar.timeInMillis
-            val key = formatDate(dayTimestamp, "dd/MM/yyyy")
-            val usage = groupedByDay[key] ?: DataUsage(0, 0)
-            val isToday = i == 0
+        val oldestTimestamp = sessions.minOf { it.startTimestamp }
+        val today = Calendar.getInstance()
+        val oldestDay = (Calendar.getInstance().apply { timeInMillis = oldestTimestamp })
 
-            val isCurrentWeek = (todayCal.get(Calendar.WEEK_OF_YEAR) == calendar.get(Calendar.WEEK_OF_YEAR)) &&
-              (todayCal.get(Calendar.YEAR) == calendar.get(Calendar.YEAR))
-            val label = when {
-                isToday -> "Today"
-                isCurrentWeek -> formatDate(dayTimestamp, "EEE")
-                else -> calendar.get(Calendar.DAY_OF_MONTH).toString()
+        today.set(Calendar.HOUR_OF_DAY, 0)
+        oldestDay.set(Calendar.HOUR_OF_DAY, 0)
+        val daysBetween = TimeUnit.MILLISECONDS.toDays(today.timeInMillis - oldestDay.timeInMillis).toInt()
+
+        val items = mutableListOf<HistoryChartItem>()
+        var lastMonth = -1
+
+        for (i in 0..daysBetween) {
+            val currentCal = (today.clone() as Calendar).apply {
+                add(Calendar.DAY_OF_YEAR, -i)
             }
+            val dayTimestamp = currentCal.timeInMillis
+            val key = formatDate(dayTimestamp, "yyyy-MM-dd")
+            val usage = groupedByDay[key] ?: DataUsage(0, 0)
 
-            if (usage.rxBytes + usage.txBytes > 0 || isToday) Triple(usage, label, dayTimestamp) else null
-        }.reversed()
+            val currentMonth = currentCal.get(Calendar.MONTH)
+            if (currentMonth != lastMonth && i > 0) {
+                items.add(0, HistoryChartItem.MonthSeparator(formatDate(dayTimestamp, "MMM")))
+            }
+            lastMonth = currentMonth
+
+            val label = formatDate(dayTimestamp, "E").first().toString()
+            items.add(0, HistoryChartItem.BarData(usage, label, dayTimestamp))
+        }
+        items
     }
 
-    if (usableDays.isEmpty()) {
+    if (chartItems.filterIsInstance<HistoryChartItem.BarData>().all { it.usage.rxBytes + it.usage.txBytes == 0L }) {
         NoDataCard("No history data yet.")
         return
     }
 
-    val todayIdx = usableDays.lastIndex
+    val todayIdx = chartItems.indexOfLast { it is HistoryChartItem.BarData }
     var selectedIndex by remember { mutableIntStateOf(todayIdx) }
     val lazyListState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
-    val maxDailyUsage = remember(usableDays) {
-        usableDays.maxOf { it.first.rxBytes + it.first.txBytes }.coerceAtLeast(1L)
+    val totalUsageData = remember(sessions) {
+        val totalRx = sessions.sumOf { it.totalData.rxBytes }
+        val totalTx = sessions.sumOf { it.totalData.txBytes }
+        DataUsage(totalRx, totalTx)
+    }
+    val totalUsageLabel = "Total Data Usage"
+    var displayedData by remember { mutableStateOf(totalUsageData to totalUsageLabel) }
+    var revertJob by remember { mutableStateOf<Job?>(null) }
+
+
+    val maxDailyUsage = remember(chartItems) {
+        chartItems.filterIsInstance<HistoryChartItem.BarData>()
+            .maxOf { it.usage.rxBytes + it.usage.txBytes }
+            .coerceAtLeast(1L)
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -155,44 +185,30 @@ fun HistoryBarChart(sessions: List<SessionSummary>) {
             val barWidth = 35.dp
             val horizontalPadding = halfScreenWidth - (barWidth / 2)
 
-            // Perform initial scroll to the last item (today)
             LaunchedEffect(Unit) {
                 lazyListState.scrollToItem(todayIdx)
+                displayedData = totalUsageData to totalUsageLabel
             }
 
-            // Haptic feedback during casual scroll
-            var currentlyCenteredItem by remember { mutableIntStateOf(-1) }
-            LaunchedEffect(lazyListState) {
-                snapshotFlow {
-                    val layoutInfo = lazyListState.layoutInfo
-                    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-                    layoutInfo.visibleItemsInfo.minByOrNull { abs((it.offset + it.size / 2) - viewportCenter) }?.index ?: -1
-                }
-                    .distinctUntilChanged()
-                    .collect { centeredIndex ->
-                        if (centeredIndex != -1 && currentlyCenteredItem != centeredIndex) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            currentlyCenteredItem = centeredIndex
-                        }
-                    }
-            }
-
-            // Magnetic snap after scrolling stops
             LaunchedEffect(lazyListState) {
                 snapshotFlow { lazyListState.isScrollInProgress }
                     .filter { !it }
                     .collect {
+                        delay(100)
                         val layoutInfo = lazyListState.layoutInfo
                         val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-                        val closestItem = layoutInfo.visibleItemsInfo.minByOrNull {
+                        val closestItemInfo = layoutInfo.visibleItemsInfo.minByOrNull {
                             abs((it.offset + it.size / 2) - viewportCenter)
                         }
-                        if (closestItem != null) {
-                            if (selectedIndex != closestItem.index) {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress) // Haptic on lock
+                        if (closestItemInfo != null) {
+                            val closestItem = chartItems[closestItemInfo.index]
+                            if (closestItem is HistoryChartItem.BarData) {
+                                if (selectedIndex != closestItemInfo.index) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                selectedIndex = closestItemInfo.index
+                                lazyListState.animateScrollToItem(closestItemInfo.index)
                             }
-                            selectedIndex = closestItem.index
-                            lazyListState.animateScrollToItem(closestItem.index)
                         }
                     }
             }
@@ -204,22 +220,43 @@ fun HistoryBarChart(sessions: List<SessionSummary>) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.Bottom
             ) {
-                itemsIndexed(usableDays) { idx, (usage, label, _) ->
-                    Bar(
-                        modifier = Modifier
-                            .width(barWidth)
-                            .fillMaxHeight(),
-                        usage = usage,
-                        maxUsage = maxDailyUsage,
-                        dayLabel = label,
-                        isSelected = idx == selectedIndex,
-                        onTap = {
-                            selectedIndex = idx
-                            scope.launch {
-                                lazyListState.animateScrollToItem(idx)
-                            }
+                itemsIndexed(chartItems, key = { index, item ->
+                    when(item) {
+                        is HistoryChartItem.BarData -> "bar_${item.timestamp}"
+                        is HistoryChartItem.MonthSeparator -> "month_${item.monthName}_$index"
+                    }
+                }) { idx, item ->
+                    when (item) {
+                        is HistoryChartItem.BarData -> {
+                            Bar(
+                                modifier = Modifier
+                                    .width(barWidth)
+                                    .fillMaxHeight(),
+                                usage = item.usage,
+                                maxUsage = maxDailyUsage,
+                                dayLabel = item.label,
+                                isSelected = (idx == selectedIndex && !lazyListState.isScrollInProgress),
+                                onTap = {
+                                    revertJob?.cancel()
+                                    val dateLabel = SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(item.timestamp))
+                                    displayedData = item.usage to dateLabel
+                                    selectedIndex = idx
+
+                                    revertJob = coroutineScope.launch {
+                                        delay(7000)
+                                        displayedData = totalUsageData to totalUsageLabel
+                                    }
+
+                                    coroutineScope.launch {
+                                        lazyListState.animateScrollToItem(idx)
+                                    }
+                                }
+                            )
                         }
-                    )
+                        is HistoryChartItem.MonthSeparator -> {
+                            MonthSeparator(monthName = item.monthName)
+                        }
+                    }
                 }
             }
         }
@@ -227,18 +264,30 @@ fun HistoryBarChart(sessions: List<SessionSummary>) {
         Spacer(Modifier.height(16.dp))
 
         AnimatedContent(
-            targetState = usableDays.getOrNull(selectedIndex),
+            targetState = displayedData,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "UsageDetails"
-        ) { selectedTriple ->
-            if (selectedTriple != null) {
-                val (usage, _, timestamp) = selectedTriple
-                val formattedDate = SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(timestamp))
-                StatDetailRow(data = usage to formattedDate)
-            } else {
-                Box(modifier = Modifier.height(60.dp))
-            }
+        ) { data ->
+            StatDetailRow(data = data)
         }
+    }
+}
+
+@Composable
+fun MonthSeparator(monthName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = monthName,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.rotate(-90f)
+        )
     }
 }
 
@@ -265,8 +314,6 @@ fun Bar(
     )
 
     val ulPart = if (total > 0) usage.txBytes.toFloat() / total else 0f
-    val dlColor = Color(0xFF0089D0)
-    val ulColor = Color(0xFFFFA500)
 
     Column(
         modifier = modifier
@@ -296,13 +343,13 @@ fun Bar(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f - ulPart)
-                        .background(dlColor)
+                        .background(GraphDownload)
                 )
                 if (usage.txBytes > 0) Box(
                     Modifier
                         .fillMaxWidth()
                         .weight(ulPart)
-                        .background(ulColor)
+                        .background(GraphUpload)
                 )
             }
         }
@@ -310,7 +357,7 @@ fun Bar(
         Text(
             dayLabel,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onBackground // FIX: Added theme color
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -319,31 +366,9 @@ fun Bar(
 fun StatDetailRow(data: Pair<DataUsage, String>) {
     val (currentUsage, label) = data
 
-    // This state is completely internal to StatDetailRow.
-    // It's initialized once when a new day is selected.
-    val displayedUsage = remember(currentUsage) { mutableStateOf(currentUsage) }
-
-    // This effect runs the 5-second lazy update loop.
-    // It is keyed to `displayedUsage`, so it only restarts when the user selects a DIFFERENT day,
-    // not from the 1-second live data updates.
-    LaunchedEffect(displayedUsage) {
-        while (isActive) {
-            // Check if the rounded value of the LIVE data is different from the DISPLAYED data.
-            val liveFormattedTotal = formatBytes(displayedUsage.value.rxBytes + displayedUsage.value.txBytes)
-            val displayedFormattedTotal = formatBytes(currentUsage.rxBytes + currentUsage.txBytes)
-
-            // ONLY update the internal state if the formatted, visible text has changed.
-            if (liveFormattedTotal != displayedFormattedTotal) {
-                displayedUsage.value = currentUsage
-            }
-            delay(5000)
-        }
-    }
-
-    // The animations are now driven by the stable, lazily-updated 'displayedUsage' state.
-    val totalFmt by remember { derivedStateOf { formatBytes(displayedUsage.value.rxBytes + displayedUsage.value.txBytes) } }
-    val dlFmt by remember { derivedStateOf { formatBytes(displayedUsage.value.rxBytes) } }
-    val ulFmt by remember { derivedStateOf { formatBytes(displayedUsage.value.txBytes) } }
+    val totalFmt by remember(currentUsage) { derivedStateOf { formatBytes(currentUsage.rxBytes + currentUsage.txBytes) } }
+    val dlFmt by remember(currentUsage) { derivedStateOf { formatBytes(currentUsage.rxBytes) } }
+    val ulFmt by remember(currentUsage) { derivedStateOf { formatBytes(currentUsage.txBytes) } }
 
 
     Column(
@@ -361,34 +386,33 @@ fun StatDetailRow(data: Pair<DataUsage, String>) {
                 "$v $u",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground // FIX: Added theme color
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f) // FIX: Added theme color with alpha
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            // FIX: Re-implemented StatItem logic to control the text color directly.
             AnimatedContent(dlFmt, label = "DLStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFF0089D0), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowDownward, null, tint = GraphDownload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
             AnimatedContent(ulFmt, label = "ULStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowUpward, null, tint = Color(0xFFFFA500), modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowUpward, null, tint = GraphUpload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

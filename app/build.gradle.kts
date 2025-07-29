@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.23"
     id("kotlin-kapt")
 }
 
@@ -58,6 +59,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Widget
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
     // Data
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.firebase.crashlytics.buildtools)
@@ -92,7 +98,7 @@ dependencies {
 
     // AppCompat (deduplicate)
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.compose.material3:material3:1.1.2")
+    implementation("androidx.compose.material3:material3:1.2.1")
     implementation ("androidx.compose.material:material-icons-extended")
 
 }
