@@ -39,7 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBitsPerSecond
 import com.vinnovateit.autonetconnector.ui.theme.GraphDownload

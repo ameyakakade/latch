@@ -7,7 +7,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -15,6 +19,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.window.PopupPositionProvider
 import com.vinnovateit.autonetconnector.ui.theme.tooltipContainer
 import com.vinnovateit.autonetconnector.ui.theme.tooltipContent
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 //================================================================================
 // Reusable Tooltip Composable
@@ -32,8 +38,8 @@ private val SimpleBelowTooltipPositionProvider = object : PopupPositionProvider 
     popupContentSize: IntSize
   ): IntOffset {
     // Define margins directly in pixels.
-    val screenEdgeMargin = 24 // ~8.dp
-    val verticalMargin = 12   // ~4.dp
+    val screenEdgeMargin = 32 // ~8.dp
+    val verticalMargin = 24   // ~4.dp
 
     // Calculate the centered horizontal position of the tooltip.
     val centeredX = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
@@ -53,7 +59,7 @@ private val SimpleBelowTooltipPositionProvider = object : PopupPositionProvider 
 
 /**
  * A wrapper around Material3's TooltipBox that reliably positions the tooltip
- * below the anchor content.
+ * below the anchor content and provides haptic feedback on long press.
  *
  * @param tooltipText The simple text to be displayed inside the tooltip.
  * @param modifier The modifier to be applied to the TooltipBox.
@@ -67,6 +73,17 @@ fun TooltipHint(
   content: @Composable () -> Unit
 ) {
   val tooltipState = rememberTooltipState()
+  val haptic = LocalHapticFeedback.current
+
+  // Trigger haptic feedback when the tooltip becomes visible
+  LaunchedEffect(tooltipState) {
+    snapshotFlow { tooltipState.isVisible }
+      .distinctUntilChanged()
+      .filter { it } // Only when it becomes visible
+      .collect {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+      }
+  }
 
   TooltipBox(
     positionProvider = SimpleBelowTooltipPositionProvider,
