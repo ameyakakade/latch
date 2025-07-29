@@ -5,27 +5,27 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
-// Define Inter font family
-val InterFontFamily = FontFamily(
-    Font(R.font.inter_regular, FontWeight.Bold),
-)
 val satoshiFont = FontFamily(
     Font(R.font.satoshi_bold, FontWeight.Bold),
 )
@@ -44,10 +44,12 @@ class LandingPageActivity : ComponentActivity() {
                 finish()
             } else {
                 setContent {
-                    LandingPageScreen(onGetStarted = {
-                        val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
-                        startActivity(intent)
-                    })
+                    AutoNetConnectorTheme {
+                        LandingPageScreen(onGetStarted = {
+                            val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
+                            startActivity(intent)
+                        })
+                    }
                 }
             }
         }
@@ -59,7 +61,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFDF0D5))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Centered column
         Column(
@@ -90,8 +92,8 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                     .padding(horizontal = 32.dp),
                 shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC01221),
-                    contentColor = Color(0xFFFDF0D5)
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
@@ -102,7 +104,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                 )
             }
         }
-        
+
         // Bottom center VinnovateIT logo
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),

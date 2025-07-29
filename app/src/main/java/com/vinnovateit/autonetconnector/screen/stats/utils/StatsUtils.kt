@@ -1,7 +1,7 @@
 package com.vinnovateit.autonetconnector.screen.stats.utils
 
 import androidx.compose.ui.graphics.Path
-import com.vinnovateit.autonetconnector.functionality.LiveDataPoint
+import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -15,8 +15,29 @@ data class GraphData(
     val uploadPath: Path,
     val lineDownloadPath: Path,
     val lineUploadPath: Path,
-    val labels: List<Pair<String, Float>>
-)
+    val labels: List<Pair<String, Float>>,
+    private val startTime: Long,
+    private val duration: Long,
+    private val width: Float,
+    private val height: Float,
+    private val maxRate: Float,
+    private val graphHeightScale: Float
+) {
+    fun xAtTimestamp(timestamp: Long): Float {
+        val elapsedTime = (timestamp - startTime).toFloat()
+        return (elapsedTime / duration) * width
+    }
+
+    fun yAtRate(rate: Long): Float {
+        val usageFraction = (rate.toFloat() / maxRate).coerceIn(0f, 1f)
+        return height - (usageFraction * height * graphHeightScale)
+    }
+
+    fun timestampAtX(x: Float): Long {
+        return startTime + ((x / width) * duration).toLong()
+    }
+}
+
 
 fun formatBytes(bytes: Long): Pair<String, String> = when {
     bytes < 1_024L                    -> bytes.toString() to "B"
@@ -39,6 +60,18 @@ fun formatBytes(bytes: Long): Pair<String, String> = when {
     else                             -> "%.2f".format(bytes / 1_073_741_824f)    to "GB"
 }
 
+fun formatBitsPerSecond(bytesPerSecond: Long, includeUnit: Boolean = true): Pair<String, String> {
+    val bitsPerSecond = bytesPerSecond * 8
+    val (value, unit) = when {
+        bitsPerSecond < 1_000L -> bitsPerSecond.toString() to "bps"
+        bitsPerSecond < 1_000_000L -> "%.1f".format(bitsPerSecond / 1_000f) to "Kbps"
+        bitsPerSecond < 1_000_000_000L -> "%.1f".format(bitsPerSecond / 1_000_000f) to "Mbps"
+        else -> "%.2f".format(bitsPerSecond / 1_000_000_000f) to "Gbps"
+    }
+    return if (includeUnit) value to unit else value to ""
+}
+
+
 fun formatDurationDynamic(ms: Long): String {
     if (ms < 0) return "0s"
     val h = TimeUnit.MILLISECONDS.toHours(ms)
@@ -59,10 +92,10 @@ fun createGraphPaths(
     width: Float,
     height: Float,
     maxRate: Float,
-    graphHeightScale: Float
+    graphHeightScale: Float = 0.6f
 ): GraphData {
     if (history.size < 2) {
-        return GraphData(Path(), Path(), Path(), Path(), emptyList())
+        return GraphData(Path(), Path(), Path(), Path(), emptyList(), 0, 0, 0f, 0f, 0f, 0f)
     }
 
     val effectiveMaxRate = maxRate.coerceAtLeast(1f)
@@ -125,5 +158,5 @@ fun createGraphPaths(
         emptyList()
     }
 
-    return GraphData(fillDL, fillUL, lineDL, lineUL, labels)
+    return GraphData(fillDL, fillUL, lineDL, lineUL, labels, startTime, duration, width, height, effectiveMaxRate, graphHeightScale)
 }

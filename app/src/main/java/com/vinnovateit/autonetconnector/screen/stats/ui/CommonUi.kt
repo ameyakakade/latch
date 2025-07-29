@@ -1,6 +1,7 @@
 package com.vinnovateit.autonetconnector.screen.stats.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -40,16 +42,27 @@ fun NoDataCard(msg: String) {
 }
 
 @Composable
-fun Tag(text: String, color: Color) {
-    Text(
-        text,
-        color = color,
-        modifier = Modifier
-            .background(color.copy(.15f), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelMedium
-    )
+fun Tag(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50)) // 1. Clip the shape first
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier) // 2. Apply clickable to get a clipped ripple
+            .background(color.copy(0.15f)) // 3. Apply background
+            .padding(horizontal = 12.dp, vertical = 6.dp), // 4. Apply padding
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            color = color,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge // Increased font size
+        )
+    }
 }
 
 @Composable

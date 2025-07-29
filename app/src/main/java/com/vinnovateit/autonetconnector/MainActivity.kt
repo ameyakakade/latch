@@ -1,107 +1,104 @@
 package com.vinnovateit.autonetconnector
 
-import android.app.Application
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality.WifiScanner
-import com.vinnovateit.autonetconnector.functionality2.background.MyForegroundService
+import com.vinnovateit.autonetconnector.functionality2.background.ForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
-import com.vinnovateit.autonetconnector.functionality2.ui.LoginTestRunner
-import com.vinnovateit.autonetconnector.functionality.*
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import kotlinx.coroutines.launch
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.autonetconnector.functionality.StatsViewModel
 import com.vinnovateit.autonetconnector.functionality.StatsViewModelFactory
-import kotlinx.coroutines.delay
+import com.vinnovateit.autonetconnector.functionality2.manager.WiFiStatusViewModel
+import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var wifiScanner: WifiScanner
+    private lateinit var wifiStatusViewModel: WiFiStatusViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        wifiScanner = WifiScanner(this)
 
+        wifiScanner = WifiScanner(this)
         requestLocationPermissionIfNeeded()
         WiFiMonitor.startMonitoring(applicationContext)
 
-        val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(this, "Location permission is required for WiFi scanning", Toast.LENGTH_LONG).show()
-            }
-        }
+        // Start foreground service
+        val serviceIntent = Intent(this, ForegroundService::class.java)
+        startForegroundService(serviceIntent)
 
-        val serviceIntent = Intent(this, MyForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
+        // Init ViewModel
+        wifiStatusViewModel = ViewModelProvider(
+            this,
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    @Suppress("UNCHECKED_CAST")
+                    return WiFiStatusViewModel(application) as T
+                }
+            }
+        )[WiFiStatusViewModel::class.java]
 
         setContent {
             AutoNetConnectorTheme {
-                val viewModel: StatsViewModel = viewModel(
-                    factory = StatsViewModelFactory(LocalContext.current.applicationContext as Application)
+                val statsViewModel: StatsViewModel = viewModel(
+                    factory = StatsViewModelFactory(application)
                 )
-                val sessionToShow by viewModel.sessionToShow.collectAsStateWithLifecycle()
+
+                val isConnected by wifiStatusViewModel.isConnected.collectAsState()
+                val ssid by wifiStatusViewModel.ssid.collectAsState()
+                val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
                 val context = LocalContext.current
 
-                // FIX: This effect ensures that if no real data is available after 2 seconds,
-                // the app will show a mock graph instead of a "no data" message.
-                LaunchedEffect(sessionToShow) {
-                    if (sessionToShow == null) {
-                        delay(2000) // Wait for 2 seconds for real data
-                        if (sessionToShow == null) { // Check again
-                            viewModel.onToggleMockData(true)
-                        }
-                    }
+                // Calculate speed based on the most recent LIVE data point
+                val currentSpeedBytesPerSecond = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
+                val formattedSpeed = com.vinnovateit.autonetconnector.screen.stats.utils.formatBitsPerSecond(currentSpeedBytesPerSecond)
+
+                // Update network speed string based on connection status
+                val networkSpeedString = if (isConnected && liveStatus != null) {
+                    "${formattedSpeed.first} ${formattedSpeed.second}"
+                } else {
+                    "0 B/s"
+                }
+
+                // Only show the session data (for the graph) if connected and logging
+                val sessionForHomeScreen = if (isConnected && liveStatus != null) {
+                    statsViewModel.sessionToShow.collectAsStateWithLifecycle().value
+                } else {
+                    null
                 }
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
-                        isConnected = false, // This should be made dynamic
-                        networkName = "Vit S-block 2.4", // This should be made dynamic
-                        networkSpeed = "6 mbps", // This should be made dynamic
-                        onSpectrumClick = {
-                            context.startActivity(Intent(context, StatsActivity::class.java))
-                        },
-                        session = sessionToShow
-                    )
-
-                    // Place the Change Credentials button at the bottom center
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        OutlinedButton(
-                            onClick = {
-                                val intent = Intent(context, SecondPageActivity::class.java)
-                                intent.putExtra("editMode", true)
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 32.dp)
-                        ) {
-                            Text("Change Credentials")
+                        isConnected = isConnected,
+                        networkSpeed = networkSpeedString,
+                        session = sessionForHomeScreen, // Pass the conditional session
+                        ssid = ssid,
+                        onConnectClick = {
+                            wifiStatusViewModel.authenticatePortal()
                         }
-                    }
+                    )
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 🔁 Refresh Wi-Fi status every time the activity comes to foreground
+        wifiStatusViewModel.refreshStatus()
     }
 
     private fun requestLocationPermissionIfNeeded() {
