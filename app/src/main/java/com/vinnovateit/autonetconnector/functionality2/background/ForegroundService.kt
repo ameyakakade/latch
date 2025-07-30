@@ -19,11 +19,14 @@ class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
+    // The themeChangeReceiver has been REMOVED from this file.
+
     override fun onCreate() {
         super.onCreate()
         Log.d("ForegroundService", "Service created")
         startForeground(1, createNotification())
         registerNetworkCallback()
+        // The receiver registration has been REMOVED.
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -33,6 +36,7 @@ class ForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d("ForegroundService", "Service destroyed")
+        // The receiver unregistration has been REMOVED.
         serviceScope.cancel()
     }
 

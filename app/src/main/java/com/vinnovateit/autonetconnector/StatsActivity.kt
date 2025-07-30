@@ -9,20 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -51,13 +46,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vinnovateit.autonetconnector.functionality2.StatsViewModel
-import com.vinnovateit.autonetconnector.functionality2.StatsViewModelFactory
-import com.vinnovateit.autonetconnector.screen.stats.components.HistoryItemCard
-import com.vinnovateit.autonetconnector.screen.stats.components.HistorySection
+import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModel
+import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModelFactory
+import com.vinnovateit.autonetconnector.screen.stats.components.HistoryBarChart
+import com.vinnovateit.autonetconnector.screen.stats.components.HistorySessionList
 import com.vinnovateit.autonetconnector.screen.stats.components.LiveSpeedSection
 import com.vinnovateit.autonetconnector.screen.stats.components.SessionCard
-import com.vinnovateit.autonetconnector.screen.stats.utils.formatFriendlyDate
 import com.vinnovateit.autonetconnector.screen.stats.utils.generateCsvReport
 import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
@@ -75,7 +69,7 @@ class StatsActivity : ComponentActivity() {
           }
           Toast.makeText(this, "Report saved successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-          Toast.makeText(this, "Failed to save report", Toast.LENGTH_SHORT).show()
+          Toast.makeText(this, "Failed to save report: $e", Toast.LENGTH_SHORT).show()
         }
       }
     }
@@ -97,7 +91,7 @@ class StatsActivity : ComponentActivity() {
 }
 
 @SuppressLint("ContextCastToActivity")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
@@ -115,11 +109,7 @@ fun StatsScreen(
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
 
   val isLive = remember(liveStatus) { liveStatus != null }
-  val lazyListState = rememberLazyListState()
-
-
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
 
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -156,8 +146,7 @@ fun StatsScreen(
         scrollBehavior = scrollBehavior
       )
     }
-  )
-  { innerPadding ->
+  ) { innerPadding ->
     if (!isLive && historyToShow.isEmpty()) {
       Box(
         modifier = Modifier
@@ -177,7 +166,6 @@ fun StatsScreen(
       }
     } else {
       LazyColumn(
-        state = lazyListState,
         modifier = modifier
           .fillMaxSize()
           .padding(innerPadding),
@@ -186,9 +174,9 @@ fun StatsScreen(
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
 
-        // Conditional content ordering
+        // Order changes based on connection status
         if (isLive && sessionToShow != null) {
-          // Show live session card if connected
+          // WHEN CONNECTED:
           item {
             SessionCard(
               session = sessionToShow!!,
@@ -206,13 +194,13 @@ fun StatsScreen(
             )
           }
           item {
-            HistorySection(history = historyToShow)
+            HistoryBarChart(history = historyToShow)
+          }
+          item {
+            HistorySessionList(history = historyToShow)
           }
         } else {
-          // Show history first if disconnected
-          item {
-            HistorySection(history = historyToShow)
-          }
+          // WHEN NOT CONNECTED:
           item {
             val allTimeMaxDownloadBps = historyToShow
               .maxOfOrNull { it.history.maxOfOrNull { p -> p.usage.rxBytes } ?: 0L } ?: 0L
@@ -225,27 +213,11 @@ fun StatsScreen(
               onDownloadReport = onDownloadReport
             )
           }
-          if (historyToShow.isNotEmpty()) {
-            val groupedSessions = historyToShow.groupBy {
-              formatFriendlyDate(it.startTimestamp)
-            }
-
-            groupedSessions.forEach { (date, sessions) ->
-              stickyHeader {
-                Text(
-                  text = date,
-                  style = MaterialTheme.typography.titleLarge,
-                  fontWeight = FontWeight.Bold,
-                  modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(vertical = 8.dp)
-                )
-              }
-              items(sessions, key = { it.startTimestamp }) { session ->
-                HistoryItemCard(session = session)
-              }
-            }
+          item {
+            HistoryBarChart(history = historyToShow)
+          }
+          item {
+            HistorySessionList(history = historyToShow)
           }
         }
 

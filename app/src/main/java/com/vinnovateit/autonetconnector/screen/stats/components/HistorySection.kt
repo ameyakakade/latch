@@ -74,29 +74,29 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 // Sealed class to represent different item types in the LazyRow
-sealed class HistoryChartItem {
+private sealed class HistoryChartItem {
     data class BarData(val usage: DataUsage, val label: String, val timestamp: Long) : HistoryChartItem()
     data class MonthSeparator(val monthName: String) : HistoryChartItem()
 }
 
 @Composable
-fun HistorySection(history: List<SessionSummary>) {
+fun HistoryBarChart(history: List<SessionSummary>) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "History",
+            "Daily Usage",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp, start = 8.dp)
         )
         if (history.isNotEmpty()) {
-            HistoryBarChart(sessions = history)
+            HistoryBarChartContent(sessions = history)
         } else {
             NoDataCard("No session history available.")
         }
@@ -105,7 +105,7 @@ fun HistorySection(history: List<SessionSummary>) {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HistoryBarChart(sessions: List<SessionSummary>) {
+private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
     val calendar = remember { Calendar.getInstance() }
 
     val chartItems = remember(sessions) {
@@ -274,7 +274,7 @@ fun HistoryBarChart(sessions: List<SessionSummary>) {
 }
 
 @Composable
-fun MonthSeparator(monthName: String) {
+private fun MonthSeparator(monthName: String) {
     Box(
         modifier = Modifier
             .fillMaxHeight()
@@ -293,7 +293,7 @@ fun MonthSeparator(monthName: String) {
 
 
 @Composable
-fun Bar(
+private fun Bar(
     modifier: Modifier = Modifier,
     usage: DataUsage,
     maxUsage: Long,
@@ -363,7 +363,7 @@ fun Bar(
 }
 
 @Composable
-fun StatDetailRow(data: Pair<DataUsage, String>) {
+private fun StatDetailRow(data: Pair<DataUsage, String>) {
     val (currentUsage, label) = data
 
     val totalFmt by remember(currentUsage) { derivedStateOf { formatBytes(currentUsage.rxBytes + currentUsage.txBytes) } }

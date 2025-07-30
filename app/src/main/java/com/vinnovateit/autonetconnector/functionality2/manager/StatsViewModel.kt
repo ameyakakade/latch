@@ -1,12 +1,9 @@
-package com.vinnovateit.autonetconnector.functionality2
+package com.vinnovateit.autonetconnector.functionality2.manager
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.vinnovateit.autonetconnector.functionality2.manager.DataUsage
-import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
-import com.vinnovateit.autonetconnector.functionality2.manager.WifiStatsManager
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

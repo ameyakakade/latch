@@ -58,6 +58,8 @@ class LandingPageActivity : ComponentActivity() {
 
 @Composable
 fun LandingPageScreen(onGetStarted: () -> Unit) {
+    val logoRes = R.drawable.ic_latch_dark
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -72,16 +74,16 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = R.drawable.latchlogo),
+            Image(
+                painter = painterResource(id = logoRes),
                 contentDescription = "Latch Logo",
                 modifier = Modifier
                     .size(120.dp)
             )
-            // Latch logo
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = R.drawable.latch),
-                contentDescription = "Latch Logo",
+            // Latch logo text
+            Image(
+                painter = painterResource(id = R.drawable.latch),
+                contentDescription = "Latch Logo Text",
                 modifier = Modifier
                     .size(120.dp)
             )
@@ -106,8 +108,8 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
         }
 
         // Bottom center VinnovateIT logo
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.res.painterResource(id = R.drawable.vinnovate),
+        Image(
+            painter = painterResource(id = R.drawable.vinnovate),
             contentDescription = "VinnovateIT Logo",
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -115,4 +117,4 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                 .size(120.dp)
         )
     }
-} 
+}

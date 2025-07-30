@@ -54,6 +54,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
             android:theme="@style/Theme.AutoNetConnector" />
 
         <activity
@@ -74,17 +75,11 @@
                 android:resource="@xml/latch_widget_info" />
         </receiver>
 
-        <activity
-            android:name=".widget.WidgetConfigureActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
-            </intent-filter>
-        </activity>
 
         <service
             android:name=".functionality2.background.ForegroundService"
             android:foregroundServiceType="connectedDevice"
+            android:configChanges="uiMode"
             android:exported="false" />
 
     </application>
