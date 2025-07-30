@@ -3,6 +3,7 @@ package com.vinnovateit.autonetconnector
 import android.content.Intent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,15 +23,14 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.Image
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
@@ -48,6 +48,40 @@ val SakingFontFamily = FontFamily(
     Font(R.font.saking_regular, FontWeight.Normal)
 )
 
+@Composable
+fun HomeRedCanvasBackground(buttonSizePx: Float) {
+    val cutoutRatio = 1.2f
+    val cutoutDiameter = buttonSizePx * cutoutRatio
+    val cutoutRadius = cutoutDiameter / 2f
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer(alpha = 0.99f)
+    ) {
+        val canvasWidth = size.width
+        val circleTopLeft = Offset(
+            x = (canvasWidth - cutoutDiameter) / 2f,
+            y = -cutoutRadius
+        )
+
+        drawRect(
+            color = Color(0xFFC8102E),
+            size = size
+        )
+
+        drawArc(
+            color = Color.Transparent,
+            startAngle = 0f,
+            sweepAngle = 180f,
+            useCenter = true,
+            topLeft = circleTopLeft,
+            size = Size(cutoutDiameter, cutoutDiameter),
+            blendMode = BlendMode.Clear
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
@@ -60,9 +94,17 @@ fun HomeScreen(
     val context = LocalContext.current
     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
     var showMenu by remember { mutableStateOf(false) }
-
-    // --- State Lifted Up for the Graph ---
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
+
+    val density = LocalDensity.current
+    val screenWidthDp = LocalContext.current.resources.displayMetrics.widthPixels / density.density
+    val buttonDiameterDp = (screenWidthDp * 0.5f).dp
+    val cutoutRatio = 1.2f
+    val cutoutDiameterDp = (screenWidthDp * 0.6f).dp
+    val spacingDp = ((screenWidthDp * 0.1f) / 2f).dp
+    val screenHeightDp = LocalContext.current.resources.displayMetrics.heightPixels / density.density
+
+    val buttonDiameterPx = with(density) { buttonDiameterDp.toPx() }
 
     Box(
         modifier = Modifier
@@ -72,13 +114,11 @@ fun HomeScreen(
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Top Beige Section (54% height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                // Background pattern
                 Image(
                     painter = painterResource(id = R.drawable.latch_background_home),
                     contentDescription = "Background Pattern",
@@ -87,28 +127,21 @@ fun HomeScreen(
                 )
 
                 Column {
-                    // Top Bar with Logo and Menu
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 49.dp, start = 16.dp, end = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(top = (screenHeightDp * 0.06f).dp, start = 16.dp, end = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Start item (Logo) - in a fixed-width box for symmetry
-                        Box(
-                            modifier = Modifier.width(50.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
+                        Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterStart) {
                             Icon(
                                 painter = painterResource(id = R.drawable.latch_logo),
                                 contentDescription = "LATCH Logo",
                                 tint = Color.Unspecified,
-                                modifier = Modifier
-                                    .size(width = 49.33.dp, height = 36.dp)
+                                modifier = Modifier.size(width = 49.33.dp, height = 36.dp)
                             )
                         }
 
-                        // Middle item (Title) - weighted to take up remaining space
                         Text(
                             text = "LATCH",
                             modifier = Modifier.weight(1f),
@@ -121,21 +154,16 @@ fun HomeScreen(
                             textAlign = TextAlign.Center
                         )
 
-                        // End item (Menu) - in a fixed-width box for symmetry
-                        Box(
-                            modifier = Modifier.width(50.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
+                        Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterEnd) {
                             TooltipHint(tooltipText = "Menu") {
-                                Box { // Wrapper Box for the dropdown menu
+                                Box {
                                     Icon(
                                         imageVector = Icons.Rounded.Menu,
                                         contentDescription = "Menu",
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier
-                                            .size(32.dp) // Increased size
+                                            .size(32.dp)
                                             .clip(CircleShape)
-
                                             .clickable { showMenu = true }
                                     )
                                     DropdownMenu(
@@ -150,8 +178,7 @@ fun HomeScreen(
                                             text = { Text("Change Credentials") },
                                             onClick = {
                                                 showMenu = false
-                                                val intent =
-                                                    Intent(context, SecondPageActivity::class.java)
+                                                val intent = Intent(context, SecondPageActivity::class.java)
                                                 intent.putExtra("editMode", true)
                                                 context.startActivity(intent)
                                             }
@@ -164,12 +191,11 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // Connection Status & Speed
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 32.dp)
-                            .padding(bottom = 180.dp) // Adjusted padding
+                            .padding(bottom = (screenHeightDp * 0.2f).dp)
                     ) {
                         Column {
                             Box(
@@ -214,86 +240,84 @@ fun HomeScreen(
                 }
             }
 
-            // Red bottom section (46% height)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.46f),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                // Red background image
-                Image(
-                    painter = painterResource(id = R.drawable.home_red_bg),
-                    contentDescription = "Red Background",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.FillBounds
-                )
-
+                HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx)
                 SpectrumCard(session, ssid, historyForHomeScreen)
             }
         }
 
-        // Power button - Overlays everything, centered on the screen
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center) // Centered alignment
-                .size(210.dp)
-                .drawBehind {
-                    val shadowColor = PowerButtonShadow
-                    val radius = size.minDimension / 2
-                    val paint = Paint().asFrameworkPaint().apply {
-                        isAntiAlias = true
-                        color = shadowColor.toArgb()
-                        maskFilter =
-                            android.graphics.BlurMaskFilter(20f, android.graphics.BlurMaskFilter.Blur.NORMAL)
-                    }
-                    drawContext.canvas.nativeCanvas.drawCircle(
-                        center.x,
-                        center.y + 20f,
-                        radius,
-                        paint
-                    )
-                },
-            contentAlignment = Alignment.Center
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Button(
-                onClick = {
-                    status = "Authenticating..."
-                    onConnectClick()
-                },
+            val screenHeight = constraints.maxHeight.toFloat()
+            val screenWidth = constraints.maxWidth.toFloat()
+
+            val cutoutDiameter = screenWidth * 0.6f
+            val cutoutCenterY = screenHeight * 0.54f
+            val cutoutBottomY = cutoutCenterY + (cutoutDiameter / 2f)
+
+            val spacing = screenWidth * 0.05f
+            val buttonDiameter = screenWidth * 0.5f
+
+            val buttonTopY = cutoutBottomY - spacing - buttonDiameter
+
+            Box(
                 modifier = Modifier
-                    .size(210.dp)
-                    .clip(CircleShape),
-                shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    .absoluteOffset(y = with(LocalDensity.current) { buttonTopY.toDp() })
+                    .align(Alignment.TopCenter)
+                    .size(with(LocalDensity.current) { buttonDiameter.toDp() })
+                    .drawBehind {
+                        val shadowColor = PowerButtonShadow
+                        val radius = size.minDimension / 2
+                        val paint = Paint().asFrameworkPaint().apply {
+                            isAntiAlias = true
+                            color = shadowColor.toArgb()
+                            maskFilter = android.graphics.BlurMaskFilter(20f, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                        }
+                        drawContext.canvas.nativeCanvas.drawCircle(center.x, center.y + 20f, radius, paint)
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                // Hoist the color outside the Canvas
-                val powerIconColor = MaterialTheme.colorScheme.onPrimary
-                Canvas(modifier = Modifier.size(66.dp)) {
-                    val stroke = 7.dp.toPx()
-                    val arcR = size.minDimension / 2.2f
-                    val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
+                Button(
+                    onClick = onConnectClick,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    val powerIconColor = MaterialTheme.colorScheme.onPrimary
+                    Canvas(modifier = Modifier.size(with(LocalDensity.current) { (buttonDiameter / 3).toDp() })) {
+                        val stroke = 7.dp.toPx()
+                        val arcR = size.minDimension / 2.2f
+                        val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
 
-                    drawArc(
-                        color = powerIconColor,
-                        startAngle = -135f,
-                        sweepAngle = -270f,
-                        useCenter = false,
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
-                        size = Size(arcR * 2, arcR * 2),
-                        topLeft = topLeft
-                    )
+                        drawArc(
+                            color = powerIconColor,
+                            startAngle = -135f,
+                            sweepAngle = -270f,
+                            useCenter = false,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round),
+                            size = Size(arcR * 2, arcR * 2),
+                            topLeft = topLeft
+                        )
 
-                    val cx = size.width / 2
-                    val cy = size.height / 2
-                    drawLine(
-                        color = powerIconColor,
-                        start = Offset(cx, cy - arcR * 1.2f),
-                        end = Offset(cx, cy - arcR * 0.6f),
-                        strokeWidth = stroke,
-                        cap = StrokeCap.Round
-                    )
+                        val cx = size.width / 2
+                        val cy = size.height / 2
+                        drawLine(
+                            color = powerIconColor,
+                            start = Offset(cx, cy - arcR * 1.2f),
+                            end = Offset(cx, cy - arcR * 0.6f),
+                            strokeWidth = stroke,
+                            cap = StrokeCap.Round
+                        )
+                    }
                 }
             }
         }
