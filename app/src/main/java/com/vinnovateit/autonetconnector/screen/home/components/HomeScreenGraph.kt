@@ -42,9 +42,9 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBitsPerSecond
-import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
-import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
-import com.vinnovateit.autonetconnector.ui.theme.Transparent
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphUpload
+import com.vinnovateit.autonetconnector.ui.theme.ColorTransparent
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.max
@@ -204,13 +204,13 @@ fun HomeScreenGraph(
                 .width(canvasWidthDp)
                 .fillMaxHeight()
             ) {
-              val dlBrush = Brush.verticalGradient(listOf(GraphDownload.copy(0.4f), Transparent))
-              val ulBrush = Brush.verticalGradient(listOf(GraphUpload.copy(0.4f), Transparent))
+              val dlBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(0.4f), ColorTransparent))
+              val ulBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(0.4f), ColorTransparent))
 
               drawPath(graphData.downloadPath, brush = dlBrush)
               drawPath(graphData.uploadPath, brush = ulBrush)
-              drawPath(graphData.lineDownloadPath, GraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-              drawPath(graphData.lineUploadPath, GraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+              drawPath(graphData.lineDownloadPath, ColorGraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+              drawPath(graphData.lineUploadPath, ColorGraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
             }
           }
 
@@ -230,7 +230,7 @@ fun HomeScreenGraph(
                       backgroundColor,
                       backgroundColor.copy(alpha = 0.8f),
                       backgroundColor.copy(alpha = 0.5f),
-                      Transparent
+                      ColorTransparent
                     )
                   )
                 )

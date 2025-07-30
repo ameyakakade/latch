@@ -76,8 +76,8 @@ import com.vinnovateit.autonetconnector.screen.stats.utils.DisplayMode
 import com.vinnovateit.autonetconnector.screen.stats.utils.createGraphPaths
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDurationDynamic
-import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
-import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphUpload
 import kotlinx.coroutines.delay
 import kotlin.math.atan2
 import kotlin.math.floor
@@ -307,13 +307,13 @@ private fun SessionRateGraph(
                 val axisAreaHeight = if (isInteractive) AXIS_LABEL_HEIGHT.toPx() else 0f
                 val graphAreaHeight = size.height - axisAreaHeight
 
-                val dlBrush = Brush.verticalGradient(listOf(GraphDownload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
-                val ulBrush = Brush.verticalGradient(listOf(GraphUpload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
+                val dlBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
+                val ulBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
 
                 drawPath(graphData.downloadPath, brush = dlBrush)
                 drawPath(graphData.uploadPath, brush = ulBrush)
-                drawPath(graphData.lineDownloadPath, GraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-                drawPath(graphData.lineUploadPath, GraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(graphData.lineDownloadPath, ColorGraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+                drawPath(graphData.lineUploadPath, ColorGraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
 
                 if (isInteractive) {
                     val axisY = graphAreaHeight
@@ -339,7 +339,7 @@ private fun SessionRateGraph(
 
         if (isInteractive && maxSpeed > 0) {
             val (value, unit) = formatBytes(maxSpeed)
-            val tagColor = if (isDownloadMax) GraphDownload else GraphUpload
+            val tagColor = if (isDownloadMax) ColorGraphDownload else ColorGraphUpload
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -441,8 +441,8 @@ fun DataUsageCircle(
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val stroke = 10.dp.toPx()
-            drawArc(color = GraphUpload, -90f, 360f, useCenter = false, style = Stroke(stroke))
-            drawArc(GraphDownload, -90f, downloadFraction * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round))
+            drawArc(color = ColorGraphUpload, -90f, 360f, useCenter = false, style = Stroke(stroke))
+            drawArc(ColorGraphDownload, -90f, downloadFraction * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round))
         }
 
         val (valueStr, unitStr) = remember(dataUsage, displayMode) {
@@ -461,8 +461,8 @@ fun DataUsageCircle(
                 else -> null
             }
             val tint = when (mode) {
-                DisplayMode.DOWNLOAD -> GraphDownload
-                DisplayMode.UPLOAD -> GraphUpload
+                DisplayMode.DOWNLOAD -> ColorGraphDownload
+                DisplayMode.UPLOAD -> ColorGraphUpload
                 else -> MaterialTheme.colorScheme.onPrimary
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

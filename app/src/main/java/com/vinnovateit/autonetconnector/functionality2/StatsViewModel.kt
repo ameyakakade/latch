@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.functionality
+package com.vinnovateit.autonetconnector.functionality2
 
 import android.app.Application
 import androidx.lifecycle.ViewModel

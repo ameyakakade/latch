@@ -26,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDurationDynamic
-import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
-import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphUpload
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -77,7 +77,7 @@ fun HistoryItemCard(
         )
         Row {
           val (dlValue, dlUnit) = formatBytes(session.totalData.rxBytes)
-          Icon(Icons.Default.ArrowDownward, contentDescription = "Download", tint = GraphDownload, modifier = Modifier.size(16.dp))
+          Icon(Icons.Default.ArrowDownward, contentDescription = "Download", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
           Text(
             text = "$dlValue $dlUnit",
             style = MaterialTheme.typography.bodySmall,
@@ -85,7 +85,7 @@ fun HistoryItemCard(
           )
           Spacer(modifier = Modifier.width(8.dp))
           val (ulValue, ulUnit) = formatBytes(session.totalData.txBytes)
-          Icon(Icons.Default.ArrowUpward, contentDescription = "Upload", tint = GraphUpload, modifier = Modifier.size(16.dp))
+          Icon(Icons.Default.ArrowUpward, contentDescription = "Upload", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
             text = "$ulValue $ulUnit",
             style = MaterialTheme.typography.bodySmall,

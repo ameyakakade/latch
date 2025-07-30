@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -34,12 +35,12 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import com.vinnovateit.autonetconnector.ui.theme.PowerButtonShadow
-import com.vinnovateit.autonetconnector.ui.theme.StatusDisconnected
+import com.vinnovateit.autonetconnector.ui.theme.ColorPowerButtonShadow
+import com.vinnovateit.autonetconnector.ui.theme.ColorStatusDisconnected
 
 val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_regular, FontWeight.Normal),
-    Font(R.font.satoshi_regular, FontWeight.Medium),
+    Font(R.font.satoshi_medium, FontWeight.Medium),
     Font(R.font.satoshi_regular, FontWeight.SemiBold),
     Font(R.font.satoshi_bold, FontWeight.Bold)
 )
@@ -123,44 +124,66 @@ fun HomeScreen(
 
                         // End item (Menu) - in a fixed-width box for symmetry
                         Box(
-                            modifier = Modifier.width(50.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
+                            modifier = Modifier
+                                .size(32.dp) // visual wrapper size
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = ripple(
+                                        bounded = false,      // allows ripple to expand beyond bounds
+                                        radius = 24.dp,       // bigger ripple radius for fuller effect
+                                        color = MaterialTheme.colorScheme.primary
+                                    ),
+                                    onClick = { showMenu = true }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ){
                             TooltipHint(tooltipText = "Menu") {
-                                Box { // Wrapper Box for the dropdown menu
-                                    Icon(
-                                        imageVector = Icons.Rounded.Menu,
-                                        contentDescription = "Menu",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .size(32.dp) // Increased size
-                                            .clip(CircleShape)
-
-                                            .clickable { showMenu = true }
+                                Icon(
+                                    imageVector = Icons.Rounded.Menu,
+                                    contentDescription = "Menu",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    modifier = Modifier
+                                        .width(200.dp),
+                                    containerColor = MaterialTheme.colorScheme.surface,          // menu background :contentReference[oaicite:1]{index=1}
+                                    tonalElevation = MenuDefaults.TonalElevation,
+                                    shadowElevation = MenuDefaults.ShadowElevation,
+                                    shape = MenuDefaults.shape
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Change Credentials",
+                                                fontSize = 16.sp,
+                                                fontFamily = SatoshiFontFamily,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        },
+                                        onClick = {
+                                            showMenu = false
+                                            val intent =
+                                                Intent(context, SecondPageActivity::class.java)
+                                            intent.putExtra("editMode", true)
+                                            context.startActivity(intent)
+                                        },
+                                        leadingIcon = null,
+                                        trailingIcon = null,
+                                        colors = MenuDefaults.itemColors(
+                                            textColor = MaterialTheme.colorScheme.primary,
+                                            disabledTextColor = MaterialTheme.colorScheme.surfaceDim
+                                        ),
+                                        contentPadding = MenuDefaults.DropdownMenuItemContentPadding
                                     )
-                                    DropdownMenu(
-                                        expanded = showMenu,
-                                        onDismissRequest = { showMenu = false },
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.surface)
-                                            .padding(vertical = 4.dp)
-                                            .width(200.dp)
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Change Credentials") },
-                                            onClick = {
-                                                showMenu = false
-                                                val intent =
-                                                    Intent(context, SecondPageActivity::class.java)
-                                                intent.putExtra("editMode", true)
-                                                context.startActivity(intent)
-                                            }
-                                        )
-                                    }
                                 }
                             }
                         }
                     }
+
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -175,7 +198,7 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        if (isConnected) MaterialTheme.colorScheme.primary else StatusDisconnected,
+                                        if (isConnected) MaterialTheme.colorScheme.primary else ColorStatusDisconnected,
                                         RoundedCornerShape(4.dp)
                                     )
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
@@ -239,7 +262,7 @@ fun HomeScreen(
                 .align(Alignment.Center) // Centered alignment
                 .size(210.dp)
                 .drawBehind {
-                    val shadowColor = PowerButtonShadow
+                    val shadowColor = ColorPowerButtonShadow
                     val radius = size.minDimension / 2
                     val paint = Paint().asFrameworkPaint().apply {
                         isAntiAlias = true

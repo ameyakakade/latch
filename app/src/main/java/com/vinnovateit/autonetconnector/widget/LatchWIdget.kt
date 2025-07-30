@@ -19,6 +19,7 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.currentState
 import androidx.glance.layout.*
@@ -35,13 +36,15 @@ import com.vinnovateit.autonetconnector.functionality2.manager.AutoLoginManager
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
 data class LatchWidgetState(
   val status: String = "Disconnected",
   val ssid: String = "N/A",
-  val speed: String = "...",
+  val connectedDuration: String = "-",
   val isConnected: Boolean = false
 )
 
@@ -50,18 +53,38 @@ enum class WidgetTheme(val key: String) { LIGHT("light"), DARK("dark") }
 // This is now a top-level class, which fixes the ClassNotFoundException
 class ConnectActionCallback : ActionCallback {
   override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+    // 1. Immediately show "Connecting..." in the widget
+    updateAppWidgetState(context, glanceId) { prefs ->
+      val stateKey = LatchWidget.WIDGET_STATE_PREF_KEY
+      val connectingState = LatchWidgetState(
+        status = "Connecting...",
+        ssid = "Trying...",
+        connectedDuration = "...",
+        isConnected = false
+      )
+      prefs[stateKey] = Json.encodeToString(connectingState)
+    }
+    LatchWidget().update(context, glanceId)
+
+    // 2. Proceed to attempt login (only if not already connected)
     val isConnected = WifiStatsManager.liveStatus.first() != null
     if (!isConnected) {
       val db = CredentialDatabase.getInstance(context)
       val credentials = db.credentialDao().getCredential()
       if (credentials != null) {
-        AutoLoginManager.attemptLogin(credentials.registrationNumber, credentials.password)
+        AutoLoginManager.attemptLogin(
+          credentials.registrationNumber,
+          credentials.password
+        )
       }
     }
+
+    // 3. Trigger full update after login attempt
     val workRequest = OneTimeWorkRequestBuilder<UpdateWidgetWorker>().build()
     WorkManager.getInstance(context).enqueue(workRequest)
   }
 }
+
 
 class LatchWidget : GlanceAppWidget() {
   companion object {
@@ -74,11 +97,8 @@ class LatchWidget : GlanceAppWidget() {
       val prefs = currentState<Preferences>()
       val themeKey = prefs[THEME_PREF_KEY] ?: WidgetTheme.DARK.key
       val stateJson = prefs[WIDGET_STATE_PREF_KEY]
-      val state = if (stateJson.isNullOrBlank()) {
-        LatchWidgetState()
-      } else {
-        Json.decodeFromString<LatchWidgetState>(stateJson)
-      }
+      val json = Json { ignoreUnknownKeys = true }
+      val state = json.decodeFromString<LatchWidgetState>(stateJson ?: "{}")
       LatchWidgetContent(themeKey = themeKey, state = state)
     }
   }
@@ -115,7 +135,7 @@ private fun LatchWidgetContent(themeKey: String, state: LatchWidgetState) {
       Text(text = state.ssid, style = TextStyle(color = ColorProvider(textColor), fontSize = 20.sp, fontWeight = FontWeight.Medium))
       Spacer(modifier = GlanceModifier.defaultWeight())
       Box(modifier = GlanceModifier.background(ImageProvider(primaryColor)).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-        Text(text = state.speed, style = TextStyle(color = ColorProvider(onPrimaryColor), fontSize = 14.sp, fontWeight = FontWeight.Bold))
+        Text(text = state.connectedDuration, style = TextStyle(color = ColorProvider(onPrimaryColor), fontSize = 14.sp, fontWeight = FontWeight.Bold))
       }
     }
     Spacer(modifier = GlanceModifier.defaultWeight())

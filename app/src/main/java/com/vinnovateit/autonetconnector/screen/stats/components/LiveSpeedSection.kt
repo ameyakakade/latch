@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -36,16 +35,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBitsPerSecond
 import com.vinnovateit.autonetconnector.ui.components.TooltipHint
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LiveSpeedSection(session: SessionSummary?) {
-  // Calculate the maximum download and upload speeds from the session history.
-  val maxDownloadBps = session?.history?.maxOfOrNull { it.usage.rxBytes } ?: 0L
-  val maxUploadBps = session?.history?.maxOfOrNull { it.usage.txBytes } ?: 0L
+fun LiveSpeedSection(
+  isLive: Boolean,
+  downloadBps: Long,
+  uploadBps: Long,
+  onDownloadReport: () -> Unit
+) {
+  val downloadLabel = if (isLive) "Download" else "Max Download"
+  val uploadLabel = if (isLive) "Upload" else "Max Upload"
 
   Column(
     modifier = Modifier
@@ -54,42 +55,44 @@ fun LiveSpeedSection(session: SessionSummary?) {
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(24.dp)
   ) {
-    // Download Report Button
-    TooltipHint(tooltipText = "Download a CSV report of the session") {
-      OutlinedButton(
-        onClick = { /* TODO: Implement report generation logic */ },
-        shape = RoundedCornerShape(50),
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(50.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-        colors = ButtonDefaults.outlinedButtonColors(
-          contentColor = MaterialTheme.colorScheme.error
-        )
-      ) {
-        Icon(
-          imageVector = Icons.Default.Download,
-          contentDescription = "Download Report"
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Download report", fontWeight = FontWeight.Bold)
+    // Conditionally show the Download Report Button only during a live session
+    if (isLive) {
+      TooltipHint(tooltipText = "Download a CSV report of the session") {
+        OutlinedButton(
+          onClick = onDownloadReport,
+          shape = RoundedCornerShape(50),
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+          colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.error
+          )
+        ) {
+          Icon(
+            imageVector = Icons.Default.Download,
+            contentDescription = "Download Report"
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Download report", fontWeight = FontWeight.Bold)
+        }
       }
     }
 
-    // Max Speeds
+    // Max Speeds are always shown
     Row(
       modifier = Modifier.fillMaxWidth(),
       horizontalArrangement = Arrangement.SpaceEvenly,
       verticalAlignment = Alignment.CenterVertically
     ) {
-      SpeedIndicator(label = "Max Download", bytesPerSecond = maxDownloadBps)
+      SpeedIndicator(label = downloadLabel, bytesPerSecond = downloadBps)
       VerticalDivider(
         modifier = Modifier
           .height(80.dp)
           .width(1.dp),
         color = MaterialTheme.colorScheme.outline
       )
-      SpeedIndicator(label = "Max Upload", bytesPerSecond = maxUploadBps)
+      SpeedIndicator(label = uploadLabel, bytesPerSecond = uploadBps)
     }
   }
 }

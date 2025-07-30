@@ -60,8 +60,8 @@ import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.stats.ui.NoDataCard
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatBytes
 import com.vinnovateit.autonetconnector.screen.stats.utils.formatDate
-import com.vinnovateit.autonetconnector.ui.theme.GraphDownload
-import com.vinnovateit.autonetconnector.ui.theme.GraphUpload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphDownload
+import com.vinnovateit.autonetconnector.ui.theme.ColorGraphUpload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
@@ -343,13 +343,13 @@ fun Bar(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f - ulPart)
-                        .background(GraphDownload)
+                        .background(ColorGraphDownload)
                 )
                 if (usage.txBytes > 0) Box(
                     Modifier
                         .fillMaxWidth()
                         .weight(ulPart)
-                        .background(GraphUpload)
+                        .background(ColorGraphUpload)
                 )
             }
         }
@@ -398,7 +398,7 @@ fun StatDetailRow(data: Pair<DataUsage, String>) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AnimatedContent(dlFmt, label = "DLStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowDownward, null, tint = GraphDownload, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowDownward, null, tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
@@ -408,7 +408,7 @@ fun StatDetailRow(data: Pair<DataUsage, String>) {
             }
             AnimatedContent(ulFmt, label = "ULStat") { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowUpward, null, tint = GraphUpload, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.ArrowUpward, null, tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
