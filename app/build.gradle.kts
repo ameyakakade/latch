@@ -40,7 +40,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
 }
 
@@ -56,8 +56,9 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3:1.4.0-alpha18")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.materialkolor:material-kolor:3.0.0")
 
     // Widget
     implementation("androidx.glance:glance-appwidget:1.1.1")
@@ -98,7 +99,5 @@ dependencies {
 
     // AppCompat (deduplicate)
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.compose.material3:material3:1.2.1")
     implementation ("androidx.compose.material:material-icons-extended")
-
 }
