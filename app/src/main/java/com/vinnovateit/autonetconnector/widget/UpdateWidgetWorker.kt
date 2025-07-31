@@ -6,7 +6,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.vinnovateit.autonetconnector.functionality2.manager.WifiStatsManager
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,7 +26,8 @@ class UpdateWidgetWorker(
     val glanceIds = manager.getGlanceIds(LatchWidget::class.java)
     if (glanceIds.isEmpty()) return Result.success()
 
-    val latestState = WifiStatsManager.liveStatus.first()
+    // Get state from the new repository
+    val latestState = SessionRepository.liveStatus.first()
     val widgetState: LatchWidgetState
     if (latestState != null) {
       // Time-based connected duration string
