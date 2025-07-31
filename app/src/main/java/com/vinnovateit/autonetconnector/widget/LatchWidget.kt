@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.concurrent.TimeUnit
 
 @Serializable
 data class LatchWidgetState(
@@ -86,6 +87,7 @@ object LatchWidgetColorScheme {
 
 class ConnectActionCallback : ActionCallback {
   override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+    // 1. Set state to "Connecting..." for immediate user feedback.
     updateAppWidgetState(context, glanceId) { prefs ->
       val stateKey = LatchWidget.WIDGET_STATE_PREF_KEY
       val connectingState = LatchWidgetState(
@@ -97,20 +99,37 @@ class ConnectActionCallback : ActionCallback {
       prefs[stateKey] = Json.encodeToString(connectingState)
     }
     LatchWidget().update(context, glanceId)
-    // Get state from the new repository
+
+    // 2. Check if already connected.
     val isConnected = SessionRepository.liveStatus.first() != null
-    if (!isConnected) {
-      val db = CredentialDatabase.getInstance(context)
-      val credentials = db.credentialDao().getCredential()
-      if (credentials != null) {
-        AutoLoginManager.attemptLogin(
-          credentials.registrationNumber,
-          credentials.password
-        )
-      }
+    if (isConnected) {
+      // If already connected, just run the update worker to refresh the UI with current data.
       val workRequest = OneTimeWorkRequestBuilder<UpdateWidgetWorker>().build()
       WorkManager.getInstance(context).enqueue(workRequest)
+      return // Nothing more to do.
     }
+
+    // 3. Not connected, so attempt login.
+    val db = CredentialDatabase.getInstance(context)
+    val credentials = db.credentialDao().getCredential()
+
+    if (credentials != null) {
+      // Actually await the login result. This was the missing piece.
+      val loginSuccess = AutoLoginManager.attemptLogin(
+        credentials.registrationNumber,
+        credentials.password
+      )
+      // We don't need to manually update the widget based on `loginSuccess` here.
+      // The login attempt will trigger network callbacks, which will update the
+      // SessionRepository. The UpdateWidgetWorker will then read the true state.
+    }
+
+    // 4. After the attempt, enqueue the worker to sync the widget with the final state.
+    // Add a small delay to give the network callbacks time to fire and update the SessionRepository.
+    val workRequest = OneTimeWorkRequestBuilder<UpdateWidgetWorker>()
+      .setInitialDelay(2, TimeUnit.SECONDS)
+      .build()
+    WorkManager.getInstance(context).enqueue(workRequest)
   }
 }
 
