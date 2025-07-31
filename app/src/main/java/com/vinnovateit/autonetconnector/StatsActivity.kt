@@ -2,7 +2,6 @@ package com.vinnovateit.autonetconnector
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.Application
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -47,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModel
-import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModelFactory
 import com.vinnovateit.autonetconnector.screen.stats.components.HistoryBarChart
 import com.vinnovateit.autonetconnector.screen.stats.components.HistorySessionList
 import com.vinnovateit.autonetconnector.screen.stats.components.LiveSpeedSection
@@ -63,7 +61,7 @@ class StatsActivity : ComponentActivity() {
     registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
       uri?.let {
         try {
-          val viewModel: StatsViewModel by viewModels { StatsViewModelFactory(application) }
+          val viewModel: StatsViewModel by viewModels()
           contentResolver.openOutputStream(it)?.use { outputStream ->
             generateCsvReport(viewModel.sessionHistory.value, outputStream)
           }
@@ -95,9 +93,7 @@ class StatsActivity : ComponentActivity() {
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
-  statsViewModel: StatsViewModel = viewModel(
-    factory = StatsViewModelFactory(LocalContext.current.applicationContext as Application)
-  ),
+  statsViewModel: StatsViewModel = viewModel(),
   overrideSsid: String?,
   onDownloadReport: () -> Unit
 ) {

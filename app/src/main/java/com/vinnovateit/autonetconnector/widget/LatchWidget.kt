@@ -49,7 +49,7 @@ import androidx.work.WorkManager
 import com.vinnovateit.autonetconnector.MainActivity
 import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.functionality2.manager.AutoLoginManager
-import com.vinnovateit.autonetconnector.functionality2.manager.WifiStatsManager
+import com.vinnovateit.autonetconnector.functionality2.manager.SessionRepository
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
@@ -71,7 +71,6 @@ object LatchWidgetColorScheme {
     onPrimary = Color(R.color.widget_light_on_primary),
     background = Color(R.color.widget_light_background),
     onBackground = Color(R.color.widget_light_text),
-    // Add more colors as needed for your UI elements
   )
 
   @SuppressLint("ResourceAsColor")
@@ -80,7 +79,6 @@ object LatchWidgetColorScheme {
     onPrimary = Color(R.color.widget_dark_on_primary),
     background = Color(R.color.widget_dark_background),
     onBackground = Color(R.color.widget_dark_text),
-    // Add more colors as needed
   )
 
   val colors = ColorProviders(light = lightColors, dark = darkColors)
@@ -99,7 +97,8 @@ class ConnectActionCallback : ActionCallback {
       prefs[stateKey] = Json.encodeToString(connectingState)
     }
     LatchWidget().update(context, glanceId)
-    val isConnected = WifiStatsManager.liveStatus.first() != null
+    // Get state from the new repository
+    val isConnected = SessionRepository.liveStatus.first() != null
     if (!isConnected) {
       val db = CredentialDatabase.getInstance(context)
       val credentials = db.credentialDao().getCredential()
@@ -126,9 +125,9 @@ class LatchWidget : GlanceAppWidget() {
     provideContent {
       GlanceTheme(
         colors = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-          GlanceTheme.colors  // Use dynamic wallpaper colors
+          GlanceTheme.colors
         } else {
-          LatchWidgetColorScheme.colors  // Fallback to custom colors
+          LatchWidgetColorScheme.colors
         }
       ) {
         val prefs = currentState<Preferences>()
