@@ -31,6 +31,11 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -132,10 +137,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 label = if (regNo.isEmpty() && !regNoFocused) { { Text("Registration Number", color = Color(0xFFC01221)) } } else null,
                 singleLine = true,
                 trailingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_username),
+                    Icon(
+                        imageVector = Icons.Default.Person,
                         contentDescription = "Username Icon",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221))
+                        tint = Color(0xFFC01221)
                     )
                 },
                 modifier = Modifier
@@ -174,10 +179,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 singleLine = true,
                 visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_password),
-                        contentDescription = "Password Icon",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221)),
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                        tint = Color(0xFFC01221),
                         modifier = Modifier.clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
