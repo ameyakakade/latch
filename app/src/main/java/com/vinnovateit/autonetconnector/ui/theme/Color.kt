@@ -1,67 +1,62 @@
 package com.vinnovateit.autonetconnector.ui.theme
 
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+// --- Button Colors ---
+val ColorDownloadReport = Color(0xFFC62828)
 
-// --- Base App Colors ---
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// --- Home Screen Themed Colors ---
+val ColorHomeBackgroundDark = Color(0xFF0B1957)
+val ColorHomeSurfaceDark = Color.White
+val ColorHomeOnBackgroundDark = Color.White
+val ColorHomeOnSurfaceDark = Color(0xFF0A1D6F)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// --- Text on alert/danger buttons ---
+val ColorTextOnDanger = Color.White
 
-// --- Buttons ---
-val DownloadReportButton = Color(0xFFC62828)
+// --- Stats Screen - Light Theme ---
+val ColorStatsBackgroundLight = Color(0xFFF0F2F5)
+val ColorStatsCardBackgroundLight = Color.White
+val ColorStatsTextPrimaryLight = Color(0xFF050505)
+val ColorStatsTextSecondaryLight = Color(0xFF65676B)
+val ColorStatsDividerLight = Color(0xFFCED0D4)
 
-// --- Themed Colors for Home Screen (Dark) ---
-val HomeBackgroundDark = Color(0xFF0B1957)
-val HomeSurfaceDark = Color.White
-val HomeOnBackgroundDark = Color.White
-val HomeOnSurfaceDark = Color(0xFF0A1D6F) // A slightly darker blue for text on white
-val TextOnDanger = Color.White
+// --- Stats Screen - Dark Theme ---
+val ColorStatsBackgroundDark = Color(0xFF18191A)
+val ColorStatsCardBackgroundDark = Color(0xFF242526)
+val ColorStatsTextPrimaryDark = Color(0xFFE4E6EB)
+val ColorStatsTextSecondaryDark = Color(0xFFB0B3B8)
+val ColorStatsDividerDark = Color(0xFF3E4042)
 
-// --- Themed Colors for Stats Screen ---
-// Light Theme
-val StatsBackgroundLight = Color(0xFFF0F2F5)
-val StatsCardBackgroundLight = Color.White
-val StatsTextPrimaryLight = Color(0xFF050505)
-val StatsTextSecondaryLight = Color(0xFF65676B)
-val StatsDividerLight = Color(0xFFCED0D4)
+// --- New App Theme (Shared) ---
+val ColorAppBackground = Color(0xFFFDF0D5)
+val ColorTextPrimary = Color(0xFFC01221)
+val ColorTextOnInteractive = Color(0xFFFAF3EB)
 
-// Dark Theme
-val StatsBackgroundDark = Color(0xFF18191A)
-val StatsCardBackgroundDark = Color(0xFF242526)
-val StatsTextPrimaryDark = Color(0xFFE4E6EB)
-val StatsTextSecondaryDark = Color(0xFFB0B3B8)
-val StatsDividerDark = Color(0xFF3E4042)
-
-
-// --- New App Theme Colors ---
-val AppBackground = Color(0xFFFDF0D5)
-val TextPrimary = Color(0xFFC01221)
-val TextOnInteractive = Color(0xFFFAF3EB)
-val ContainerPrimary = Color(0xFFC01221)
-val SurfaceContainer = Color(0xFFFAF3EB) // For cards and surfaces on the main background
+val ColorContainerPrimary = Color(0xFF4CAF50) // Green
+val ColorContainerSecondary = Color(0xFF2196F3) // Blue
+val ColorContainerTertiary = Color(0xFFFFC107) // Amber
+val ColorSurfaceContainer = Color(0xFFFAF3EB)
 
 // --- Status & Tags ---
-val StatusConnected = Color(0xFF4CAF50)
-val StatusDisconnected = Color(0xFFE53E3E)
-val LiveTag = Color(0xFFD32F2F)
-val LastTag = Color(0xFF757575)
+val ColorStatusConnected = Color(0xFF4CAF50)
+val ColorStatusDisconnected = Color(0xFFE53E3E)
+val ColorLiveTag = Color(0xFFD32F2F)
+val ColorLastTag = Color(0xFF757575)
 
-// --- Graph & Charts ---
-val GraphDownload = Color(0xFF0089D0)
-val GraphUpload = Color(0xFFFFA500)
+// --- Graph Colors ---
+val ColorGraphDownload = Color(0xFF0089D0)
+val ColorGraphUpload = Color(0xFFFFA500)
 
 // --- UI Effects ---
-val ShadowColor = Color.Black.copy(alpha = 0.2f)
-val PowerButtonShadow = Color.Black.copy(alpha = 0.7f)
+val ColorShadow = Color.Black.copy(alpha = 0.2f)
+val ColorPowerButtonShadow = Color.Black.copy(alpha = 0.7f)
 
-// --- Tooltip Colors ---
-val TooltipContainer = Color(0xFF2D2F31)
-val TooltipContent = Color(0xFFF5F5F5)
+// --- Tooltip ---
+val ColorTooltipContainer = Color(0xFF2D2F31)
+val ColorTooltipContent = Color(0xFFF5F5F5)
 
 // --- Misc ---
-val Transparent = Color.Transparent
-val CollapsedAppBar = Color(0xFFEEDFCA)
+val ColorTransparent = Color.Transparent
+val ColorCollapsedAppBar = Color(0xFFEEDFCA)
