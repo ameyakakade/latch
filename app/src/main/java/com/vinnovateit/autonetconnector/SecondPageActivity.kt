@@ -13,16 +13,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.storage.CredentialDatabase
@@ -31,21 +27,15 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.paint
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-
-// Define Outfit font family
-val OutfitFontFamily = FontFamily(
-    Font(R.font.outfit_regular, FontWeight.Normal),
-)
-
-// Define Satoshi font family
-val SatoshiRegularFontFamily = FontFamily(
-    Font(R.font.satoshi_regular, FontWeight.Normal),
-)
+import com.vinnovateit.autonetconnector.ui.theme.ColorCredentialText
+import com.vinnovateit.autonetconnector.ui.theme.OutfitFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,35 +97,35 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Let's Get Started",
+                text = stringResource(id = R.string.credentials_title),
                 fontSize = 35.sp,
                 fontWeight = FontWeight.Bold,
-                fontFamily = OutfitFontFamily,
-                color = MaterialTheme.colorScheme.onBackground
+                fontFamily = SatoshiFontFamily,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Enter credentials",
+                text = stringResource(id = R.string.credentials_subtitle),
                 fontSize = 20.sp,
-                fontFamily = OutfitFontFamily,
-                color = MaterialTheme.colorScheme.onBackground,
+                fontFamily = SatoshiFontFamily,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
             TextField(
                 value = regNo,
                 onValueChange = { regNo = it },
-                label = if (regNo.isEmpty() && !regNoFocused) { { Text("Registration Number", color = Color(0xFFC01221)) } } else null,
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = ColorCredentialText) } } else null,
                 singleLine = true,
                 trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_username),
-                        contentDescription = "Username Icon",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221))
+                        contentDescription = stringResource(id = R.string.username_icon_content_description),
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(ColorCredentialText)
                     )
                 },
                 modifier = Modifier
@@ -144,13 +134,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         regNoFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = Color(0xFFC01221),
+                    color = ColorCredentialText,
                     fontSize = 18.sp,
-                    fontFamily = SatoshiRegularFontFamily
+                    fontFamily = SatoshiFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Next
+                    imeAction = ImeAction.Next
                 ),
               colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -170,14 +160,14 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = if (password.isEmpty() && !passwordFocused) { { Text("Password", color = Color(0xFFC01221)) } } else null,
+                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = ColorCredentialText) } } else null,
                 singleLine = true,
                 visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Image(
                         painter = painterResource(id = R.drawable.ic_password),
-                        contentDescription = "Password Icon",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color(0xFFC01221)),
+                        contentDescription = stringResource(id = R.string.password_icon_content_description),
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(ColorCredentialText),
                         modifier = Modifier.clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
@@ -190,13 +180,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         passwordFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = Color(0xFFC01221),
+                    color = ColorCredentialText,
                     fontSize = 18.sp,
-                    fontFamily = SatoshiRegularFontFamily
+                    fontFamily = SatoshiFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    imeAction = ImeAction.Done
                 ),
               colors = TextFieldDefaults.colors(
                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -222,24 +212,24 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                                 CredentialEntity(id = "singleton", registrationNumber = regNo, password = password)
                             )
 
-                            Toast.makeText(context, "Credentials saved!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
                             onCredentialsSaved()
                         }
                     } else {
-                        message = "Please enter User ID and Password"
+                        message = context.getString(R.string.credentials_error_message)
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 40.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text(
-                    text = if (editMode) "Update Credentials" else "Save Credentials",
+                    text = if (editMode) stringResource(id = R.string.update_credentials) else stringResource(id = R.string.save_credentials),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = OutfitFontFamily,

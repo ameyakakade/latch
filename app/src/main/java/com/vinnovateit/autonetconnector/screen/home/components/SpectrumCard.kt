@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import com.vinnovateit.autonetconnector.functionality2.manager.SessionSummary
 import com.vinnovateit.autonetconnector.screen.home.components.HomeScreenGraph
+import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
 @Composable
 fun SpectrumCard(

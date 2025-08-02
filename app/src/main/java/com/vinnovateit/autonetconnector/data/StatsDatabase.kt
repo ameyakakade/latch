@@ -52,6 +52,12 @@ interface StatsDao {
 
   @Query("SELECT * FROM daily_usage WHERE date = :day")
   suspend fun getUsageForDay(day: Date): DailyUsage?
+
+  @Query("DELETE FROM sessions")
+  suspend fun clearAllSessions()
+
+  @Query("DELETE FROM daily_usage")
+  suspend fun clearAllDailyUsage()
 }
 
 class Converters {
@@ -68,55 +74,24 @@ class Converters {
 
 @Database(entities = [Session::class, DailyUsage::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class)
-abstract class AutonetDatabase : RoomDatabase() {
+abstract class LatchDatabase : RoomDatabase() {
 
   abstract fun statsDao(): StatsDao
 
   companion object {
     @Volatile
-    private var INSTANCE: AutonetDatabase? = null
+    private var INSTANCE: LatchDatabase? = null
 
-    fun getDatabase(context: Context): AutonetDatabase {
+    fun getDatabase(context: Context): LatchDatabase {
       return INSTANCE ?: synchronized(this) {
         val instance = Room.databaseBuilder(
           context.applicationContext,
-          AutonetDatabase::class.java,
-          "autonet_database"
+          LatchDatabase::class.java,
+          "latch_database"
         ).build()
         INSTANCE = instance
         instance
       }
     }
-  }
-}
-
-class StatsRepository(private val statsDao: StatsDao) {
-
-  fun getAllSessions(): Flow<List<Session>> = statsDao.getAllSessions()
-
-  fun getDailyUsage(): Flow<List<DailyUsage>> = statsDao.getDailyUsage()
-
-  suspend fun addSession(session: Session) {
-    statsDao.insertSession(session)
-    val sessionDate = getStartOfDay(session.startTime)
-    val dataUsed = session.dataUsed
-    val existingDailyUsage = statsDao.getUsageForDay(sessionDate)
-
-    if (existingDailyUsage == null) {
-      statsDao.insertDailyUsage(DailyUsage(date = sessionDate, totalDataUsed = dataUsed))
-    } else {
-      val updatedUsage = existingDailyUsage.totalDataUsed + dataUsed
-      statsDao.updateDailyUsage(existingDailyUsage.copy(totalDataUsed = updatedUsage))
-    }
-  }
-
-  private fun getStartOfDay(date: Date): Date {
-    return Calendar.getInstance().apply {
-      time = date
-      set(Calendar.HOUR_OF_DAY, 0)
-      set(Calendar.MINUTE, 0)
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }.time
   }
 }
