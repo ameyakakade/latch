@@ -1,9 +1,70 @@
 <resources>
-    <string name="app_name">Auto Net Connector</string>
-    <string name="welcome_back">Welcome back</string>
+    <string name="app_name">AutoNetConnector</string>
+    <string name="status">Status</string>
+    <string name="app_logo_content_description">App Logo</string>
     <string name="get_started">Get Started</string>
-    <string name="lets_get_st">Lets Get Started</string>
-    <string name="create_your">Enter Credentials</string>
-    <string name="loading">Loading Latch…</string>
-    <string name="latch_widget_description">Quick status and control for Latch AutoNet.</string>
+    <string name="menu">Menu</string>
+
+    <string name="landing_latch_logo_content_description">Latch Logo</string>
+    <string name="landing_latch_logo_text_content_description">Latch Logo Text</string>
+    <string name="landing_vinnovateit_logo_content_description">VinnovateIT Logo</string>
+
+    <string name="credentials_title">Let\'s Get Started</string>
+    <string name="credentials_subtitle">Enter credentials</string>
+    <string name="registration_number">Registration Number</string>
+    <string name="password">Password</string>
+    <string name="save_credentials">Save Credentials</string>
+    <string name="update_credentials">Update Credentials</string>
+    <string name="credentials_saved_toast">Credentials saved!</string>
+    <string name="credentials_error_message">Please enter User ID and Password</string>
+    <string name="username_icon_content_description">Username Icon</string>
+    <string name="password_icon_content_description">Password Icon</string>
+
+    <string name="home_initial_status">Press the button to run auto-login test.</string>
+    <string name="home_background_pattern_content_description">Background Pattern</string>
+    <string name="home_change_credentials">Change Credentials</string>
+    <string name="home_status_connected">CONNECTED</string>
+    <string name="home_status_disconnected">DISCONNECTED</string>
+    <string name="home_network_statistics">Network Statistics</string>
+    <string name="home_go_to_statistics">Go to Statistics</string>
+    <string name="home_no_data_for_graph">No data available for graph</string>
+
+    <string name="stats_title">Network Statistics</string>
+    <string name="stats_go_back">Go Back</string>
+    <string name="stats_reset_stats">Reset Stats</string>
+    <string name="stats_report_saved_toast">Report saved successfully</string>
+    <string name="stats_report_failed_toast">Failed to save report: %s</string>
+    <string name="stats_report_filename">session_report.csv</string>
+    <string name="stats_empty_message">No stats to show yet. Connect to a network to get started!</string>
+    <string name="stats_reset_dialog_title">Reset Stats</string>
+    <string name="stats_reset_dialog_message">Are you sure you want to delete all session history? This action cannot be undone.</string>
+    <string name="stats_reset_dialog_confirm">Reset</string>
+    <string name="stats_reset_dialog_cancel">Cancel</string>
+    <string name="stats_daily_usage">Daily Usage</string>
+    <string name="stats_no_session_history">No session history available.</string>
+    <string name="stats_no_history_data">No history data yet.</string>
+    <string name="stats_total_data_usage">Total Data Usage</string>
+    <string name="stats_sessions">Sessions</string>
+    <string name="stats_download_report_tooltip">Download a CSV report of the session</string>
+    <string name="stats_download_report_button">Download report</string>
+    <string name="stats_live_download">Download</string>
+    <string name="stats_live_upload">Upload</string>
+    <string name="stats_max_download">Max Download</string>
+    <string name="stats_max_upload">Max Upload</string>
+
+    <string name="widget_status_disconnected">Disconnected</string>
+    <string name="latch_widget_description">Quick status and control for Latch.</string>
+    <string name="widget_ssid_na">N/A</string>
+    <string name="widget_duration_fallback">-</string>
+    <string name="widget_connect">Connect</string>
+    <string name="widget_disconnect">Disconnect</string>
+    <string name="widget_login_required">Login Required</string>
+    <string name="widget_loading">Loading…</string>
+
+    <string name="permission_location_required">Location permission is required to detect WiFi network.</string>
+    <string name="network_speed_fallback">0 B/s</string>
+    <string name="not_connected">Not Connected</string>
+    <string name="unknown_wifi">Unknown Wi‑Fi</string>
+    <string name="other_network">Other Network</string>
+    <string name="name_uppercase">LATCH</string>
 </resources>

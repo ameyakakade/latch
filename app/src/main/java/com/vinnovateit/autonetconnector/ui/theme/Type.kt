@@ -11,12 +11,18 @@ import com.vinnovateit.autonetconnector.R
 
 val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_light, FontWeight.Light, FontStyle.Normal),
-    Font(R.font.satoshi_bold, FontWeight.Normal, FontStyle.Normal),
+    Font(R.font.satoshi_regular, FontWeight.Normal, FontStyle.Normal),
     Font(R.font.satoshi_medium, FontWeight.Medium, FontStyle.Normal),
     Font(R.font.satoshi_bold, FontWeight.Bold, FontStyle.Normal)
 )
 
+val SakingFontFamily = FontFamily(
+    Font(R.font.saking_regular, FontWeight.Normal)
+)
 
+val OutfitFontFamily = FontFamily(
+    Font(R.font.outfit_regular, FontWeight.Normal),
+)
 // Define Material 3 Typography using Satoshi for all styles
 val AppTypography = Typography(
     displayLarge = TextStyle(

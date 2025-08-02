@@ -6,26 +6,23 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality2.background.ForegroundService
 import com.vinnovateit.autonetconnector.functionality2.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModel
-import com.vinnovateit.autonetconnector.functionality2.manager.StatsViewModelFactory
 import com.vinnovateit.autonetconnector.functionality2.manager.WiFiStatusViewModel
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 
 class MainActivity : ComponentActivity() {
 
-    private lateinit var wifiStatusViewModel: WiFiStatusViewModel
+    private val wifiStatusViewModel: WiFiStatusViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,27 +34,13 @@ class MainActivity : ComponentActivity() {
         val serviceIntent = Intent(this, ForegroundService::class.java)
         startForegroundService(serviceIntent)
 
-        // Init ViewModel
-        wifiStatusViewModel = ViewModelProvider(
-            this,
-            object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST")
-                    return WiFiStatusViewModel(application) as T
-                }
-            }
-        )[WiFiStatusViewModel::class.java]
-
         setContent {
             AutoNetConnectorTheme {
-                val statsViewModel: StatsViewModel = viewModel(
-                    factory = StatsViewModelFactory(application)
-                )
+                val statsViewModel: StatsViewModel = viewModel() // No custom factory needed
 
-                val isConnected by wifiStatusViewModel.isConnected.collectAsState()
-                val ssid by wifiStatusViewModel.ssid.collectAsState()
+                val isConnected by wifiStatusViewModel.isConnected.collectAsStateWithLifecycle()
+                val ssid by wifiStatusViewModel.ssid.collectAsStateWithLifecycle()
                 val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
-                val context = LocalContext.current
 
                 // Calculate speed based on the most recent LIVE data point
                 val currentSpeedBytesPerSecond = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
@@ -67,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 val networkSpeedString = if (isConnected && liveStatus != null) {
                     "${formattedSpeed.first} ${formattedSpeed.second}"
                 } else {
-                    "0 B/s"
+                    stringResource(id = R.string.network_speed_fallback)
                 }
 
                 // Only show the session data (for the graph) if connected and logging
@@ -103,7 +86,7 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (!isGranted) {
-                Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.permission_location_required), Toast.LENGTH_LONG).show()
             }
         }
 
