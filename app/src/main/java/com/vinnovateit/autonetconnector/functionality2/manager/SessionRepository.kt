@@ -1,34 +1,28 @@
 package com.vinnovateit.autonetconnector.functionality2.manager
 
 import android.app.Application
-import android.content.Context
-import androidx.core.content.edit
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.vinnovateit.autonetconnector.widget.UpdateWidgetWorker
+import com.vinnovateit.autonetconnector.data.DailyUsage
+import com.vinnovateit.autonetconnector.data.LatchDatabase
+import com.vinnovateit.autonetconnector.data.Session
+import com.vinnovateit.autonetconnector.data.StatsDao
+import com.vinnovateit.autonetconnector.widget.LatchWidgetUpdater
+import java.util.Calendar
+import java.util.Date
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Manages session data, including live status, history, and persistence.
- * This is the single source of truth for all session-related information.
- */
 object SessionRepository {
-  // region --- Constants and Properties ---
-  private const val PREFS_NAME = "wifi_stats_prefs"
-  private const val KEY_SESSIONS = "session_summaries"
-  private const val KEY_LIVE_SESSION = "live_session_status"
-  private val gson = Gson()
-
   private var applicationContext: Application? = null
+  private lateinit var statsDao: StatsDao
   private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var sessionUpdateJob: Job? = null
   private val isInitialized = AtomicBoolean(false)
@@ -41,24 +35,35 @@ object SessionRepository {
 
   private val _sessionSummaries = MutableStateFlow<List<SessionSummary>>(emptyList())
   val sessionSummaries = _sessionSummaries.asStateFlow()
-  // endregion
 
-  /**
-   * Initializes the repository, loading any persisted session data.
-   * Must be called once, typically from an Application class or the first ViewModel.
-   */
   fun initialize(context: Application) {
     if (isInitialized.getAndSet(true)) return
     applicationContext = context
-    loadSessions()
-    // If the app was killed, this will finalize the stale session.
-    resumeLiveSession()
+    val database = LatchDatabase.getDatabase(context)
+    statsDao = database.statsDao()
+    loadSessionsFromDb()
   }
 
-  /**
-   * Starts a new logging session for the given SSID.
-   * It begins polling for traffic stats and updates the live status.
-   */
+  private fun loadSessionsFromDb() {
+    repoScope.launch {
+      statsDao.getAllSessions().map { dbSessions ->
+        // Map Room Session entities to UI SessionSummary objects
+        dbSessions.map {
+          SessionSummary(
+            ssid = "VIT-WiFi", // SSID is not stored in DB, using a placeholder
+            startTimestamp = it.startTime.time,
+            endTimestamp = it.endTime.time,
+            totalData = DataUsage(it.dataUsed, 0), // DB only stores total data
+            history = emptyList() // History is not persisted
+          )
+        }
+      }.collect { summaries ->
+        _sessionSummaries.value = summaries
+        _lastSession.value = summaries.firstOrNull()
+      }
+    }
+  }
+
   fun startSession(ssid: String) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
@@ -72,11 +77,8 @@ object SessionRepository {
       liveData = listOf(LiveDataPoint(startTime, DataUsage(0, 0)))
     )
     _liveStatus.value = initialStatus
-    saveLiveSessionState(initialStatus)
-
     TrafficStatsLogger.start()
 
-    // Collect data from the logger and update the live session
     sessionUpdateJob = repoScope.launch {
       TrafficStatsLogger.dataUsageFlow.collect { dataUsage ->
         val currentStatus = _liveStatus.value
@@ -88,124 +90,73 @@ object SessionRepository {
         }
       }
     }
-    triggerWidgetUpdate(context)
+    triggerWidgetUpdate()
   }
 
-  /**
-   * Stops the current logging session, finalizes the data, and persists it.
-   */
   fun stopSession() {
     if (sessionUpdateJob == null && _liveStatus.value == null) return
-    val context = applicationContext ?: return
+    val sessionToFinalize = _liveStatus.value ?: return
 
     sessionUpdateJob?.cancel()
     sessionUpdateJob = null
     TrafficStatsLogger.stop()
+    _liveStatus.value = null
 
-    val sessionToFinalize = _liveStatus.value ?: return
-    _liveStatus.value = null // Clear live status immediately
+    UiNotifier.showToast(applicationContext!!, "Stopping stats for: ${sessionToFinalize.ssid}")
 
-    UiNotifier.showToast(context, "Stopping stats for: ${sessionToFinalize.ssid}")
+    val totalDataUsed = sessionToFinalize.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
 
-    val totalRx = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
-    val totalTx = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
-    val duration = System.currentTimeMillis() - sessionToFinalize.startTimeMillis
-
-    // Don't save very short or empty sessions
-    if (duration < 5000 && totalRx < 1024 && totalTx < 1024) {
-      clearLiveSessionState()
-      triggerWidgetUpdate(context)
+    if (totalDataUsed < 1024) { // Don't save empty sessions
+      triggerWidgetUpdate()
       return
     }
 
-    val summary = SessionSummary(
-      ssid = sessionToFinalize.ssid,
-      startTimestamp = sessionToFinalize.startTimeMillis,
-      endTimestamp = System.currentTimeMillis(),
-      totalData = DataUsage(totalRx, totalTx),
-      history = sessionToFinalize.liveData
-    )
-
-    val updatedHistory = (_sessionSummaries.value + summary).sortedByDescending { it.startTimestamp }
-    _sessionSummaries.value = updatedHistory
-    _lastSession.value = summary
-    saveSessions()
-    clearLiveSessionState()
-    triggerWidgetUpdate(context)
+    repoScope.launch {
+      val session = Session(
+        startTime = Date(sessionToFinalize.startTimeMillis),
+        endTime = Date(System.currentTimeMillis()),
+        dataUsed = totalDataUsed
+      )
+      addSessionToDb(session)
+    }
+    triggerWidgetUpdate()
   }
 
-  /**
-   * Clears all persisted session history.
-   */
+  private suspend fun addSessionToDb(session: Session) {
+    statsDao.insertSession(session)
+    val sessionDate = getStartOfDay(session.startTime)
+    val dataUsed = session.dataUsed
+    val existingDailyUsage = statsDao.getUsageForDay(sessionDate)
+
+    if (existingDailyUsage == null) {
+      statsDao.insertDailyUsage(DailyUsage(date = sessionDate, totalDataUsed = dataUsed))
+    } else {
+      val updatedUsage = existingDailyUsage.totalDataUsed + dataUsed
+      statsDao.updateDailyUsage(existingDailyUsage.copy(totalDataUsed = updatedUsage))
+    }
+  }
+
   fun clearHistory() {
-    val context = applicationContext ?: return
     repoScope.launch {
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
-      _sessionSummaries.value = emptyList()
-      _lastSession.value = null
-      UiNotifier.showToast(context, "Stats history cleared")
+      statsDao.clearAllSessions()
+      statsDao.clearAllDailyUsage()
+      UiNotifier.showToast(applicationContext!!, "Stats history cleared")
     }
   }
 
-  // region --- Persistence ---
-  private fun resumeLiveSession() {
+  private fun triggerWidgetUpdate() {
     val context = applicationContext ?: return
-    repoScope.launch {
-      val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_LIVE_SESSION, null)
-      if (json != null) {
-        // If a live session was saved, it means the app was killed.
-        // We finalize it as a completed session.
-        stopSession()
-      }
-    }
-  }
-
-  private fun triggerWidgetUpdate(context: Context) {
-    val workRequest = OneTimeWorkRequestBuilder<UpdateWidgetWorker>().build()
+    val workRequest = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
     WorkManager.getInstance(context).enqueue(workRequest)
   }
 
-  private fun saveSessions() {
-    val context = applicationContext ?: return
-    repoScope.launch {
-      val json = gson.toJson(_sessionSummaries.value)
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit()?.putString(KEY_SESSIONS, json)?.apply()
-    }
+  private fun getStartOfDay(date: Date): Date {
+    return Calendar.getInstance().apply {
+      time = date
+      set(Calendar.HOUR_OF_DAY, 0)
+      set(Calendar.MINUTE, 0)
+      set(Calendar.SECOND, 0)
+      set(Calendar.MILLISECOND, 0)
+    }.time
   }
-
-  private fun loadSessions() {
-    val context = applicationContext ?: return
-    repoScope.launch {
-      val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.getString(KEY_SESSIONS, null)
-      if (json != null) {
-        val type = object : TypeToken<ArrayList<SessionSummary>>() {}.type
-        val sessions: List<SessionSummary> = gson.fromJson(json, type)
-        val sortedSessions = sessions.sortedByDescending { it.startTimestamp }
-        _sessionSummaries.value = sortedSessions
-        if (_liveStatus.value == null) {
-          _lastSession.value = sortedSessions.firstOrNull()
-        }
-      }
-    }
-  }
-
-  private fun saveLiveSessionState(liveStatus: LiveConnectionStatus) {
-    val context = applicationContext ?: return
-    repoScope.launch {
-      val json = gson.toJson(liveStatus)
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-        putString(KEY_LIVE_SESSION, json)
-      }
-    }
-  }
-
-  private fun clearLiveSessionState() {
-    val context = applicationContext ?: return
-    repoScope.launch {
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-        remove(KEY_LIVE_SESSION)
-      }
-    }
-  }
-  // endregion
 }

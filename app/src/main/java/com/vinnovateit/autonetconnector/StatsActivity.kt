@@ -2,6 +2,7 @@ package com.vinnovateit.autonetconnector
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -83,7 +84,11 @@ class StatsActivity : ComponentActivity() {
         StatsScreen(
           overrideSsid = currentSsid,
           onDownloadReport = {
-            createDocumentLauncher.launch("session_report.csv")
+            try {
+              createDocumentLauncher.launch("session_report.csv")
+            } catch (e: ActivityNotFoundException) {
+              Toast.makeText(this, "No app found to create CSV files.", Toast.LENGTH_LONG).show()
+            }
           }
         )
       }

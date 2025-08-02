@@ -200,7 +200,7 @@ private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
                         val closestItemInfo = layoutInfo.visibleItemsInfo.minByOrNull {
                             abs((it.offset + it.size / 2) - viewportCenter)
                         }
-                        if (closestItemInfo != null) {
+                        if (closestItemInfo != null && closestItemInfo.index in chartItems.indices) {
                             val closestItem = chartItems[closestItemInfo.index]
                             if (closestItem is HistoryChartItem.BarData) {
                                 if (selectedIndex != closestItemInfo.index) {
