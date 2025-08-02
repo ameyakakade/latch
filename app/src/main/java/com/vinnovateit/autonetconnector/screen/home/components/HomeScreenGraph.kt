@@ -140,30 +140,32 @@ fun HomeScreenGraph(
 
       if (containerWidthPx > 0 && rateHistory.size > 1) {
 
-        // --- DYNAMIC MAX SPEED CALCULATION ---
-        val maxSpeed by remember(rateHistory, scrollState.value, containerWidthPx, scale) {
-          derivedStateOf {
-            if (rateHistory.size < 2) return@derivedStateOf 1L
+        // --- OPTIMIZED MAX SPEED CALCULATION ---
+        var maxSpeed by remember { mutableLongStateOf(1L) }
 
-            val totalGraphWidthPx = containerWidthPx * scale
-            val firstTimestamp = rateHistory.first().timestamp
-            val totalDuration = (rateHistory.last().timestamp - firstTimestamp).coerceAtLeast(1)
+        // Recalculate max speed only when scrolling stops or data/zoom changes.
+        // This prevents expensive recalculations during scroll animations.
+        LaunchedEffect(rateHistory, scrollState.isScrollInProgress, scale) {
+          if (rateHistory.size < 2 || scrollState.isScrollInProgress) return@LaunchedEffect
 
-            val visibleStartRatio = scrollState.value / totalGraphWidthPx
-            val visibleEndRatio = (scrollState.value + containerWidthPx) / totalGraphWidthPx
+          val totalGraphWidthPx = containerWidthPx * scale
+          val firstTimestamp = rateHistory.first().timestamp
+          val totalDuration = (rateHistory.last().timestamp - firstTimestamp).coerceAtLeast(1)
 
-            val visibleStartTime = firstTimestamp + (totalDuration * visibleStartRatio).toLong()
-            val visibleEndTime = firstTimestamp + (totalDuration * visibleEndRatio).toLong()
+          val visibleStartRatio = scrollState.value / totalGraphWidthPx
+          val visibleEndRatio = (scrollState.value + containerWidthPx) / totalGraphWidthPx
 
-            val visiblePoints = rateHistory.filter { it.timestamp in visibleStartTime..visibleEndTime }
+          val visibleStartTime = firstTimestamp + (totalDuration * visibleStartRatio).toLong()
+          val visibleEndTime = firstTimestamp + (totalDuration * visibleEndRatio).toLong()
 
-            if (visiblePoints.isEmpty()) {
-              1L
-            } else {
-              val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 0L
-              val maxTx = visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 0L
-              max(maxRx, maxTx)
-            }
+          val visiblePoints = rateHistory.filter { it.timestamp in visibleStartTime..visibleEndTime }
+
+          maxSpeed = if (visiblePoints.isEmpty()) {
+            1L
+          } else {
+            val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 0L
+            val maxTx = visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 0L
+            max(maxRx, maxTx)
           }
         }
 
