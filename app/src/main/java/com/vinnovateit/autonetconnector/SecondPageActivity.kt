@@ -28,7 +28,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.paint
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -122,10 +128,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = ColorCredentialText) } } else null,
                 singleLine = true,
                 trailingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_username),
-                        contentDescription = stringResource(id = R.string.username_icon_content_description),
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(ColorCredentialText)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Username Icon",
+                        tint = ColorCredentialText
                     )
                 },
                 modifier = Modifier
@@ -164,10 +170,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 singleLine = true,
                 visualTransformation = if (passwordVisible) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_password),
-                        contentDescription = stringResource(id = R.string.password_icon_content_description),
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(ColorCredentialText),
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                        tint = Color(0xFFC01221),
                         modifier = Modifier.clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
