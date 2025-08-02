@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.lifecycle.lifecycleScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -17,18 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-
-val satoshiFont = FontFamily(
-    Font(R.font.satoshi_bold, FontWeight.Bold),
-)
+import com.vinnovateit.autonetconnector.ui.theme.SakingFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
 class LandingPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +55,9 @@ class LandingPageActivity : ComponentActivity() {
 
 @Composable
 fun LandingPageScreen(onGetStarted: () -> Unit) {
-    val logoRes = R.drawable.ic_latch_dark
+    val logoRes = if (isSystemInDarkTheme()) R.drawable.ic_latch_light else R.drawable.ic_latch_dark
+
+
 
     Box(
         modifier = Modifier
@@ -69,8 +68,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth()
-                .offset(y = (-40).dp),
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -81,28 +79,27 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                     .size(120.dp)
             )
             // Latch logo text
-            Image(
-                painter = painterResource(id = R.drawable.latch),
-                contentDescription = "Latch Logo Text",
-                modifier = Modifier
-                    .size(120.dp)
+            Text(
+                text = stringResource(R.string.name_uppercase),
+                fontSize = 32.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = SakingFontFamily
             )
+            Spacer(Modifier.height(48.dp))
             Button(
                 onClick = onGetStarted,
-                modifier = Modifier
-                    .width(300.dp)
-                    .padding(horizontal = 32.dp),
-                shape = RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(24),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
                 Text(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                     text = "Get Started",
                     fontSize = 23.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = satoshiFont
+                    fontFamily = SatoshiFontFamily
                 )
             }
         }
@@ -114,7 +111,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 20.dp)
-                .size(120.dp)
+                .size(150.dp)
         )
     }
 }

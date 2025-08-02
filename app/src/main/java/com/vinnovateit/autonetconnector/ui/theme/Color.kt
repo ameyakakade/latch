@@ -3,6 +3,11 @@ package com.vinnovateit.autonetconnector.ui.theme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+
+// --- Newly Extracted Colors ---
+val ColorCredentialText = Color(0xFFC01221)
+val ColorHomeScreenBackground = Color(0xFFC8102E)
+val ColorLatch = Color(0xFFC01221)
 // --- Button Colors ---
 val ColorDownloadReport = Color(0xFFC62828)
 

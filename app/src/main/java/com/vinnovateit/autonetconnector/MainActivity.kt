@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.functionality2.background.ForegroundService
@@ -49,7 +50,7 @@ class MainActivity : ComponentActivity() {
                 val networkSpeedString = if (isConnected && liveStatus != null) {
                     "${formattedSpeed.first} ${formattedSpeed.second}"
                 } else {
-                    "0 B/s"
+                    stringResource(id = R.string.network_speed_fallback)
                 }
 
                 // Only show the session data (for the graph) if connected and logging
@@ -85,7 +86,7 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
             if (!isGranted) {
-                Toast.makeText(this, "Location permission is required to detect WiFi network.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.permission_location_required), Toast.LENGTH_LONG).show()
             }
         }
 
