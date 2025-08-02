@@ -11,7 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.vinnovateit.autonetconnector.widget.UpdateWidgetWorker
+import com.vinnovateit.autonetconnector.widget.LatchWidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -155,7 +155,7 @@ object WifiStatsManager {
   }
 
   private fun triggerWidgetUpdate(context: Context) {
-    val workRequest = OneTimeWorkRequestBuilder<UpdateWidgetWorker>().build()
+    val workRequest = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
     WorkManager.getInstance(context).enqueue(workRequest)
   }
 

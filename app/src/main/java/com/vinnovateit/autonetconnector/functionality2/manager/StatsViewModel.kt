@@ -1,8 +1,7 @@
 package com.vinnovateit.autonetconnector.functionality2.manager
 
 import android.app.Application
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -10,53 +9,46 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
 
-class StatsViewModel(application: Application) : ViewModel() {
+class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
-  val liveStatus = WifiStatsManager.liveStatus
-  val lastSession = WifiStatsManager.lastSession
-  val sessionHistory = WifiStatsManager.sessionSummaries
-  val systemStatus = WifiStatsManager.systemStatus
+  // Data now comes from the single source of truth: SessionRepository
+  val liveStatus = SessionRepository.liveStatus
+  val lastSession = SessionRepository.lastSession
+  val sessionHistory = SessionRepository.sessionSummaries
 
+  // This flow combines live and last sessions to decide what to show in the UI.
   val sessionToShow: StateFlow<SessionSummary?> =
     combine(
       liveStatus,
       lastSession,
     ) { live, last ->
       live?.let {
+        // Create a temporary summary for the UI from the live data
         SessionSummary(
           ssid = it.ssid,
           startTimestamp = it.startTimeMillis,
-          endTimestamp = System.currentTimeMillis(),
+          endTimestamp = System.currentTimeMillis(), // It's ongoing
           totalData = DataUsage(
             it.liveData.sumOf { p -> p.usage.rxBytes },
             it.liveData.sumOf { p -> p.usage.txBytes }),
           history = it.liveData
         )
-      } ?: last
+      } ?: last // If not live, show the last completed session
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
   val historyToShow: StateFlow<List<SessionSummary>> = sessionHistory
 
   init {
-    WifiStatsManager.initialize(application)
+    // Ensure the repository is initialized.
+    SessionRepository.initialize(application)
   }
 
   fun onClearHistory() {
-    WifiStatsManager.clearHistory()
+    SessionRepository.clearHistory()
   }
 
   override fun onCleared() {
     super.onCleared()
-  }
-}
-
-class StatsViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
-  override fun <T : ViewModel> create(modelClass: Class<T>): T {
-    if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
-      @Suppress("UNCHECKED_CAST")
-      return StatsViewModel(application) as T
-    }
-    throw IllegalArgumentException("Unknown ViewModel class")
   }
 }
 

@@ -1,4 +1,3 @@
-// In autonetconnector/functionality2/manager/WiFiStatusViewModel.kt
 package com.vinnovateit.autonetconnector.functionality2.manager
 
 import android.app.Application
@@ -42,6 +41,8 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     init {
+        // Initialize the repository
+        SessionRepository.initialize(application)
         ctx.registerReceiver(receiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         updateNetworkInfo()
         evaluateCurrentConnection()
@@ -59,7 +60,8 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         _networkUp.value = currentlyConnected
 
         if (!currentlyConnected) {
-            WifiStatsManager.stopLogging(ctx)
+            // If network is down, stop any running session
+            SessionRepository.stopSession()
         }
 
         _ssid.value = when {
@@ -81,13 +83,16 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
                 _isAuthenticated.value = authenticated
 
                 if (authenticated) {
-                    WifiStatsManager.startLogging(ctx, currentSSID)
+                    // Start session logging
+                    SessionRepository.startSession(currentSSID)
                 } else {
-                    WifiStatsManager.stopLogging(ctx)
+                    // Stop session logging
+                    SessionRepository.stopSession()
                 }
             } else {
                 _isAuthenticated.value = false
-                WifiStatsManager.stopLogging(ctx)
+                // Stop session logging if not on a VIT network
+                SessionRepository.stopSession()
             }
         }
     }
@@ -103,7 +108,8 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             _isAuthenticated.value = success
 
             if (success) {
-                WifiStatsManager.startLogging(ctx, currentSSID)
+                // Start session logging after successful manual login
+                SessionRepository.startSession(currentSSID)
             }
         }
     }
