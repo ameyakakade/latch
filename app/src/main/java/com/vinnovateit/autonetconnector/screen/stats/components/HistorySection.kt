@@ -110,7 +110,7 @@ private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
 
     val chartItems = remember(sessions) {
         if (sessions.isEmpty()) return@remember emptyList<HistoryChartItem>()
-
+        val calendar = Calendar.getInstance() // Reused single instance
         val groupedByDay = sessions.groupBy {
             calendar.timeInMillis = it.startTimestamp
             formatDate(calendar.timeInMillis, "yyyy-MM-dd")
@@ -123,8 +123,7 @@ private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
 
         val oldestTimestamp = sessions.minOf { it.startTimestamp }
         val today = Calendar.getInstance()
-        val oldestDay = (Calendar.getInstance().apply { timeInMillis = oldestTimestamp })
-
+        val oldestDay = Calendar.getInstance().apply { timeInMillis = oldestTimestamp }
         today.set(Calendar.HOUR_OF_DAY, 0)
         oldestDay.set(Calendar.HOUR_OF_DAY, 0)
         val daysBetween = TimeUnit.MILLISECONDS.toDays(today.timeInMillis - oldestDay.timeInMillis).toInt()
@@ -133,9 +132,8 @@ private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
         var lastMonth = -1
 
         for (i in 0..daysBetween) {
-            val currentCal = (today.clone() as Calendar).apply {
-                add(Calendar.DAY_OF_YEAR, -i)
-            }
+            val currentCal = today.clone() as Calendar
+            currentCal.add(Calendar.DAY_OF_YEAR, -i)
             val dayTimestamp = currentCal.timeInMillis
             val key = formatDate(dayTimestamp, "yyyy-MM-dd")
             val usage = groupedByDay[key] ?: DataUsage(0, 0)

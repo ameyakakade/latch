@@ -1,14 +1,15 @@
 package com.vinnovateit.autonetconnector.screen.stats.utils
 
+import android.util.SparseArray
 import androidx.compose.ui.graphics.Path
 import com.vinnovateit.autonetconnector.functionality2.manager.LiveDataPoint
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import androidx.core.util.size
 
 enum class DisplayMode { TOTAL, DOWNLOAD, UPLOAD }
-enum class Timeframe { LIVE, LAST }
 
 data class GraphData(
     val downloadPath: Path,
@@ -101,12 +102,7 @@ fun createGraphPaths(
     val effectiveMaxRate = maxRate.coerceAtLeast(1f)
     val startTime = history.first().timestamp
     val duration = (history.last().timestamp - startTime).coerceAtLeast(1)
-
-    fun x(t: Long): Float {
-        val elapsedTime = (t - startTime).toFloat()
-        return (elapsedTime / duration) * width
-    }
-
+    fun x(t: Long): Float = ((t - startTime).toFloat() / duration) * width
     fun y(bytes: Long): Float {
         val usageFraction = (bytes.toFloat() / effectiveMaxRate).coerceIn(0f, 1f)
         return height - (usageFraction * height * graphHeightScale)
@@ -116,8 +112,10 @@ fun createGraphPaths(
     val fillUL = Path().apply { moveTo(0f, height) }
     val lineDL = Path()
     val lineUL = Path()
-
-    history.forEachIndexed { i, p ->
+    val sparseHistory = SparseArray<LiveDataPoint>(history.size)
+    history.forEachIndexed { i, p -> sparseHistory.put(i, p) }
+    for (i in 0 until sparseHistory.size) {
+        val p = sparseHistory.get(i)
         val xp = x(p.timestamp)
         val yDL = y(p.usage.rxBytes)
         val yUL = y(p.usage.txBytes)
@@ -128,7 +126,7 @@ fun createGraphPaths(
             lineUL.moveTo(xp, yUL)
             fillUL.lineTo(xp, yUL)
         } else {
-            val prevPoint = history[i - 1]
+            val prevPoint = sparseHistory.get(i - 1)
             val prevX = x(prevPoint.timestamp)
             val prevYDL = y(prevPoint.usage.rxBytes)
             val prevYUL = y(prevPoint.usage.txBytes)
