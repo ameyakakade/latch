@@ -5,7 +5,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,12 +24,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +71,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float) {
     val cutoutRatio = 1.2f
     val cutoutDiameter = buttonSizePx * cutoutRatio
     val cutoutRadius = cutoutDiameter / 2f
-
+    val paint = remember { Paint() }
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -83,12 +82,10 @@ fun HomeRedCanvasBackground(buttonSizePx: Float) {
             x = (canvasWidth - cutoutDiameter) / 2f,
             y = -cutoutRadius
         )
-
         drawRect(
             color = Color(0xFFC8102E),
             size = size
         )
-
         drawArc(
             color = Color.Transparent,
             startAngle = 0f,
@@ -101,6 +98,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float) {
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
@@ -112,7 +110,6 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var status by remember { mutableStateOf("Press the button to run auto-login test.") }
-    var showMenu by remember { mutableStateOf(false) }
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
     val density = LocalDensity.current
@@ -124,7 +121,7 @@ fun HomeScreen(
     val screenHeightDp = LocalContext.current.resources.displayMetrics.heightPixels / density.density
 
     val buttonDiameterPx = with(density) { buttonDiameterDp.toPx() }
-    val logoRes = R.drawable.ic_latch_dark
+    val logoRes = R.drawable.ic_latch
 
     Box(
         modifier = Modifier
@@ -150,7 +147,7 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = (screenHeightDp * 0.06f).dp, start = 16.dp, end = 16.dp),
+                            .padding(top = (screenHeightDp * 0.03f).dp, start = 16.dp, end = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterStart) {
@@ -177,31 +174,18 @@ fun HomeScreen(
                         Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterEnd) {
                             TooltipHint(tooltipText = "Menu") {
                                 Box {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Menu,
-                                        contentDescription = "Menu",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .clickable { showMenu = true }
-                                    )
-                                    DropdownMenu(
-                                        expanded = showMenu,
-                                        onDismissRequest = { showMenu = false },
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.surface)
-                                            .padding(vertical = 4.dp)
-                                            .width(200.dp)
+                                    IconButton(
+                                        onClick = {
+                                            context.startActivity(Intent(context, SettingsActivity::class.java))
+                                        }
                                     ) {
-                                        DropdownMenuItem(
-                                            text = { Text("Change Credentials") },
-                                            onClick = {
-                                                showMenu = false
-                                                val intent = Intent(context, SecondPageActivity::class.java)
-                                                intent.putExtra("editMode", true)
-                                                context.startActivity(intent)
-                                            }
+                                        Icon(
+                                            imageVector = Icons.Rounded.Menu,
+                                            contentDescription = "Menu",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(CircleShape)
                                         )
                                     }
                                 }

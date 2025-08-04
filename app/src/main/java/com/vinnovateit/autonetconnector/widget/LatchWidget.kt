@@ -37,6 +37,7 @@ import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.material3.ColorProviders
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -51,82 +52,103 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 // Configurable constants for easy customization
-private const val WIDGET_CORNER_RADIUS = 24
+private const val WIDGET_CORNER_RADIUS = 28
 private const val WIDGET_PADDING = 16
 private val STATUS_FONT_SIZE = 24.sp
 private val BUTTON_FONT_SIZE = 18.sp
 
 @Serializable
-data class AutoNetWidgetState(
+data class LatchWidgetState(
   val status: String = "Disconnected",
   val ssid: String = "N/A",
   val connectedDuration: String = "-",
-  val isConnected: Boolean = false
+  val isConnected: Boolean = false,
+  val isLightTheme: Boolean = true  // Flag for theme mode
 )
 
-class AutoNetWidget : GlanceAppWidget() {
+class LatchWidget : GlanceAppWidget() {
 
   override suspend fun provideGlance(context: Context, id: GlanceId) {
     provideContent {
       val stateJson = currentState<Preferences>()[LatchWidgetUpdater.WIDGET_STATE_PREF_KEY] ?: "{}"
       val state = try {
-        Json.decodeFromString<AutoNetWidgetState>(stateJson)
+        Json.decodeFromString<LatchWidgetState>(stateJson)
       } catch (e: Exception) {
-        AutoNetWidgetState() // Fallback on error
+        LatchWidgetState() // Fallback on error
       }
-      AutoNetWidgetContent(state)
+
+      LatchWidgetContent(state)
     }
   }
+}
 
-  @Composable
-  private fun AutoNetWidgetContent(state: AutoNetWidgetState) {
-    // Custom colors (can be extended for themes)
-    val colors = ColorProviders(
-      light = lightColorScheme(background = Color.White, onBackground = Color.Black),
-      dark = darkColorScheme(background = Color.DarkGray, onBackground = Color.White)
+@Composable
+private fun LatchWidgetContent(state: LatchWidgetState) {
+  // Custom colors with light and dark theme as per requirement
+  val colors = ColorProviders(
+    light = lightColorScheme(
+      background = Color(0xFFFDF0D5),
+      onBackground = Color(0xFFB71D25),
+      primary = Color(0xFFB71D25),
+      onPrimary = Color(0xFFFDF0D5)
+    ),
+    dark = darkColorScheme(
+      background = Color(0xFFB71D25),
+      onBackground = Color(0xFFFDF0D5),
+      primary = Color(0xFFFDF0D5),
+      onPrimary = Color(0xFFB71D25)
     )
-    GlanceTheme(colors = colors) {
-      Column(
-        modifier = GlanceModifier
-          .fillMaxSize()
-          .background(GlanceTheme.colors.background)
-          .cornerRadius(WIDGET_CORNER_RADIUS.dp)
-          .padding(WIDGET_PADDING.dp)
-          .clickable(actionStartActivity<MainActivity>()),
-        verticalAlignment = Alignment.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(text = stringResource(id = R.string.status) + ":", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp))
-            Text(text = state.status, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = STATUS_FONT_SIZE, fontWeight = FontWeight.Bold))
-          }
-          Image(provider = ImageProvider(R.drawable.ic_latch_dark), contentDescription = stringResource(id = R.string.app_logo_content_description), modifier = GlanceModifier.size(40.dp))
+  )
+
+  GlanceTheme(colors = colors) {
+    val logo = if (state.isLightTheme) {
+      ImageProvider(R.drawable.ic_latch_dark)
+    } else {
+      ImageProvider(R.drawable.ic_latch_light)
+    }
+
+    Column(
+      modifier = GlanceModifier
+        .fillMaxSize()
+        .background(GlanceTheme.colors.background)
+        .cornerRadius(WIDGET_CORNER_RADIUS.dp)
+        .padding(WIDGET_PADDING.dp)
+        .clickable(actionStartActivity<MainActivity>()),
+      verticalAlignment = Alignment.Top,
+      horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+      Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = GlanceModifier.defaultWeight()) {
+          Text(text = "Status:", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp, fontFamily = FontFamily.Monospace))
+          Text(text = state.status, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = STATUS_FONT_SIZE, fontWeight = FontWeight.Bold))
         }
-        Spacer(modifier = GlanceModifier.height(16.dp))
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          Text(text = state.ssid, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Medium))
-          Spacer(modifier = GlanceModifier.defaultWeight())
-          Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-            Text(text = state.connectedDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold))
-          }
-        }
+        Image(provider = logo, contentDescription = "App Logo", modifier = GlanceModifier.size(40.dp))
+      }
+
+      Spacer(modifier = GlanceModifier.height(16.dp))
+      Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(text = state.ssid, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold))
         Spacer(modifier = GlanceModifier.defaultWeight())
-        Box(
-          modifier = GlanceModifier
-            .fillMaxWidth()
-            .background(GlanceTheme.colors.primary)
-            .cornerRadius(12.dp)
-            .padding(vertical = 12.dp)
-            .clickable(actionRunCallback<ConnectAction>()),
-          contentAlignment = Alignment.Center
-        ) {
-          val buttonText = if (state.isConnected) stringResource(id = R.string.widget_disconnect) else stringResource(id = R.string.widget_connect)
-          Text(
-            text = buttonText,
-            style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = BUTTON_FONT_SIZE, fontWeight = FontWeight.Bold)
-          )
+        Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+          Text(text = state.connectedDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = 14.sp))
         }
+      }
+
+      Spacer(modifier = GlanceModifier.defaultWeight())
+      Box(
+        modifier = GlanceModifier
+          .fillMaxWidth()
+          .background(GlanceTheme.colors.primary)
+          .cornerRadius(16.dp)
+          .padding(vertical = 12.dp)
+          .clickable(actionRunCallback<ConnectAction>()),
+        contentAlignment = Alignment.Center
+      ) {
+        val buttonText = if (state.isConnected) "Disconnect" else "Connect"
+        Text(
+          text = buttonText,
+          style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = BUTTON_FONT_SIZE, fontWeight = FontWeight.Bold)
+        )
       }
     }
   }
@@ -134,16 +156,17 @@ class AutoNetWidget : GlanceAppWidget() {
 
 class ConnectAction : ActionCallback {
   override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-    val prefs = getAppWidgetState<Preferences>(
+    val prefs = getAppWidgetState(
       context,
       glanceId = glanceId,
       definition = PreferencesGlanceStateDefinition,
     )
+
     val stateJson = prefs[LatchWidgetUpdater.WIDGET_STATE_PREF_KEY] ?: "{}"
     val state = try {
-      Json.decodeFromString<AutoNetWidgetState>(stateJson)
+      Json.decodeFromString<LatchWidgetState>(stateJson)
     } catch (e: Exception) {
-      AutoNetWidgetState()
+      LatchWidgetState()
     }
 
     val actionRequest = if (state.isConnected) {
@@ -152,8 +175,6 @@ class ConnectAction : ActionCallback {
       OneTimeWorkRequestBuilder<DirectLoginWorker>().build()
     }
     WorkManager.getInstance(context).enqueue(actionRequest)
-
-    // Give a small delay for the action to process before updating the widget UI
     delay(1500)
     LatchWidgetUpdater.enqueueOneTimeUpdate(context)
   }

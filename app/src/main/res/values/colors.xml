@@ -19,4 +19,7 @@
     <color name="widget_dark_primary">#FFFBEF</color>
     <color name="widget_dark_on_primary">#C53F3F</color>
     <color name="widget_dark_text">#FFFBEF</color>
+
+    <color name="latch_primary">#FAF3EB</color>  <!-- Light background/fill -->
+    <color name="latch_secondary">#E7D8B8</color>  <!-- Light accents -->
 </resources>
