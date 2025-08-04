@@ -1,12 +1,14 @@
 package com.vinnovateit.autonetconnector.widget
 
+import android.app.UiModeManager
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.work.CoroutineWorker
-import androidx.work.Data
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vinnovateit.autonetconnector.R
@@ -26,35 +28,50 @@ class LatchWidgetUpdater(
 ) : CoroutineWorker(context, params) {
 
   companion object {
-    val WIDGET_STATE_PREF_KEY = stringPreferencesKey("autonet_widget_state")
+    val WIDGET_STATE_PREF_KEY = stringPreferencesKey("latch_widget_state")
 
     fun enqueueOneTimeUpdate(context: Context) {
       val request = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
       WorkManager.getInstance(context).enqueue(request)
     }
+
+    fun enqueuePeriodicUpdate(context: Context) {
+      val periodicRequest = PeriodicWorkRequestBuilder<LatchWidgetUpdater>(
+        15, TimeUnit.MINUTES
+      ).build()
+      WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+        "latch_widget_periodic_update",
+        ExistingPeriodicWorkPolicy.KEEP,
+        periodicRequest
+      )
+    }
   }
 
   override suspend fun doWork(): Result {
     val manager = GlanceAppWidgetManager(applicationContext)
-    val glanceIds = manager.getGlanceIds(AutoNetWidget::class.java)
+    val glanceIds = manager.getGlanceIds(LatchWidget::class.java)
     if (glanceIds.isEmpty()) return Result.success()
+
+    // Detect current theme mode
+    val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+    val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
 
     // Read current state
     val isConnectedToWifi = WiFiConnectionDetector.isConnectedToWiFi(applicationContext)
     val hasInternet = isConnectedToWifi && !CaptivePortalDetector.isCaptivePortalActive(applicationContext)
-
     val widgetState = if (hasInternet) {
       val liveSession = try {
         SessionRepository.liveStatus.firstOrNull()
       } catch (e: Exception) {
         null // Handle repository errors gracefully
       }
+
       val durationString = liveSession?.let {
         val connectedAt = it.startTimeMillis
         val now = System.currentTimeMillis() + TimeZone.getTimeZone("Asia/Kolkata").rawOffset // IST adjustment
         val durationMillis = now - connectedAt
         when {
-          durationMillis < 30_000 -> "Just now"
+          durationMillis < 30_000 -> applicationContext.getString(R.string.widget_duration_just_now)
           durationMillis < 60_000 -> "30 sec"
           durationMillis < 120_000 -> "1 min"
           durationMillis < 5 * 60_000 -> "${durationMillis / 60_000} min"
@@ -62,18 +79,20 @@ class LatchWidgetUpdater(
           else -> "${TimeUnit.MILLISECONDS.toHours(durationMillis)}h"
         }
       } ?: applicationContext.getString(R.string.widget_duration_fallback)
-      AutoNetWidgetState(
-        status = "Connected",
-        ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext) ?: "VIT WiFi",
+      LatchWidgetState(
+        status = applicationContext.getString(R.string.widget_status_connected),
+        ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext) ?: applicationContext.getString(R.string.widget_ssid_vit_wifi),
         connectedDuration = durationString,
-        isConnected = true
+        isConnected = true,
+        isLightTheme = !isDarkMode
       )
     } else {
-      AutoNetWidgetState(
+      LatchWidgetState(
         status = applicationContext.getString(R.string.widget_status_disconnected),
         ssid = if (isConnectedToWifi) applicationContext.getString(R.string.widget_login_required) else applicationContext.getString(R.string.widget_ssid_na),
         connectedDuration = applicationContext.getString(R.string.widget_duration_fallback),
-        isConnected = false
+        isConnected = false,
+        isLightTheme = !isDarkMode
       )
     }
 
@@ -81,8 +100,9 @@ class LatchWidgetUpdater(
       updateAppWidgetState(applicationContext, glanceId) { prefs ->
         prefs[WIDGET_STATE_PREF_KEY] = Json.encodeToString(widgetState)
       }
-      AutoNetWidget().update(applicationContext, glanceId)
+      LatchWidget().update(applicationContext, glanceId)
     }
+
     return Result.success()
   }
 }

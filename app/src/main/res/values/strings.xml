@@ -67,4 +67,7 @@
     <string name="unknown_wifi">Unknown Wi‑Fi</string>
     <string name="other_network">Other Network</string>
     <string name="name_uppercase">LATCH</string>
+    <string name="widget_status_connected">Connected</string>
+    <string name="widget_duration_just_now">Just Now</string>
+    <string name="widget_ssid_vit_wifi">X-VIT</string>
 </resources>

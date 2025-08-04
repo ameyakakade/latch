@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,10 +54,9 @@ fun SpectrumCard(
     Column(
       modifier = Modifier
         .fillMaxSize()
-        .padding(16.dp)
     ) {
       // Box to align the button to the top-left
-      Box(modifier = Modifier.fillMaxWidth()) {
+      Box(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)) {
         OutlinedButton(
           onClick = {
             val intent = Intent(context, StatsActivity::class.java).apply {
@@ -78,20 +78,18 @@ fun SpectrumCard(
             verticalAlignment = Alignment.CenterVertically,
           ) {
             Text(
-              text = "Network Statistics",
+              text = stringResource(id = R.string.home_network_statistics),
               fontWeight = FontWeight.Bold
             )
             Icon(
               imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-              contentDescription = "Go to Statistics"
+              contentDescription = stringResource(id = R.string.home_go_to_statistics)
             )
           }
         }
       }
 
-      Spacer(modifier = Modifier.height(8.dp))
-
-      // Graph Box
+      // Graph Box now fills the remaining space without horizontal padding
       Box(
         modifier = Modifier
           .fillMaxWidth()
@@ -108,7 +106,7 @@ fun SpectrumCard(
             contentAlignment = Alignment.Center
           ) {
             Text(
-              text = "No data available for graph",
+              text = stringResource(id = R.string.home_no_data_for_graph),
               color = MaterialTheme.colorScheme.onSurfaceVariant, // Use theme color
               fontSize = 14.sp,
               fontFamily = SatoshiFontFamily

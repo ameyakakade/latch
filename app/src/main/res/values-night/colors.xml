@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="latch_primary">#C01221</color>  <!-- Dark background/fill -->
+    <color name="latch_secondary">#670002</color>  <!-- Dark accents -->
+</resources>
