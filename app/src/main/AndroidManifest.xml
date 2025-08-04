@@ -57,6 +57,8 @@
             android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
             android:theme="@style/Theme.AutoNetConnector" />
 
+        <activity android:name=".SettingsActivity" android:exported="false" />
+
         <activity
             android:name=".StatsActivity"
             android:exported="true"
