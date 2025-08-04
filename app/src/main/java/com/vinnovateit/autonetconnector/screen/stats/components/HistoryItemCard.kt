@@ -18,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
@@ -68,31 +69,32 @@ fun HistoryItemCard(
         )
       }
       Column(horizontalAlignment = Alignment.End) {
-        val (totalValue, totalUnit) = formatBytes(session.totalData.rxBytes + session.totalData.txBytes)
+        val total = remember(session.totalData) { formatBytes(session.totalData.rxBytes + session.totalData.txBytes) }
         Text(
-          text = "$totalValue $totalUnit",
+          text = "${total.first} ${total.second}",
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
         )
         Row {
-          val (dlValue, dlUnit) = formatBytes(session.totalData.rxBytes)
-          Icon(Icons.Default.ArrowDownward, contentDescription = "Download", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
+          val dl = remember(session.totalData) { formatBytes(session.totalData.rxBytes) }
+          Icon(Icons.Default.ArrowDownward, contentDescription = "Download data", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
           Text(
-            text = "$dlValue $dlUnit",
+            text = "${dl.first} ${dl.second}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
           Spacer(modifier = Modifier.width(8.dp))
-          val (ulValue, ulUnit) = formatBytes(session.totalData.txBytes)
-          Icon(Icons.Default.ArrowUpward, contentDescription = "Upload", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
+          val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
+          Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
-            text = "$ulValue $ulUnit",
+            text = "${ul.first} ${ul.second}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
       }
+
     }
   }
 }

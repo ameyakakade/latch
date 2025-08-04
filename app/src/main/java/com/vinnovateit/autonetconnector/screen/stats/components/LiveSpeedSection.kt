@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -131,21 +132,17 @@ fun RollingNumberText(
   textStyle: androidx.compose.ui.text.TextStyle
 ) {
   var previousValue by remember { mutableStateOf<String?>(null) }
-
-  SideEffect {
+  LaunchedEffect(value) {
     previousValue = value
   }
-
   Row(
     horizontalArrangement = Arrangement.Center
   ) {
     val previousChars = previousValue?.padStart(value.length, ' ')?.toCharArray() ?: " ".repeat(value.length).toCharArray()
     val currentChars = value.padStart(previousValue?.length ?: value.length, ' ').toCharArray()
-
     for (i in currentChars.indices) {
       val oldChar = previousChars.getOrNull(i)
       val newChar = currentChars[i]
-
       AnimatedContent(
         targetState = newChar,
         transitionSpec = {
@@ -164,7 +161,7 @@ fun RollingNumberText(
         Text(
           text = char.toString(),
           style = textStyle,
-          textAlign = TextAlign.Center,
+          textAlign = TextAlign.Center
         )
       }
     }
