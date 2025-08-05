@@ -30,14 +30,14 @@
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="35">
 
-        <receiver android:name=".functionality2.background.WiFiChangeReceiver"
+        <receiver android:name=".features.wifi.background.WiFiChangeReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
             </intent-filter>
         </receiver>
         <activity
-            android:name=".LandingPageActivity"
+            android:name=".features.auth.LandingPageActivity"
             android:exported="true"
             android:theme="@style/Theme.AutoNetConnector">
             <intent-filter>
@@ -47,26 +47,26 @@
         </activity>
 
         <activity
-            android:name=".SecondPageActivity"
+            android:name=".features.auth.SecondPageActivity"
             android:exported="true"
             android:theme="@style/Theme.AutoNetConnector" />
 
         <activity
-            android:name=".MainActivity"
+            android:name=".features.home.MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
             android:theme="@style/Theme.AutoNetConnector" />
 
-        <activity android:name=".SettingsActivity" android:exported="false" />
+        <activity android:name=".features.settings.SettingsActivity" android:exported="false" />
 
         <activity
-            android:name=".StatsActivity"
+            android:name=".features.stats.StatsActivity"
             android:exported="true"
             android:label="Network Statistics"
             android:theme="@style/Theme.AutoNetConnector" />
 
         <receiver
-            android:name=".widget.LatchWidgetReceiver"
+            android:name=".features.wifi.widget.LatchWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -79,13 +79,13 @@
 
 
         <service
-            android:name=".functionality2.background.ForegroundService"
+            android:name=".features.wifi.background.ForegroundService"
             android:foregroundServiceType="connectedDevice"
             android:configChanges="uiMode"
             android:exported="false" />
 
         <service
-            android:name=".qstile.LatchTileService"
+            android:name=".features.wifi.quicksettings.LatchTileService"
             android:exported="true"
             android:icon="@drawable/ic_latch_dark"
             android:label="Latch"
