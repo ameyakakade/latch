@@ -6,11 +6,14 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.autonetconnector.features.settings.SettingsManager
 
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFFC01221),
@@ -79,10 +82,17 @@ private val DarkColorScheme = darkColorScheme(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AutoNetConnectorTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
+    val themeSetting by SettingsManager.theme.collectAsStateWithLifecycle()
+    val systemIsDark = isSystemInDarkTheme()
+
+    val darkTheme = when (themeSetting) {
+        "Light" -> false
+        "Dark" -> true
+        else -> systemIsDark
+    }
+
     val colorScheme = when {
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
