@@ -1,44 +1,43 @@
 package com.vinnovateit.autonetconnector.features.settings
 
+import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.SettingsBackupRestore
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.outlined.Autorenew
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.DataUsage
-import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import com.vinnovateit.autonetconnector.domain.model.SessionRepository
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.autonetconnector.common.util.TooltipHint
+import com.vinnovateit.autonetconnector.domain.model.SessionRepository
+import com.vinnovateit.autonetconnector.features.auth.SecondPageActivity
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import java.time.Year
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 class SettingsActivity : ComponentActivity() {
@@ -46,6 +45,7 @@ class SettingsActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     WindowCompat.setDecorFitsSystemWindows(window, false)
+    SettingsManager.initialize(applicationContext)
     setContent {
       AutoNetConnectorTheme {
         SettingsScreen(onBackClick = { finish() })
@@ -54,72 +54,59 @@ class SettingsActivity : ComponentActivity() {
   }
 }
 
+@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBackClick: () -> Unit) {
-  // Local states
-  var autoLogin by remember { mutableStateOf(true) }
-  var speedUnits by remember { mutableStateOf("Mbps") }
-  var darkMode by remember { mutableStateOf("System Default") }
-  var dataThreshold by remember { mutableStateOf(1) } // Integral 1-10 GB
-  var dataAlertEnabled by remember { mutableStateOf(true) } // Switch for Data Alert
-  var detailedLogs by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+  // Local states are now managed by SettingsManager, we collect them here
+  val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
+  val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
+  val theme by SettingsManager.theme.collectAsStateWithLifecycle()
+  val dataThreshold by SettingsManager.dataThreshold.collectAsStateWithLifecycle()
+  val dataAlertEnabled by SettingsManager.dataAlertEnabled.collectAsStateWithLifecycle()
+  val detailedLogs by SettingsManager.detailedLogs.collectAsStateWithLifecycle()
 
   // Bottom sheet states
   var showSpeedUnitsSheet by remember { mutableStateOf(false) }
-  var showDarkModeSheet by remember { mutableStateOf(false) }
-  var showUpdateCredentialsSheet by remember { mutableStateOf(false) }
+  var showThemeSheet by remember { mutableStateOf(false) }
   var showClearStatsSheet by remember { mutableStateOf(false) }
-
-  // Credential editing states
-  var registrationNumber by remember { mutableStateOf("") }
-  var registrationNumberError by remember { mutableStateOf<String?>(null) }
-  var password by remember { mutableStateOf("") }
-  var showPassword by remember { mutableStateOf(false) }
+  var showDataThresholdSheet by remember { mutableStateOf(false) }
 
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
   val configuration = LocalConfiguration.current
-  val sidePadding = if (configuration.screenWidthDp > 600) 80.dp else 16.dp // Padding for wide screens
-
-  val currentYear = Year.now().value % 100
-  fun validateRegistrationNumber(input: String): String? {
-    if (input.length != 9) return "Must be exactly 9 characters (YYAAAXXXX)"
-    val yy = input.substring(0, 2).toIntOrNull() ?: return "Invalid year format"
-    if (yy > currentYear) return "Year cannot be in the future"
-    val aaa = input.substring(2, 5)
-    if (!aaa.all { it.isLetter() }) return "Branch must be 3 letters"
-    val xxxx = input.substring(5)
-    if (!xxxx.all { it.isDigit() }) return "Last 4 must be digits"
-    return null
-  }
+  val sidePadding = if (configuration.screenWidthDp > 600) 80.dp else 0.dp
 
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+    containerColor = MaterialTheme.colorScheme.surface,
     topBar = {
       LargeTopAppBar(
         title = {
           Text(
             "Preferences",
-            fontSize = if (scrollBehavior.state.collapsedFraction > 0.5f) 24.sp else 32.sp,
-            fontWeight = FontWeight.ExtraBold, // Emphasized font
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
         },
         navigationIcon = {
           TooltipHint(tooltipText = "Back") {
-            FilledIconButton(
-              onClick = onBackClick,
-              modifier = Modifier.size(48.dp).padding(8.dp)
+            IconButton(
+              onClick = onBackClick
             ) {
-              Icon(Icons.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(24.dp))
+              Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", modifier = Modifier.size(24.dp))
             }
           }
         },
-        colors = TopAppBarDefaults.largeTopAppBarColors(
+        colors = TopAppBarDefaults.topAppBarColors(
           containerColor = MaterialTheme.colorScheme.surface,
-          scrolledContainerColor = MaterialTheme.colorScheme.surface
+          scrolledContainerColor = MaterialTheme.colorScheme.surface,
+          navigationIconContentColor = Color.Unspecified,
+          titleContentColor = Color.Unspecified,
+          actionIconContentColor = Color.Unspecified
         ),
         scrollBehavior = scrollBehavior
       )
@@ -130,134 +117,117 @@ fun SettingsScreen(onBackClick: () -> Unit) {
         .fillMaxSize()
         .padding(innerPadding)
         .padding(horizontal = sidePadding),
-      verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
       // Account Category
       item {
         PreferenceCategory(title = "Account")
       }
-      itemsIndexed(listOf(
-        PreferenceData("Auto-login on Connect", "Automatically log in to VIT Wi-Fi", Icons.Outlined.Autorenew, trailing = {
-          Switch(checked = autoLogin, onCheckedChange = { autoLogin = it /* TODO: Save */ })
-        }),
-        PreferenceData("Update Credentials", "Change your registration number and password", Icons.Filled.Key, onClick = { showUpdateCredentialsSheet = true })
-      )) { index, item ->
-        val shape = when {
-          index == 0 -> MaterialTheme.shapes.medium.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
-          index == 1 -> MaterialTheme.shapes.medium.copy(topStart = CornerSize(0.dp), topEnd = CornerSize(0.dp))
-          else -> MaterialTheme.shapes.small
-        }
-        PreferenceItem(item, shape)
+      items(
+        listOf(
+          PreferenceData("Auto-login on Connect", "Automatically log in to VIT Wi-Fi", Icons.Rounded.Autorenew, trailing = {
+            Switch(checked = autoLogin, onCheckedChange = { SettingsManager.setAutoLogin(it) })
+          }),
+          PreferenceData("Update Credentials", "Change your registration number and password", Icons.Rounded.Key, onClick = {
+            context.startActivity(Intent(context, SecondPageActivity::class.java).apply {
+              putExtra("editMode", true)
+            })
+          })
+        )
+      ) { item ->
+        PreferenceItem(item)
       }
 
       // Display Category
       item {
         PreferenceCategory(title = "Display")
       }
-      itemsIndexed(listOf(
-        PreferenceData("Speed Units", speedUnits, Icons.Outlined.Speed, onClick = { showSpeedUnitsSheet = true }),
-        PreferenceData("Dark Mode", darkMode, Icons.Outlined.DarkMode, onClick = { showDarkModeSheet = true })
-      )) { index, item ->
-        val shape = when {
-          index == 0 -> MaterialTheme.shapes.medium.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
-          index == 1 -> MaterialTheme.shapes.medium.copy(topStart = CornerSize(0.dp), topEnd = CornerSize(0.dp))
-          else -> MaterialTheme.shapes.small
-        }
-        PreferenceItem(item, shape)
+      items(
+        listOf(
+          PreferenceData("Speed Units", speedUnits, Icons.Rounded.Speed, onClick = { showSpeedUnitsSheet = true }),
+          PreferenceData("Theme", theme, Icons.Rounded.DarkMode, onClick = { showThemeSheet = true })
+        )
+      ) { item ->
+        PreferenceItem(item)
       }
 
       // Data Management Category
       item {
         PreferenceCategory(title = "Data Management")
       }
-      itemsIndexed(listOf(
-        PreferenceData("Clear Network Stats", "Reset usage history", Icons.Filled.SettingsBackupRestore, onClick = { showClearStatsSheet = true }),
-        PreferenceData("Data Alert Threshold (GB)", "${dataThreshold} GB", Icons.Outlined.DataUsage, trailing = {
-          Switch(checked = dataAlertEnabled, onCheckedChange = { dataAlertEnabled = it /* TODO: Save */ })
-        })
-      )) { index, item ->
-        val shape = when {
-          index == 0 -> MaterialTheme.shapes.medium.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
-          index == 1 -> MaterialTheme.shapes.medium.copy(topStart = CornerSize(0.dp), topEnd = CornerSize(0.dp))
-          else -> MaterialTheme.shapes.small
-        }
-        if (index == 1) {
-          Column(modifier = Modifier.clip(shape)) {
-            PreferenceItem(item, shape)
-            Slider(
-              value = dataThreshold.toFloat(),
-              onValueChange = { dataThreshold = it.toInt() /* TODO: Save */ },
-              valueRange = 1f..10f,
-              steps = 9, // Integral steps 1-10
-              enabled = dataAlertEnabled, // Disable if switch is off
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-            )
-          }
-        } else {
-          PreferenceItem(item, shape)
-        }
+      item {
+        PreferenceItem(PreferenceData("Clear Network Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true }))
       }
+      item {
+        val thresholdSubtitle = when {
+          dataThreshold < 0 -> "Custom"
+          else -> "$dataThreshold GB"
+        }
+        PreferenceItem(
+          PreferenceData(
+            "Data Alert Threshold",
+            subtitle = "Current: $thresholdSubtitle",
+            Icons.Rounded.DataUsage,
+            onClick = { showDataThresholdSheet = true },
+            trailing = {
+              Switch(checked = dataAlertEnabled, onCheckedChange = { SettingsManager.setDataAlertEnabled(it) })
+            }
+          )
+        )
+      }
+
 
       // Advanced Category
       item {
         PreferenceCategory(title = "Advanced")
       }
       item {
-        val item = PreferenceData("Detailed Logs", "Enable verbose logging", Icons.Filled.BugReport, trailing = {
-          Switch(checked = detailedLogs, onCheckedChange = { detailedLogs = it /* TODO: Save */ })
+        val item = PreferenceData("Detailed Logs", "Enable verbose logging", Icons.Rounded.BugReport, trailing = {
+          Switch(checked = detailedLogs, onCheckedChange = { SettingsManager.setDetailedLogs(it) })
         })
-        PreferenceItem(item, MaterialTheme.shapes.medium) // Single item, full rounding
+        PreferenceItem(item)
       }
     }
   }
 
   // Bottom Sheets
   if (showSpeedUnitsSheet) {
-    SettingsDropdownBottomSheet(
+    SettingsSelectionBottomSheet(
       title = "Speed Units",
-      options = listOf("Mbps", "MB/s"),
+      options = listOf(
+        SelectionOption("Mbps", Icons.Rounded.Speed),
+        SelectionOption("MB/s", Icons.Rounded.Speed)
+      ),
       selected = speedUnits,
-      onSelect = { speedUnits = it /* TODO: Save */ },
+      onSelect = {
+        SettingsManager.setSpeedUnits(it.label)
+        showSpeedUnitsSheet = false
+      },
       onDismiss = { showSpeedUnitsSheet = false }
     )
   }
 
-  if (showDarkModeSheet) {
-    SettingsDropdownBottomSheet(
-      title = "Dark Mode",
-      options = listOf("System Default", "Light", "Dark"),
-      selected = darkMode,
-      onSelect = { darkMode = it /* TODO: Save */ },
-      onDismiss = { showDarkModeSheet = false }
+  if (showThemeSheet) {
+    SettingsSelectionBottomSheet(
+      title = "Theme",
+      options = listOf(
+        SelectionOption("System Default", Icons.Rounded.SettingsSystemDaydream),
+        SelectionOption("Light", Icons.Rounded.LightMode),
+        SelectionOption("Dark", Icons.Rounded.DarkMode)
+      ),
+      selected = theme,
+      onSelect = {
+        SettingsManager.setTheme(it.label)
+        showThemeSheet = false
+      },
+      onDismiss = { showThemeSheet = false }
     )
   }
 
-  if (showUpdateCredentialsSheet) {
-    UpdateCredentialsBottomSheet(
-      registrationNumber = registrationNumber,
-      onRegistrationNumberChange = {
-        val newValue = it.uppercase()
-        registrationNumber = newValue
-        registrationNumberError = validateRegistrationNumber(newValue)
-      },
-      registrationNumberError = registrationNumberError,
-      password = password,
-      onPasswordChange = { password = it },
-      showPassword = showPassword,
-      onShowPasswordChange = { showPassword = it },
-      onSave = {
-        if (registrationNumber.isBlank() || password.isBlank()) {
-          // Notify user (e.g., set error)
-          if (registrationNumber.isBlank()) registrationNumberError = "Required field"
-          // Similar for password if needed
-        } else if (registrationNumberError == null) {
-          // TODO: Save to database
-          showUpdateCredentialsSheet = false
-        }
-      },
-      onDismiss = { showUpdateCredentialsSheet = false }
+  if (showDataThresholdSheet) {
+    DataThresholdSliderBottomSheet(
+      currentThreshold = dataThreshold,
+      onThresholdChange = { SettingsManager.setDataThreshold(it) },
+      onDismiss = { showDataThresholdSheet = false }
     )
   }
 
@@ -267,7 +237,10 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       description = "This will reset all usage history. Continue?",
       confirmText = "Clear",
       cancelText = "Cancel",
-      onConfirm = { SessionRepository.clearHistory() },
+      onConfirm = {
+        SessionRepository.clearHistory()
+        showClearStatsSheet = false
+      },
       onDismiss = { showClearStatsSheet = false }
     )
   }
@@ -282,80 +255,196 @@ data class PreferenceData(
   val trailing: @Composable () -> Unit = {}
 )
 
-// Custom Composables
+data class SelectionOption(
+  val label: String,
+  val icon: ImageVector
+)
+
+// Custom Composable
 @Composable
 fun PreferenceCategory(title: String) {
   Text(
     title,
     style = MaterialTheme.typography.labelLarge.copy(
       fontWeight = FontWeight.ExtraBold, // Emphasized
-      color = MaterialTheme.colorScheme.onSurface // Matches homepage
+      color = MaterialTheme.colorScheme.primary // Matches homepage
     ),
-    modifier = Modifier.padding(vertical = 16.dp)
+    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 16.dp)
   )
 }
 
 @Composable
-fun PreferenceItem(data: PreferenceData, shape: Shape) {
-  Card(
+fun PreferenceItem(data: PreferenceData) {
+  Row(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(shape),
-    onClick = data.onClick,
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+      .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = ripple(),
+        onClick = data.onClick
+      )
+      .padding(16.dp),
+    verticalAlignment = Alignment.CenterVertically
   ) {
-    Row(
-      modifier = Modifier
-        .fillMaxWidth()
-        .padding(16.dp),
-      verticalAlignment = Alignment.CenterVertically
-    ) {
-      Icon(data.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
-      Column(modifier = Modifier.weight(1f)) {
-        Text(
-          data.title,
-          style = MaterialTheme.typography.bodyLarge.copy(
-            fontWeight = FontWeight.Medium, // Emphasized
-            color = MaterialTheme.colorScheme.onSurface // Matches homepage
-          )
+    Icon(data.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = MaterialTheme.colorScheme.primary)
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        data.title,
+        style = MaterialTheme.typography.bodyLarge.copy(
+          fontWeight = FontWeight.Bold, // Emphasized
+          color = MaterialTheme.colorScheme.onSurface // Matches homepage
         )
-        Text(
-          data.subtitle,
-          style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-        )
-      }
-      data.trailing()
+      )
+      Text(
+        data.subtitle,
+        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+      )
     }
+    Spacer(Modifier.width(16.dp))
+    data.trailing()
   }
 }
 
 // Bottom Sheet for Dropdowns (simple list selection)
+// Bottom Sheet for Dropdowns (simple list selection)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsDropdownBottomSheet(
+fun SettingsSelectionBottomSheet(
   title: String,
-  options: List<String>,
+  options: List<SelectionOption>,
   selected: String,
-  onSelect: (String) -> Unit,
+  onSelect: (SelectionOption) -> Unit,
   onDismiss: () -> Unit
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold)) // Emphasized
-      Spacer(Modifier.height(8.dp))
-      options.forEach { option ->
-        TextButton(
-          onClick = {
-            onSelect(option)
-            onDismiss()
-          },
-          modifier = Modifier.fillMaxWidth()
-        ) {
-          Text(option, color = if (option == selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    sheetState = sheetState,
+    content = {
+      Column(modifier = Modifier.padding(vertical = 16.dp)) {
+        Text(
+          title,
+          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+          modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Spacer(Modifier.height(8.dp))
+        options.forEach { option ->
+          val isSelected = option.label == selected
+          val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(),
+                onClick = { onSelect(option) }
+              )
+              .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = if (isSelected) contentColor else LocalContentColor.current)
+            Text(
+              option.label,
+              color = contentColor,
+              fontWeight = FontWeight.Bold
+            )
+          }
         }
       }
     }
+  )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DataThresholdSliderBottomSheet(
+  currentThreshold: Float,
+  onThresholdChange: (Float) -> Unit,
+  onDismiss: () -> Unit
+) {
+  var isCustom by remember { mutableStateOf(currentThreshold < 0) }
+  var sliderValue by remember { mutableStateOf(if (isCustom || currentThreshold > 10f || currentThreshold < 1f) 1f else currentThreshold) }
+  var customValue by remember { mutableStateOf(if (isCustom) currentThreshold.unaryMinus().toString() else "") }
+
+  LaunchedEffect(isCustom) {
+    if (!isCustom) {
+      onThresholdChange(sliderValue)
+    } else {
+      onThresholdChange(customValue.toFloatOrNull()?.unaryMinus() ?: -1f)
+    }
   }
+
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    content = {
+      Column(
+        modifier = Modifier
+          .padding(16.dp)
+          .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
+        Text("Data Alert Threshold", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
+        Text(
+          "Get a notification when you're about to exceed your data limit.",
+          style = MaterialTheme.typography.bodyMedium,
+          modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        Slider(
+          value = sliderValue,
+          onValueChange = {
+            sliderValue = ((it * 2).roundToInt() / 2.0f) // Snap to 0.5 steps
+            isCustom = false
+          },
+          valueRange = 1f..10f,
+          steps = 17, // (10 - 1) / 0.5 - 1 = 17
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+        )
+
+        Text(
+          if (isCustom) "Custom" else "${sliderValue} GB",
+          style = MaterialTheme.typography.bodyLarge,
+          color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isCustom = !isCustom }
+            .padding(vertical = 8.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Checkbox(checked = isCustom, onCheckedChange = { isCustom = it })
+          Text("Custom Threshold")
+        }
+
+        if (isCustom) {
+          Spacer(Modifier.height(8.dp))
+          OutlinedTextField(
+            value = customValue,
+            onValueChange = {
+              customValue = it
+              val customFloat = it.toFloatOrNull()
+              if(customFloat != null) {
+                onThresholdChange(customFloat.unaryMinus()) // Store custom value as negative
+              } else {
+                onThresholdChange(-1f) // Indicate custom but invalid
+              }
+            },
+            label = { Text("Custom Threshold (GB)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            shape = CircleShape
+          )
+        }
+      }
+    }
+  )
 }
 
 // Bottom Sheet for Actions (confirm dialogs)
@@ -369,80 +458,36 @@ fun SettingsActionBottomSheet(
   onConfirm: () -> Unit,
   onDismiss: () -> Unit
 ) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      Text(title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold)) // Emphasized
-      Spacer(Modifier.height(8.dp))
-      Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface))
-      Spacer(Modifier.height(16.dp))
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        TextButton(onClick = onDismiss) {
-          Text(cancelText)
-        }
-        TextButton(onClick = {
-          onConfirm()
-          onDismiss()
-        }) {
-          Text(confirmText)
-        }
-      }
-    }
-  }
-}
-
-// Bottom Sheet for Update Credentials
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun UpdateCredentialsBottomSheet(
-  registrationNumber: String,
-  onRegistrationNumberChange: (String) -> Unit,
-  registrationNumberError: String?,
-  password: String,
-  onPasswordChange: (String) -> Unit,
-  showPassword: Boolean,
-  onShowPasswordChange: (Boolean) -> Unit,
-  onSave: () -> Unit,
-  onDismiss: () -> Unit
-) {
-  ModalBottomSheet(onDismissRequest = onDismiss) {
-    Column(modifier = Modifier.padding(16.dp)) {
-      Text("Update Credentials", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold))
-      Spacer(Modifier.height(8.dp))
-      OutlinedTextField(
-        value = registrationNumber,
-        onValueChange = onRegistrationNumberChange,
-        label = { Text("Registration Number (YYAAAXXXX)") },
-        isError = registrationNumberError != null,
-        supportingText = { if (registrationNumberError != null) Text(registrationNumberError, color = MaterialTheme.colorScheme.error) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium // M3 rounded corners
-      )
-      Spacer(Modifier.height(8.dp))
-      OutlinedTextField(
-        value = password,
-        onValueChange = onPasswordChange,
-        label = { Text("Password") },
-        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
-          IconButton(onClick = { onShowPasswordChange(!showPassword) }) {
-            Icon(if (showPassword) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = "Toggle visibility")
-          }
-        },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium // M3 rounded corners
-      )
-      Spacer(Modifier.height(16.dp))
-      Button(
-        onClick = onSave,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large, // M3 shape for expressive motion
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp) // Flatten on press for motion
+  ModalBottomSheet(
+    onDismissRequest = onDismiss,
+    content = {
+      Column(
+        modifier = Modifier
+          .padding(16.dp)
+          .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text("Save", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)) // Emphasized
+        Spacer(Modifier.height(8.dp))
+        Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface))
+        Spacer(Modifier.height(24.dp))
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+          horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+          OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+            Text(cancelText, fontWeight = FontWeight.Bold)
+          }
+          Button(
+            onClick = onConfirm,
+            modifier = Modifier.weight(1f)
+          ) {
+            Text(confirmText, fontWeight = FontWeight.Bold)
+          }
+        }
       }
     }
-  }
+  )
 }

@@ -42,8 +42,6 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     init {
-        // Initialize the repository
-        SessionRepository.initialize(application)
         ctx.registerReceiver(receiver, IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
         updateNetworkInfo()
         evaluateCurrentConnection()
@@ -67,7 +65,7 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
 
         _ssid.value = when {
             !currentlyConnected -> "Not Connected"
-            info?.type == ConnectivityManager.TYPE_WIFI -> {
+            info.type == ConnectivityManager.TYPE_WIFI -> {
                 VITWiFiIdentifier.getCurrentSSID(ctx)
                     .orEmpty()
                     .ifBlank { "Unknown Wi‑Fi" }
