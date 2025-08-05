@@ -64,19 +64,3 @@ fun Tag(
         )
     }
 }
-
-@Composable
-fun StatItem(
-    icon: ImageVector,
-    value: Pair<String, String>,
-    iconColor: Color
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = iconColor, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("${value.first} ${value.second}",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
