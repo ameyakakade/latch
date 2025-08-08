@@ -81,10 +81,6 @@ fun SpectrumCard(
               text = stringResource(id = R.string.home_network_statistics),
               fontWeight = FontWeight.Bold
             )
-            Icon(
-              imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-              contentDescription = stringResource(id = R.string.home_go_to_statistics)
-            )
           }
         }
       }
