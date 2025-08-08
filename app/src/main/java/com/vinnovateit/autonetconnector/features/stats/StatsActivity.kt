@@ -86,7 +86,7 @@ class StatsActivity : ComponentActivity() {
             try {
               createDocumentLauncher.launch("session_report.csv")
             } catch (e: ActivityNotFoundException) {
-              Toast.makeText(this, "No app found to create CSV files.", Toast.LENGTH_LONG).show()
+              Toast.makeText(this, "No app found to create CSV files. $e", Toast.LENGTH_LONG).show()
             }
           }
         )
@@ -245,7 +245,7 @@ private fun StatsTopAppBar(
   LargeTopAppBar(
     title = {
       Text(
-        text = "Network Statistics",
+        text = "Stats",
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold
       )

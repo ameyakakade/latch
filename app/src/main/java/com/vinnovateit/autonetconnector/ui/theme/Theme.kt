@@ -1,19 +1,17 @@
 package com.vinnovateit.autonetconnector.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vinnovateit.autonetconnector.features.settings.SettingsManager
+import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFFC01221),
@@ -34,7 +32,7 @@ private val LightColorScheme = lightColorScheme(
     onErrorContainer = Color(0xFF410002),
     background = Color(0xFFFDF0D5),
     onBackground = Color(0xFF201A19),
-    surface = Color(0xFFFFF8F6), // A slightly lighter beige for cards
+    surface = Color(0xFFFFF4E0), // A slightly lighter beige for cards
     onSurface = Color(0xFF201A19), // Dark text for readability on beige
     surfaceVariant = Color(0xFFFDE9E2), // A muted red/beige for variants
     onSurfaceVariant = Color(0xFF534341),

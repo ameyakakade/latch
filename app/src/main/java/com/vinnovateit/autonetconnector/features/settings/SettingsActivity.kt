@@ -1,6 +1,7 @@
 package com.vinnovateit.autonetconnector.features.settings
 
 import android.annotation.SuppressLint
+import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import com.vinnovateit.autonetconnector.features.auth.SecondPageActivity
+import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import kotlin.math.roundToInt
 
@@ -155,7 +156,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
         PreferenceCategory(title = "Data Management")
       }
       item {
-        PreferenceItem(PreferenceData("Clear Network Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true }))
+        PreferenceItem(PreferenceData("Clear Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true }))
       }
       item {
         val thresholdSubtitle = when {
@@ -233,7 +234,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
 
   if (showClearStatsSheet) {
     SettingsActionBottomSheet(
-      title = "Clear Network Stats",
+      title = "Clear Stats",
       description = "This will reset all usage history. Continue?",
       confirmText = "Clear",
       cancelText = "Cancel",
@@ -306,7 +307,6 @@ fun PreferenceItem(data: PreferenceData) {
 }
 
 // Bottom Sheet for Dropdowns (simple list selection)
-// Bottom Sheet for Dropdowns (simple list selection)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSelectionBottomSheet(
@@ -364,7 +364,7 @@ fun DataThresholdSliderBottomSheet(
   onDismiss: () -> Unit
 ) {
   var isCustom by remember { mutableStateOf(currentThreshold < 0) }
-  var sliderValue by remember { mutableStateOf(if (isCustom || currentThreshold > 10f || currentThreshold < 1f) 1f else currentThreshold) }
+  var sliderValue by remember { mutableFloatStateOf(if (isCustom || currentThreshold > 10f || currentThreshold < 1f) 1f else currentThreshold) }
   var customValue by remember { mutableStateOf(if (isCustom) currentThreshold.unaryMinus().toString() else "") }
 
   LaunchedEffect(isCustom) {
@@ -405,7 +405,7 @@ fun DataThresholdSliderBottomSheet(
         )
 
         Text(
-          if (isCustom) "Custom" else "${sliderValue} GB",
+          if (isCustom) "Custom" else "$sliderValue GB",
           style = MaterialTheme.typography.bodyLarge,
           color = MaterialTheme.colorScheme.onSurface
         )

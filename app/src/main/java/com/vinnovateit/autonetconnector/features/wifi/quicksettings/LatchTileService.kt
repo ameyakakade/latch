@@ -12,6 +12,7 @@ import com.vinnovateit.autonetconnector.features.home.MainActivity
 import com.vinnovateit.autonetconnector.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.autonetconnector.domain.model.WifiStatsManager
 import com.vinnovateit.autonetconnector.data.StoredCredentials
+import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,10 +22,15 @@ import kotlinx.coroutines.withContext
 
 class LatchTileService : TileService() {
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var isProcessing = false
+  private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+  private var isProcessing = false
+  private lateinit var sessionRepository: SessionRepository
 
-    companion object {
+  override fun onCreate() {
+    super.onCreate()
+  }
+
+  companion object {
         private const val TAG = "LatchTileService"
     }
 

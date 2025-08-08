@@ -1,4 +1,4 @@
-package com.vinnovateit.autonetconnector.features.settings
+package com.vinnovateit.autonetconnector.features.settings.manager
 
 import android.content.Context
 import android.content.SharedPreferences
