@@ -188,25 +188,51 @@ private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
                 displayedData = totalUsageData to totalUsageLabel
             }
 
+            // Real-time center detection during scrolling with haptics and stats update
             LaunchedEffect(lazyListState) {
-                snapshotFlow { lazyListState.isScrollInProgress }
-                    .filter { !it }
-                    .collect {
-                        delay(100)
+                snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset }
+                    .collect { (firstIndex, scrollOffset) ->
                         val layoutInfo = lazyListState.layoutInfo
+                        // Calculate viewport center
                         val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
                         val closestItemInfo = layoutInfo.visibleItemsInfo.minByOrNull {
-                            abs((it.offset + it.size / 2) - viewportCenter)
+                            // Center of item in viewport
+                            val itemCenter = it.offset + it.size / 2
+                            abs(itemCenter - viewportCenter)
                         }
                         if (closestItemInfo != null && closestItemInfo.index in chartItems.indices) {
                             val closestItem = chartItems[closestItemInfo.index]
                             if (closestItem is HistoryChartItem.BarData) {
                                 if (selectedIndex != closestItemInfo.index) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    selectedIndex = closestItemInfo.index
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) // Medium strength
+                                    val dateLabel = SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(closestItem.timestamp))
+                                    displayedData = closestItem.usage to dateLabel
+                                    revertJob?.cancel()
+                                    revertJob = coroutineScope.launch {
+                                        delay(7000)
+                                        displayedData = totalUsageData to totalUsageLabel
+                                    }
                                 }
-                                selectedIndex = closestItemInfo.index
-                                lazyListState.animateScrollToItem(closestItemInfo.index)
                             }
+                        }
+                    }
+            }
+
+            // Snap to nearest bar on scroll stop
+            LaunchedEffect(lazyListState) {
+                snapshotFlow { lazyListState.isScrollInProgress }
+                    .filter { !it }
+                    .collect {
+                        delay(100) // Debounce for smooth snap
+                        val layoutInfo = lazyListState.layoutInfo
+                        val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+                        val closestItemInfo = layoutInfo.visibleItemsInfo.minByOrNull {
+                            val itemCenter = it.offset + it.size / 2
+                            abs(itemCenter - viewportCenter)
+                        }
+                        closestItemInfo?.let {
+                            lazyListState.animateScrollToItem(it.index)
                         }
                     }
             }

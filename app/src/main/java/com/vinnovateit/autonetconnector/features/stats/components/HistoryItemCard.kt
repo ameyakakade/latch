@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,7 +52,7 @@ fun HistoryItemCard(
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(16.dp),
+        .padding(20.dp), // Increased padding for better spacing
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -61,6 +62,13 @@ fun HistoryItemCard(
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp)) // Added space between date and next lines
+        // Added WiFi SSID display
+        Text(
+          text = "WiFi: ${session.ssid}",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
           text = "Duration: ${formatDurationDynamic(session.endTimestamp - session.startTimestamp)}",
@@ -84,7 +92,7 @@ fun HistoryItemCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
-          Spacer(modifier = Modifier.width(8.dp))
+          Spacer(modifier = Modifier.width(12.dp)) // Adjusted spacer for better data row spacing
           val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
           Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
@@ -94,7 +102,6 @@ fun HistoryItemCard(
           )
         }
       }
-
     }
   }
 }
