@@ -16,8 +16,8 @@ val SatoshiFontFamily = FontFamily(
     Font(R.font.satoshi_bold, FontWeight.Bold, FontStyle.Normal)
 )
 
-val SakingFontFamily = FontFamily(
-    Font(R.font.saking_regular, FontWeight.Normal)
+val ModernizFontFamily = FontFamily(
+    Font(R.font.moderniz, FontWeight.Normal)
 )
 
 val OutfitFontFamily = FontFamily(

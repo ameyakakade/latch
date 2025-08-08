@@ -38,6 +38,7 @@ import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import com.vinnovateit.autonetconnector.features.auth.SecondPageActivity
 import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,7 +61,6 @@ class SettingsActivity : ComponentActivity() {
 @Composable
 fun SettingsScreen(onBackClick: () -> Unit) {
   val context = LocalContext.current
-  // Local states are now managed by SettingsManager, we collect them here
   val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
   val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
@@ -87,9 +87,10 @@ fun SettingsScreen(onBackClick: () -> Unit) {
         title = {
           Text(
             "Preferences",
-            fontSize = 24.sp,
+            fontSize = 23.sp,
             fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
+            fontFamily = ModernizFontFamily,
             overflow = TextOverflow.Ellipsis
           )
         },
@@ -267,8 +268,8 @@ fun PreferenceCategory(title: String) {
   Text(
     title,
     style = MaterialTheme.typography.labelLarge.copy(
-      fontWeight = FontWeight.ExtraBold, // Emphasized
-      color = MaterialTheme.colorScheme.primary // Matches homepage
+      fontWeight = FontWeight.ExtraBold,
+      color = MaterialTheme.colorScheme.primary
     ),
     modifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 16.dp)
   )
