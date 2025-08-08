@@ -36,10 +36,9 @@ fun HistorySessionList(history: List<SessionSummary>) {
     )
 
     if (history.isNotEmpty()) {
-      // Using a simple Column as the parent is a LazyColumn.
-      // This prevents nested scrolling issues and is efficient for a reasonable number of sessions.
-      LazyColumn(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        itemsIndexed(history) { index, session ->
+      // This Column replaces the LazyColumn that was causing the crash
+      Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        history.forEachIndexed { index, session ->
           val shape = when {
             history.size == 1 -> MaterialTheme.shapes.medium
             index == 0 -> MaterialTheme.shapes.medium.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
@@ -49,7 +48,6 @@ fun HistorySessionList(history: List<SessionSummary>) {
           HistoryItemCard(session = session, shape = shape)
         }
       }
-
     } else {
       NoDataCard("No session history available.")
     }

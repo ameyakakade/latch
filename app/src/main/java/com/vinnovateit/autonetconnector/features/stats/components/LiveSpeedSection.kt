@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,13 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -37,14 +30,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.vinnovateit.autonetconnector.common.util.formatBitsPerSecond
-import com.vinnovateit.autonetconnector.common.util.TooltipHint
 
 @Composable
 fun LiveSpeedSection(
   isLive: Boolean,
   downloadBps: Long,
   uploadBps: Long,
-  onDownloadReport: () -> Unit
+  onDownloadReport: () -> Unit // Retained param but not used here
 ) {
   val downloadLabel = if (isLive) "Download" else "Max Download"
   val uploadLabel = if (isLive) "Upload" else "Max Upload"
@@ -56,30 +48,6 @@ fun LiveSpeedSection(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(24.dp)
   ) {
-    // Conditionally show the Download Report Button only during a live session
-    if (isLive) {
-      TooltipHint(tooltipText = "Download a CSV report of the session") {
-        OutlinedButton(
-          onClick = onDownloadReport,
-          shape = RoundedCornerShape(50),
-          modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-          border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.error
-          )
-        ) {
-          Icon(
-            imageVector = Icons.Default.Download,
-            contentDescription = "Download Report"
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text("Download report", fontWeight = FontWeight.Bold)
-        }
-      }
-    }
-
     // Max Speeds are always shown
     Row(
       modifier = Modifier.fillMaxWidth(),
@@ -101,7 +69,6 @@ fun LiveSpeedSection(
 @Composable
 fun SpeedIndicator(label: String, bytesPerSecond: Long) {
   val (value, unit) = formatBitsPerSecond(bytesPerSecond)
-
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -132,17 +99,21 @@ fun RollingNumberText(
   textStyle: TextStyle
 ) {
   var previousValue by remember { mutableStateOf<String?>(null) }
+
   LaunchedEffect(value) {
     previousValue = value
   }
+
   Row(
     horizontalArrangement = Arrangement.Center
   ) {
     val previousChars = previousValue?.padStart(value.length, ' ')?.toCharArray() ?: " ".repeat(value.length).toCharArray()
     val currentChars = value.padStart(previousValue?.length ?: value.length, ' ').toCharArray()
+
     for (i in currentChars.indices) {
       val oldChar = previousChars.getOrNull(i)
       val newChar = currentChars[i]
+
       AnimatedContent(
         targetState = newChar,
         transitionSpec = {
