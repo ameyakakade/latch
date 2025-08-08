@@ -22,14 +22,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,15 +63,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.R
-import com.vinnovateit.autonetconnector.SpectrumCard
+import com.vinnovateit.autonetconnector.features.home.components.SpectrumCard
 import com.vinnovateit.autonetconnector.features.settings.SettingsActivity
 import com.vinnovateit.autonetconnector.domain.model.SessionSummary
 import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import com.vinnovateit.autonetconnector.ui.theme.ColorPowerButtonShadow
 import com.vinnovateit.autonetconnector.ui.theme.ColorStatusDisconnected
-import com.vinnovateit.autonetconnector.ui.theme.SakingFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
+import androidx.compose.ui.platform.LocalResources
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float) {
@@ -116,15 +121,13 @@ fun HomeScreen(
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
     val density = LocalDensity.current
-    val screenWidthDp = LocalContext.current.resources.displayMetrics.widthPixels / density.density
+    val screenWidthDp = LocalResources.current.displayMetrics.widthPixels / density.density
     val buttonDiameterDp = (screenWidthDp * 0.5f).dp
     val cutoutRatio = 1.2f
     val cutoutDiameterDp = (screenWidthDp * 0.6f).dp
     val spacingDp = ((screenWidthDp * 0.1f) / 2f).dp
-    val screenHeightDp = LocalContext.current.resources.displayMetrics.heightPixels / density.density
-
+    val screenHeightDp = LocalResources.current.displayMetrics.heightPixels / density.density
     val buttonDiameterPx = with(density) { buttonDiameterDp.toPx() }
-    val logoRes = R.drawable.ic_latch
 
     Box(
         modifier = Modifier
@@ -147,54 +150,12 @@ fun HomeScreen(
                 )
 
                 Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = (screenHeightDp * 0.03f).dp, start = 16.dp, end = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterStart) {
-                            Icon(
-                                painter = painterResource(id = logoRes),
-                                contentDescription = "LATCH Logo",
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(width = 49.33.dp, height = 36.dp)
-                            )
+                    TopBarSection(
+                        onPreferencesClick = {
+                            context.startActivity(Intent(context, SettingsActivity::class.java))
                         }
+                    )
 
-                        Text(
-                            text = "LATCH",
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 28.97.sp,
-                            fontFamily = SakingFontFamily,
-                            fontWeight = FontWeight.Normal,
-                            letterSpacing = (28.97 * 0.02).sp,
-                            lineHeight = (28.97 * 1.0).sp,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Box(modifier = Modifier.width(50.dp), contentAlignment = Alignment.CenterEnd) {
-                            TooltipHint(tooltipText = "Menu") {
-                                Box {
-                                    IconButton(
-                                        onClick = {
-                                            context.startActivity(Intent(context, SettingsActivity::class.java))
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Menu,
-                                            contentDescription = "Menu",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .size(32.dp)
-                                                .clip(CircleShape)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
 
                     Spacer(modifier = Modifier.weight(1f))
 
@@ -332,16 +293,95 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TopBarSection(
+    onPreferencesClick: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    CenterAlignedTopAppBar(
+        title = {
+            Text(
+                modifier = Modifier.padding(top=5.dp),
+                text = "LATCH",
+                color = MaterialTheme.colorScheme.primary,
+                fontSize = 23.sp,
+                fontFamily = ModernizFontFamily,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center
+            )
+        },
+        navigationIcon = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_latch),
+                contentDescription = "LATCH Logo",
+                tint = Color.Unspecified,
+                modifier = Modifier
+                    .size(48.dp).padding(start = 10.dp)
+            )
+        },
+        actions = {
+            TooltipHint(tooltipText = "More options") {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        modifier = Modifier.padding(0.dp),
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.width(200.dp) // Increased width here
+            ) {
+                DropdownMenuItem(
+                    text = {
+                        Text("Preferences", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onPreferencesClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Dummy Option 1", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = { menuExpanded = false }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Dummy Option 2", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = { menuExpanded = false }
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.Transparent, // Transparent AppBar
+            scrolledContainerColor = Color.Transparent,
+            navigationIconContentColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.primary,
+            actionIconContentColor = MaterialTheme.colorScheme.primary
+        )
+    )
+}
+
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
     AutoNetConnectorTheme {
         HomeScreen(
-            isConnected = false,
-            networkSpeed = "6 mbps",
-            session = null,
-            ssid = "Not Connected",
-            onConnectClick = { }
+          isConnected = false,
+          networkSpeed = "6 mbps",
+          session = null,
+          ssid = "Not Connected",
+          onConnectClick = { },
         )
     }
 }
@@ -351,11 +391,11 @@ fun HomeScreenPreview() {
 fun HomeScreenOnlinePreview() {
     AutoNetConnectorTheme {
         HomeScreen(
-            isConnected = true,
-            networkSpeed = "12 mbps",
-            session = null,
-            ssid = "VIT-WiFi",
-            onConnectClick = { }
+          isConnected = true,
+          networkSpeed = "12 mbps",
+          session = null,
+          ssid = "VIT-WiFi",
+          onConnectClick = { },
         )
     }
 }

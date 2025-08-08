@@ -15,47 +15,52 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vinnovateit.autonetconnector.common.util.generateCsvReport
+import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.domain.model.LiveConnectionStatus
 import com.vinnovateit.autonetconnector.domain.model.SessionSummary
 import com.vinnovateit.autonetconnector.features.stats.components.HistoryBarChart
+import com.vinnovateit.autonetconnector.features.stats.components.HistoryItemCard
 import com.vinnovateit.autonetconnector.features.stats.components.HistorySessionList
 import com.vinnovateit.autonetconnector.features.stats.components.LiveSpeedSection
 import com.vinnovateit.autonetconnector.features.stats.components.SessionCard
-import com.vinnovateit.autonetconnector.common.util.generateCsvReport
-import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 
 class StatsActivity : ComponentActivity() {
   private var currentSsid: String? = null
@@ -107,9 +112,7 @@ fun StatsScreen(
   overrideSsid: String?,
   onDownloadReport: () -> Unit
 ) {
-  var showResetDialog by remember { mutableStateOf(false) }
   val context = LocalContext.current as Activity
-
   val sessionToShow by statsViewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by statsViewModel.sessionHistory.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
@@ -123,8 +126,7 @@ fun StatsScreen(
     topBar = {
       StatsTopAppBar(
         scrollBehavior = scrollBehavior,
-        onBackClick = { context.finish() },
-        onResetClick = { showResetDialog = true }
+        onBackClick = { context.finish() }
       )
     }
   ) { innerPadding ->
@@ -136,16 +138,6 @@ fun StatsScreen(
       liveStatus = liveStatus,
       overrideSsid = overrideSsid,
       onDownloadReport = onDownloadReport
-    )
-  }
-
-  if (showResetDialog) {
-    ResetStatsDialog(
-      onDismiss = { showResetDialog = false },
-      onConfirm = {
-        statsViewModel.onClearHistory()
-        showResetDialog = false
-      }
     )
   }
 }
@@ -178,10 +170,6 @@ private fun StatsScreenContent(
   }
 }
 
-/**
- * The main list of stats items, displayed in a LazyColumn.
- * The order of items changes based on the connection status.
- */
 @Composable
 private fun StatsList(
   modifier: Modifier = Modifier,
@@ -200,7 +188,12 @@ private fun StatsList(
   ) {
     if (isLive && sessionToShow != null) {
       // WHEN CONNECTED:
-      item { SessionCard(session = sessionToShow, overrideSsid = overrideSsid) }
+      item {
+        SessionCard(
+          session = sessionToShow,
+          overrideSsid = overrideSsid
+        )
+      }
       item {
         val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
         val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBytes ?: 0L
@@ -208,11 +201,15 @@ private fun StatsList(
           isLive = true,
           downloadBps = liveDownloadBps,
           uploadBps = liveUploadBps,
-          onDownloadReport = onDownloadReport
+          onDownloadReport = {}
         )
       }
       item { HistoryBarChart(history = historyToShow) }
-      item { HistorySessionList(history = historyToShow) }
+      item {
+        HistorySessionList(
+          history = historyToShow
+        )
+      }
     } else {
       // WHEN NOT CONNECTED:
       item {
@@ -222,11 +219,34 @@ private fun StatsList(
           isLive = false,
           downloadBps = allTimeMaxDownloadBps,
           uploadBps = allTimeMaxUploadBps,
-          onDownloadReport = onDownloadReport
+          onDownloadReport = {} // Removed button from here
         )
       }
       item { HistoryBarChart(history = historyToShow) }
-      item { HistorySessionList(history = historyToShow) }
+      items(historyToShow.size) { index ->
+        // This is where you should iterate and display your history items directly
+        HistoryItemCard(session = historyToShow[index])
+      }
+    }
+    // Added download button at the end
+    if (historyToShow.isNotEmpty()) {
+      item {
+        TooltipHint(tooltipText = "Download a CSV report of all sessions") {
+          OutlinedButton(
+            onClick = onDownloadReport,
+            modifier = Modifier
+              .fillMaxWidth()
+              .height(50.dp)
+          ) {
+            Icon(
+              imageVector = Icons.Default.Download,
+              contentDescription = "Download Report"
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Download Usage Report", fontWeight = FontWeight.Bold)
+          }
+        }
+      }
     }
     item { Spacer(modifier = Modifier.height(100.dp)) }
   }
@@ -240,27 +260,21 @@ private fun StatsList(
 private fun StatsTopAppBar(
   scrollBehavior: TopAppBarScrollBehavior,
   onBackClick: () -> Unit,
-  onResetClick: () -> Unit
 ) {
   LargeTopAppBar(
     title = {
       Text(
-        text = "Stats",
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold
+        "Stats",
+        fontSize = 23.sp,
+        maxLines = 1,
+        fontFamily = ModernizFontFamily,
+        overflow = TextOverflow.Ellipsis
       )
     },
     navigationIcon = {
       TooltipHint(tooltipText = "Go Back") {
         IconButton(onClick = onBackClick) {
           Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-        }
-      }
-    },
-    actions = {
-      TooltipHint(tooltipText = "Reset Stats") {
-        IconButton(onClick = onResetClick) {
-          Icon(imageVector = Icons.Default.Refresh, contentDescription = "Reset Stats")
         }
       }
     },
@@ -277,7 +291,16 @@ private fun EmptyStatsView(modifier: Modifier = Modifier) {
     modifier = modifier,
     contentAlignment = Alignment.Center
   ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+    ) {
+      Icon(
+        imageVector = Icons.Rounded.BarChart,
+        contentDescription = "Empty Stats Icon",
+        modifier = Modifier.size(128.dp),
+        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+      )
       Spacer(modifier = Modifier.height(16.dp))
       Text(
         text = "No stats to show yet. Connect to a network to get started!",
@@ -287,25 +310,4 @@ private fun EmptyStatsView(modifier: Modifier = Modifier) {
       )
     }
   }
-}
-
-/**
- * A composable for the dialog that asks for confirmation before resetting stats.
- */
-@Composable
-private fun ResetStatsDialog(
-  onDismiss: () -> Unit,
-  onConfirm: () -> Unit
-) {
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text("Reset Stats") },
-    text = { Text("Are you sure you want to delete all session history? This action cannot be undone.") },
-    confirmButton = {
-      TextButton(onClick = onConfirm) { Text("Reset") }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) { Text("Cancel") }
-    }
-  )
 }

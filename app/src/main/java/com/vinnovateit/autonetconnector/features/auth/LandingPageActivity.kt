@@ -29,7 +29,7 @@ import com.vinnovateit.autonetconnector.data.CredentialDatabase
 import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import com.vinnovateit.autonetconnector.ui.theme.SakingFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
 class LandingPageActivity : ComponentActivity() {
@@ -63,7 +63,7 @@ class LandingPageActivity : ComponentActivity() {
 
 @Composable
 fun LandingPageScreen(onGetStarted: () -> Unit) {
-    val logoRes = if (isSystemInDarkTheme()) R.drawable.ic_latch_light else R.drawable.ic_latch_dark
+    val logoRes = R.drawable.ic_latch_dark
 
 
 
@@ -89,9 +89,9 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             // Latch logo text
             Text(
                 text = stringResource(R.string.name_uppercase),
-                fontSize = 32.sp,
+                fontSize = 30.sp,
                 color = MaterialTheme.colorScheme.onSurface,
-                fontFamily = SakingFontFamily
+                fontFamily = ModernizFontFamily
             )
             Spacer(Modifier.height(48.dp))
             Button(

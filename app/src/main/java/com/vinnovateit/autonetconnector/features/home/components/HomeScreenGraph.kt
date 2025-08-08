@@ -2,9 +2,11 @@ package com.vinnovateit.autonetconnector.features.home.components
 
 import android.annotation.SuppressLint
 import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
@@ -39,9 +42,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.autonetconnector.domain.model.LiveDataPoint
 import com.vinnovateit.autonetconnector.common.util.createGraphPaths
 import com.vinnovateit.autonetconnector.common.util.formatBitsPerSecond
+import com.vinnovateit.autonetconnector.domain.model.LiveDataPoint
 import com.vinnovateit.autonetconnector.ui.theme.ColorGraphDownload
 import com.vinnovateit.autonetconnector.ui.theme.ColorGraphUpload
 import com.vinnovateit.autonetconnector.ui.theme.ColorTransparent
@@ -51,10 +54,9 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlinx.coroutines.delay
 
-private const val GRAPH_HEIGHT_SCALE = 0.7f
+private const val GRAPH_HEIGHT_SCALE = 0.77f
 private val Y_AXIS_WIDTH = 70.dp
-private const val POINTS_IN_ONE_MINUTE = 30  // 1 min * 30 points/min
-
+private const val POINTS_IN_30_SECONDS = 20
 
 /**
  * Calculates a "nice" rounded number for the top of the Y-axis.
@@ -79,8 +81,8 @@ fun HomeScreenGraph(
   modifier: Modifier = Modifier,
   rateHistory: List<LiveDataPoint>
 ) {
-  val initialScale = if (rateHistory.size > POINTS_IN_ONE_MINUTE) {
-    rateHistory.size.toFloat() / POINTS_IN_ONE_MINUTE.toFloat()
+  val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
+    rateHistory.size.toFloat() / POINTS_IN_30_SECONDS.toFloat()
   } else {
     1f
   }
@@ -115,11 +117,15 @@ fun HomeScreenGraph(
           isAutoScrolling = true
           scrollState.animateScrollTo(
             scrollState.maxValue,
-            animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 500)
           )
           isAutoScrolling = false
         }
       }
+      if (timeSinceInteraction > 5000 && scale != initialScale) {
+        scale = initialScale
+      }
+
       delay(200)
     }
   }
@@ -129,12 +135,12 @@ fun HomeScreenGraph(
     modifier = modifier
       .pointerInput(Unit) {
         detectTransformGestures { _, _, zoom, _ ->
-          scale = (scale * zoom).coerceIn(1f, initialScale * 2) // Allow zooming in further, but not out past 1:1
+          scale = (scale * zoom).coerceIn(1f, initialScale * 3) // Allow zooming in further, but not out past 1:1
           lastInteraction = System.currentTimeMillis() // Update interaction time on zoom
         }
       }
   ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
       val containerWidthPx = constraints.maxWidth
       val containerHeightPx = constraints.maxHeight
 
@@ -171,7 +177,10 @@ fun HomeScreenGraph(
 
         val animatedMaxSpeed by animateFloatAsState(
           targetValue = maxSpeed.toFloat(),
-          animationSpec = tween(500, easing = FastOutSlowInEasing),
+          animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+          ),
           label = "MaxSpeedAnimation"
         )
 
@@ -237,11 +246,16 @@ fun HomeScreenGraph(
                   )
                 )
             ) {
+              val animatedFontWeight by animateFloatAsState(
+                targetValue = if (yAxisVisible) 700f else 400f, // Bold to normal
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+              )
               Canvas(modifier = Modifier.fillMaxSize()) {
                 val axisPaint = Paint().apply {
                   color = onBackgroundColor.copy(alpha = 0.7f).toArgb()
                   textAlign = Paint.Align.LEFT
                   textSize = 12.sp.toPx()
+                  typeface = Typeface.create(Typeface.DEFAULT, animatedFontWeight.toInt())
                 }
                 val rulerTopValue = calculateNiceMaxSpeed(animatedMaxSpeed / 2)
                 val numLines = 4
