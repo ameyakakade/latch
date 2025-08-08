@@ -19,7 +19,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.common.util.formatBitsPerSecond
 import com.vinnovateit.autonetconnector.domain.model.SessionRepository
-import com.vinnovateit.autonetconnector.features.settings.SettingsManager
+import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 import com.vinnovateit.autonetconnector.features.wifi.background.ForegroundService
 import com.vinnovateit.autonetconnector.features.wifi.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.features.stats.StatsViewModel
@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
 
         // Initialize managers
         SettingsManager.initialize(this)
-        SessionRepository.initialize(this.application)
 
         requestLocationPermissionIfNeeded()
         WiFiMonitor.startMonitoring(applicationContext)

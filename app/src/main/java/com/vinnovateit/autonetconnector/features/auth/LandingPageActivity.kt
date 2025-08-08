@@ -27,7 +27,7 @@ import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.features.home.MainActivity
 import com.vinnovateit.autonetconnector.data.CredentialDatabase
 import com.vinnovateit.autonetconnector.domain.model.SessionRepository
-import com.vinnovateit.autonetconnector.features.settings.SettingsManager
+import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
 import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
 import com.vinnovateit.autonetconnector.ui.theme.SakingFontFamily
 import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
@@ -38,7 +38,6 @@ class LandingPageActivity : ComponentActivity() {
 
         // Initialize SettingsManager to apply the correct theme immediately
         SettingsManager.initialize(this)
-        SessionRepository.initialize(this.application)
 
         lifecycleScope.launch {
             val db = CredentialDatabase.getInstance(this@LandingPageActivity)
