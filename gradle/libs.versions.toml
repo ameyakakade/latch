@@ -3,6 +3,7 @@ agp = "8.6.1"
 androidxComposeBom = "2025.07.00"
 appcompatVersion = "1.7.1"
 composeBomVersion = "2024.05.00"
+coreSplashscreen = "1.0.1"
 foundation = "1.6.7"
 glanceAppwidget = "1.1.1"
 glanceMaterial3 = "1.1.1"
@@ -66,6 +67,7 @@ androidx-compose-foundation = { group = "androidx.compose.foundation", name = "f
 
 
 # Lifecycle
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-foundation = { module = "androidx.compose.foundation:foundation" }
 androidx-foundation-v167 = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glanceAppwidget" }

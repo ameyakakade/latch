@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,14 +37,13 @@ fun HistorySessionList(history: List<SessionSummary>) {
     )
 
     if (history.isNotEmpty()) {
-      // This Column replaces the LazyColumn that was causing the crash
-      Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+      Column {
         history.forEachIndexed { index, session ->
           val shape = when {
-            history.size == 1 -> MaterialTheme.shapes.medium
-            index == 0 -> MaterialTheme.shapes.medium.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))
-            index == history.size - 1 -> MaterialTheme.shapes.medium.copy(topStart = CornerSize(0.dp), topEnd = CornerSize(0.dp))
-            else -> MaterialTheme.shapes.small
+            history.size == 1 -> RoundedCornerShape(16.dp)
+            index == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+            index == history.size - 1 -> RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp, bottomStart = 16.dp, bottomEnd = 16.dp)
+            else -> RoundedCornerShape(5.dp)
           }
           HistoryItemCard(session = session, shape = shape)
         }

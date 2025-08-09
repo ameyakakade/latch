@@ -296,8 +296,8 @@ fun PreferenceItem(data: PreferenceData) {
       Text(
         data.title,
         style = MaterialTheme.typography.bodyLarge.copy(
-          fontWeight = FontWeight.Bold, // Emphasized
-          color = MaterialTheme.colorScheme.onSurface // Matches homepage
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.onSurface
         )
       )
       Text(
@@ -323,10 +323,13 @@ fun SettingsSelectionBottomSheet(
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
   ModalBottomSheet(
+    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    contentColor = MaterialTheme.colorScheme.onSurface,
     onDismissRequest = onDismiss,
     sheetState = sheetState,
     content = {
-      Column(modifier = Modifier.padding(vertical = 16.dp)) {
+      Column(modifier = Modifier.padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
           title,
           style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
@@ -398,7 +401,7 @@ fun DataThresholdSliderBottomSheet(
         Slider(
           value = sliderValue,
           onValueChange = {
-            sliderValue = ((it * 2).roundToInt() / 2.0f) // Snap to 0.5 steps
+            sliderValue = ((it * 2).roundToInt() / 2.0f)
             isCustom = false
           },
           colors = SliderDefaults.colors(
@@ -409,7 +412,7 @@ fun DataThresholdSliderBottomSheet(
             inactiveTrackColor = ColorSliderInactiveTrack,
           ),
           valueRange = 1f..10f,
-          steps = 17, // (10 - 1) / 0.5 - 1 = 17
+          steps = 17,
           modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -442,9 +445,9 @@ fun DataThresholdSliderBottomSheet(
               customValue = it
               val customFloat = it.toFloatOrNull()
               if(customFloat != null) {
-                onThresholdChange(customFloat.unaryMinus()) // Store custom value as negative
+                onThresholdChange(customFloat.unaryMinus())
               } else {
-                onThresholdChange(-1f) // Indicate custom but invalid
+                onThresholdChange(-1f)
               }
             },
             label = { Text("Custom Threshold (GB)") },
@@ -478,7 +481,7 @@ fun SettingsActionBottomSheet(
           .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)) // Emphasized
+        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
         Spacer(Modifier.height(8.dp))
         Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface))
         Spacer(Modifier.height(24.dp))

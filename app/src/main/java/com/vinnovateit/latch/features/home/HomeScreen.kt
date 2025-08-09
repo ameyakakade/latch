@@ -5,13 +5,14 @@ import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Handyman
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -127,10 +128,10 @@ fun PortraitHomeScreen(
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+            painter = if(isDark) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
             contentDescription = "Background Pattern",
             modifier = Modifier.fillMaxSize(),
             alignment = Alignment.TopCenter
@@ -186,7 +187,7 @@ fun LandscapeHomeScreen(
                 .fillMaxHeight()
         ) {
             Image(
-                painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+                painter = if(LocalIsDarkTheme.current) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
                 contentDescription = "Background Pattern",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -361,7 +362,7 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
 fun TopBarSection(
     onPreferencesClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     var menuExpanded by remember { mutableStateOf(false) }
 
     CenterAlignedTopAppBar(
@@ -401,7 +402,7 @@ fun TopBarSection(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
                 shape = RoundedCornerShape(12.dp),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.width(200.dp)
             ) {
                 DropdownMenuItem(
@@ -411,19 +412,25 @@ fun TopBarSection(
                     onClick = {
                         menuExpanded = false
                         onPreferencesClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Handyman,
+                            contentDescription = "Preferences"
+                        )
                     }
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("Dummy Option 1", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                        Text("About", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
-                    onClick = { menuExpanded = false }
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text("Dummy Option 2", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
-                    },
-                    onClick = { menuExpanded = false }
+                    onClick = { menuExpanded = false },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Info,
+                            contentDescription = "About"
+                        )
+                    }
                 )
             }
         },

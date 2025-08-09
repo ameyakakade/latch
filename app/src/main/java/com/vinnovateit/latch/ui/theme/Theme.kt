@@ -26,7 +26,7 @@ private val LightColorScheme = lightColorScheme(
     onSecondaryContainer = Color(0xFF410002),
     tertiary = Color(0xFFC01221),
     onTertiary = Color(0xFFFFD078),
-    tertiaryContainer = Color(0xFFFFF1D4),
+    tertiaryContainer = Color(0xFFE0E0E0),
     onTertiaryContainer = Color(0xFF241A00),
     error = Color(0xFFBA1A1A),
     onError = Color(0xFFFFFFFF),
@@ -35,6 +35,7 @@ private val LightColorScheme = lightColorScheme(
     background = Color(0xFFFDF0D5),
     onBackground = Color(0xFF201A19),
     surface = Color(0xFFFDF0D5),
+    surfaceContainer = Color(0xFFFFF1D4),
     onSurface = Color(0xFFC01221),
     surfaceVariant = Color(0xFFF6EDD1),
     onSurfaceVariant = Color(0xFF534341),
@@ -58,7 +59,7 @@ private val DarkColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFFFDAD6),
     tertiary = Color(0xFFe0e0e0),
     onTertiary = Color(0xFF3F2E00),
-    tertiaryContainer = Color(0xFF000C38),
+    tertiaryContainer = Color(0xFF242424),
     onTertiaryContainer = Color(0xFFFBDD88),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
@@ -68,6 +69,7 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFe0e0e0),
     surface = Color(0xFF00092E),
     onSurface = Color(0xFFe0e0e0),
+    surfaceContainer = Color(0xFF000C38),
     surfaceVariant = Color(0xFF000A3D),
     onSurfaceVariant = Color(0xFFD7C1BE),
     outline = Color(0xFFA08C8A),
@@ -117,13 +119,6 @@ fun LatchTheme(
             WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
-
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
-        typography = AppTypography,
-        content = content
-    )
 }
 
 val ColorScheme.tooltipContainer: Color

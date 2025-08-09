@@ -23,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.data.CredentialDatabase
@@ -34,7 +35,7 @@ import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 class LandingPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        installSplashScreen()
         // Initialize SettingsManager to apply the correct theme immediately
         SettingsManager.initialize(this)
 
