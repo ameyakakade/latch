@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.vinnovateit.autonetconnector"
+    namespace = "com.vinnovateit.latch"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vinnovateit.autonetconnector"
+        applicationId = "com.vinnovateit.latch"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
