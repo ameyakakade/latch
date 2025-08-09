@@ -50,17 +50,17 @@ fun Tag(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(50)) // 1. Clip the shape first
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier) // 2. Apply clickable to get a clipped ripple
-            .background(color.copy(0.15f)) // 3. Apply background
-            .padding(horizontal = 12.dp, vertical = 6.dp), // 4. Apply padding
+            .clip(RoundedCornerShape(50))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .background(color.copy(0.15f))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
             color = color,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge // Increased font size
+            style = MaterialTheme.typography.labelLarge
         )
     }
 }

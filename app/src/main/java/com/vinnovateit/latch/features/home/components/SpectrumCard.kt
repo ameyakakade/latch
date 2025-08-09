@@ -55,9 +55,7 @@ fun SpectrumCard(
         modifier = Modifier
           .fillMaxWidth()
           .clickable {
-            val intent = Intent(context, StatsActivity::class.java).apply {
-              putExtra("CURRENT_SSID", ssid)
-            }
+            val intent = Intent(context, StatsActivity::class.java)
             (context as? Activity)?.startActivity(intent)
           }
           .padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
