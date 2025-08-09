@@ -62,7 +62,6 @@
     <string name="widget_loading">Loading…</string>
 
     <string name="permission_location_required">Location permission is required to detect WiFi network.</string>
-    <string name="network_speed_fallback">0 B/s</string>
     <string name="not_connected">Not Connected</string>
     <string name="unknown_wifi">Unknown Wi‑Fi</string>
     <string name="other_network">Other Network</string>

@@ -21,7 +21,7 @@ object SettingsManager {
 
   // Default Values
   private const val DEFAULT_AUTO_LOGIN = true
-  private const val DEFAULT_SPEED_UNITS = "Mbps"
+  private const val DEFAULT_SPEED_UNITS = "bps"
   private const val DEFAULT_THEME = "System Default"
   private const val DEFAULT_DATA_ALERT_ENABLED = true
   private const val DEFAULT_DATA_THRESHOLD = 1.0f

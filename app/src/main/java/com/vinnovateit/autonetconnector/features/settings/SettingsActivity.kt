@@ -199,8 +199,8 @@ fun SettingsScreen(onBackClick: () -> Unit) {
     SettingsSelectionBottomSheet(
       title = "Speed Units",
       options = listOf(
-        SelectionOption("Mbps", Icons.Rounded.Speed),
-        SelectionOption("MB/s", Icons.Rounded.Speed)
+        SelectionOption("bps", Icons.Rounded.Speed),
+        SelectionOption("B/s", Icons.Rounded.Speed)
       ),
       selected = speedUnits,
       onSelect = {
