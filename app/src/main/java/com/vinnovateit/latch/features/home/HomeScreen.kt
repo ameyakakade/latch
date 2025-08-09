@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Handyman
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -400,7 +402,7 @@ fun TopBarSection(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
                 shape = RoundedCornerShape(12.dp),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.width(200.dp)
             ) {
                 DropdownMenuItem(
@@ -410,19 +412,25 @@ fun TopBarSection(
                     onClick = {
                         menuExpanded = false
                         onPreferencesClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Handyman,
+                            contentDescription = "Preferences"
+                        )
                     }
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("Dummy Option 1", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                        Text("About", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
-                    onClick = { menuExpanded = false }
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text("Dummy Option 2", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
-                    },
-                    onClick = { menuExpanded = false }
+                    onClick = { menuExpanded = false },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Info,
+                            contentDescription = "About"
+                        )
+                    }
                 )
             }
         },

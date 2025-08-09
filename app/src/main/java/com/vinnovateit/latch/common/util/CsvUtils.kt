@@ -12,7 +12,7 @@ import java.util.Locale
 fun generateCsvReport(sessions: List<SessionSummary>, outputStream: OutputStream) {
   val writer = outputStream.bufferedWriter()
   // CSV Header
-  writer.write(""""SSID","Start Time","End Time","Duration (Minutes)","Total Data (MB)","Download (MB)","Upload (MB)","Max Download Speed (Mbps)","Max Upload Speed (Mbps)"""")
+  writer.write(""""Start Time","End Time","Duration (Minutes)","Total Data (MB)","Download (MB)","Upload (MB)","Max Download Speed (Mbps)","Max Upload Speed (Mbps)"""")
   writer.newLine()
 
   val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -29,7 +29,7 @@ fun generateCsvReport(sessions: List<SessionSummary>, outputStream: OutputStream
     val maxUploadMbps = (session.history.maxOfOrNull { it.usage.txBytes } ?: 0L) * 8 / 1000000.0
 
     writer.write(
-      """"${session.ssid}","$startTime","$endTime","${"%.2f".format(durationMinutes)}","${"%.2f".format(totalDataMb)}","${"%.2f".format(downloadMb)}","${"%.2f".format(uploadMb)}","${"%.2f".format(maxDownloadMbps)}","${"%.2f".format(maxUploadMbps)}""""
+      """"$startTime","$endTime","${"%.2f".format(durationMinutes)}","${"%.2f".format(totalDataMb)}","${"%.2f".format(downloadMb)}","${"%.2f".format(uploadMb)}","${"%.2f".format(maxDownloadMbps)}","${"%.2f".format(maxUploadMbps)}""""
     )
     writer.newLine()
   }
