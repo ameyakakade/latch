@@ -117,13 +117,6 @@ fun LatchTheme(
             WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
-
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
-        typography = AppTypography,
-        content = content
-    )
 }
 
 val ColorScheme.tooltipContainer: Color
