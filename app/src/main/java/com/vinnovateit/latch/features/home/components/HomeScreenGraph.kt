@@ -54,14 +54,14 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlinx.coroutines.delay
 
-private const val GRAPH_HEIGHT_SCALE = 0.77f
-private val Y_AXIS_WIDTH = 70.dp
-private const val POINTS_IN_30_SECONDS = 20
+const val GRAPH_HEIGHT_SCALE = 0.77f
+val Y_AXIS_WIDTH = 70.dp
+const val POINTS_IN_30_SECONDS = 20
 
 /**
  * Calculates a "nice" rounded number for the top of the Y-axis.
  */
-private fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
+fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
   if (maxSpeed <= 0f) return 1f // CRASH FIX: Handle zero or negative maxSpeed
   val exponent = floor(log10(maxSpeed))
   val fraction = maxSpeed / 10f.pow(exponent)

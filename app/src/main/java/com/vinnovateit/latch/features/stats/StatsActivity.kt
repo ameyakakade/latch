@@ -67,8 +67,6 @@ import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 
 class StatsActivity : ComponentActivity() {
-  private var currentSsid: String? = null
-
   private val createDocumentLauncher =
     registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
       uri?.let {
@@ -86,11 +84,9 @@ class StatsActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    currentSsid = intent.getStringExtra("CURRENT_SSID")
     setContent {
       LatchTheme {
         StatsScreen(
-          overrideSsid = currentSsid,
           onDownloadReport = {
             try {
               createDocumentLauncher.launch("session_report.csv")
@@ -113,7 +109,6 @@ class StatsActivity : ComponentActivity() {
 fun StatsScreen(
   modifier: Modifier = Modifier,
   statsViewModel: StatsViewModel = viewModel(),
-  overrideSsid: String?,
   onDownloadReport: () -> Unit
 ) {
   val context = LocalContext.current as Activity
@@ -141,7 +136,6 @@ fun StatsScreen(
       sessionToShow = sessionToShow,
       historyToShow = historyToShow,
       liveStatus = liveStatus,
-      overrideSsid = overrideSsid,
       onDownloadReport = onDownloadReport
     )
   }
@@ -157,7 +151,6 @@ private fun StatsScreenContent(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
-  overrideSsid: String?,
   onDownloadReport: () -> Unit
 ) {
   if (!isLive && historyToShow.isEmpty()) {
@@ -169,7 +162,6 @@ private fun StatsScreenContent(
       sessionToShow = sessionToShow,
       historyToShow = historyToShow,
       liveStatus = liveStatus,
-      overrideSsid = overrideSsid,
       onDownloadReport = onDownloadReport
     )
   }
@@ -182,7 +174,6 @@ private fun StatsList(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
-  overrideSsid: String?,
   onDownloadReport: () -> Unit
 ) {
   LazyColumn(
@@ -196,7 +187,6 @@ private fun StatsList(
       item {
         SessionCard(
           session = sessionToShow,
-          overrideSsid = overrideSsid
         )
       }
       item {
@@ -228,9 +218,8 @@ private fun StatsList(
         )
       }
       item { HistoryBarChart(history = historyToShow) }
-      items(historyToShow.size) { index ->
-        // This is where you should iterate and display your history items directly
-        HistoryItemCard(session = historyToShow[index])
+      item {
+        HistorySessionList(history = historyToShow)
       }
     }
     // Added download button at the end
