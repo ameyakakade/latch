@@ -5,53 +5,24 @@ import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absoluteOffset
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -62,45 +33,48 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.R
+import com.vinnovateit.autonetconnector.common.util.TooltipHint
+import com.vinnovateit.autonetconnector.domain.model.SessionSummary
 import com.vinnovateit.autonetconnector.features.home.components.SpectrumCard
 import com.vinnovateit.autonetconnector.features.settings.SettingsActivity
 import com.vinnovateit.autonetconnector.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
 
 @Composable
-fun HomeRedCanvasBackground(buttonSizePx: Float) {
-    val cutoutRatio = 1.2f
-    val cutoutDiameter = buttonSizePx * cutoutRatio
-    val cutoutRadius = cutoutDiameter / 2f
-    val paint = remember { Paint() }
+fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
+    val colorScheme = MaterialTheme.colorScheme
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.99f)
+            .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
-        val canvasWidth = size.width
-        val circleTopLeft = Offset(
-            x = (canvasWidth - cutoutDiameter) / 2f,
-            y = -cutoutRadius
-        )
         drawRect(
-            color = Color(0xFFC8102E),
+            color = colorScheme.secondaryContainer,
             size = size
         )
-        drawArc(
-            color = Color.Transparent,
-            startAngle = 0f,
-            sweepAngle = 180f,
-            useCenter = true,
-            topLeft = circleTopLeft,
-            size = Size(cutoutDiameter, cutoutDiameter),
-            blendMode = BlendMode.Clear
-        )
+        if (isPortrait) {
+            val cutoutRatio = 1.2f
+            val cutoutDiameter = buttonSizePx * cutoutRatio
+            val cutoutRadius = cutoutDiameter / 2f
+            val circleTopLeft = Offset(
+                x = (size.width - cutoutDiameter) / 2f,
+                y = -cutoutRadius
+            )
+            drawArc(
+                color = Color.Transparent,
+                startAngle = 0f,
+                sweepAngle = 180f,
+                useCenter = true,
+                topLeft = circleTopLeft,
+                size = Size(cutoutDiameter, cutoutDiameter),
+                blendMode = BlendMode.Clear
+            )
+        }
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isConnected: Boolean,
@@ -109,178 +83,274 @@ fun HomeScreen(
     ssid: String,
     onConnectClick: () -> Unit,
 ) {
-    val context = LocalContext.current
-    var status by remember { mutableStateOf("Press the button to run auto-login test.") }
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
-    val density = LocalDensity.current
-    val screenWidthDp = LocalResources.current.displayMetrics.widthPixels / density.density
-    val buttonDiameterDp = (screenWidthDp * 0.5f).dp
-    val cutoutRatio = 1.2f
-    val cutoutDiameterDp = (screenWidthDp * 0.6f).dp
-    val spacingDp = ((screenWidthDp * 0.1f) / 2f).dp
-    val screenHeightDp = LocalResources.current.displayMetrics.heightPixels / density.density
-    val buttonDiameterPx = with(density) { buttonDiameterDp.toPx() }
-
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        val isPortrait = maxHeight > maxWidth
+
+        if (isPortrait) {
+            PortraitHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                ssid,
+                onConnectClick,
+                historyForHomeScreen
+            )
+        } else {
+            LandscapeHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                ssid,
+                onConnectClick,
+                historyForHomeScreen
+            )
+        }
+    }
+}
+
+
+@Composable
+fun PortraitHomeScreen(
+    isConnected: Boolean,
+    networkSpeed: String,
+    session: SessionSummary?,
+    ssid: String,
+    onConnectClick: () -> Unit,
+    historyForHomeScreen: List<com.vinnovateit.autonetconnector.domain.model.LiveDataPoint>
+) {
+    val density = LocalDensity.current
+    val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
+    val buttonDiameterPx = screenWidthPx * 0.5f
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+            contentDescription = "Background Pattern",
+            modifier = Modifier.fillMaxSize(),
+            alignment = Alignment.TopCenter
+        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Section
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.latch_background_home),
-                    contentDescription = "Background Pattern",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                Column {
-                    TopBarSection(
-                        onPreferencesClick = {
-                            context.startActivity(Intent(context, SettingsActivity::class.java))
-                        }
-                    )
-
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 32.dp)
-                            .padding(bottom = (screenHeightDp * 0.2f).dp)
-                    ) {
-                        Column {
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        if (isConnected) MaterialTheme.colorScheme.primary else ColorStatusDisconnected,
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = SatoshiFontFamily
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = ssid,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 16.sp,
-                                    fontFamily = SatoshiFontFamily,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = networkSpeed,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = SatoshiFontFamily
-                                )
-                            }
-                        }
-                    }
-                }
+                HomeTopSection(isConnected, ssid, networkSpeed)
             }
-
+            // Bottom Section with Canvas Cutout
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(0.46f),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx)
+                HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
                 SpectrumCard(session, ssid, historyForHomeScreen)
             }
         }
+        // Power Button Overlay
+        PowerButtonOverlay(
+            onConnectClick = onConnectClick,
+            isPortrait = true,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = 25.dp) // Move button down slightly
+        )
+    }
+}
 
-        BoxWithConstraints(
-            modifier = Modifier.fillMaxSize()
+@Composable
+fun LandscapeHomeScreen(
+    isConnected: Boolean,
+    networkSpeed: String,
+    session: SessionSummary?,
+    ssid: String,
+    onConnectClick: () -> Unit,
+    historyForHomeScreen: List<com.vinnovateit.autonetconnector.domain.model.LiveDataPoint>
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        // Left Section (Status and Button)
+        Box(
+            modifier = Modifier
+                .weight(0.45f)
+                .fillMaxHeight()
         ) {
-            val screenHeight = constraints.maxHeight.toFloat()
-            val screenWidth = constraints.maxWidth.toFloat()
+            Image(
+                painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+                contentDescription = "Background Pattern",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                HomeTopSection(isConnected, ssid, networkSpeed, isLandscape = true)
+                Spacer(modifier = Modifier.height(32.dp))
+                PowerButtonOverlay(
+                    onConnectClick = onConnectClick,
+                    isPortrait = false
+                )
+            }
+        }
 
-            val cutoutDiameter = screenWidth * 0.6f
-            val cutoutCenterY = screenHeight * 0.54f
-            val cutoutBottomY = cutoutCenterY + (cutoutDiameter / 2f)
+        // Right Section (Graph)
+        Box(
+            modifier = Modifier
+                .weight(0.55f)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceVariant), // Darker background
+            contentAlignment = Alignment.Center,
+        ) {
+            SpectrumCard(
+                session,
+                ssid,
+                historyForHomeScreen,
+            )
+        }
+    }
+}
 
-            val spacing = screenWidth * 0.05f
-            val buttonDiameter = screenWidth * 0.5f
-
-            val buttonTopY = cutoutBottomY - spacing - buttonDiameter
-
+@Composable
+fun HomeTopSection(
+    isConnected: Boolean,
+    ssid: String,
+    networkSpeed: String,
+    isLandscape: Boolean = false
+) {
+    val context = LocalContext.current
+    Column {
+        TopBarSection(
+            onPreferencesClick = {
+                context.startActivity(Intent(context, SettingsActivity::class.java))
+            }
+        )
+        Spacer(Modifier.size(25.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+                .padding(bottom = if (isLandscape) 16.dp else 90.dp) // Increased bottom padding
+        ) {
             Box(
                 modifier = Modifier
-                    .absoluteOffset(y = with(LocalDensity.current) { buttonTopY.toDp() })
-                    .align(Alignment.TopCenter)
-                    .size(with(LocalDensity.current) { buttonDiameter.toDp() })
-                    .drawBehind {
-                        val shadowColor = ColorPowerButtonShadow
-                        val radius = size.minDimension / 2
-                        val paint = Paint().asFrameworkPaint().apply {
-                            isAntiAlias = true
-                            color = shadowColor.toArgb()
-                            maskFilter =
-                                BlurMaskFilter(20f, BlurMaskFilter.Blur.NORMAL)
-                        }
-                        drawContext.canvas.nativeCanvas.drawCircle(center.x, center.y + 20f, radius, paint)
-                    },
-                contentAlignment = Alignment.Center
+                    .background(
+                        if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
+                        RoundedCornerShape(10.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
             ) {
-                Button(
-                    onClick = onConnectClick,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape),
-                    shape = CircleShape,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
-                ) {
-                    val powerIconColor = MaterialTheme.colorScheme.onPrimary
-                    Canvas(modifier = Modifier.size(with(LocalDensity.current) { (buttonDiameter / 3).toDp() })) {
-                        val stroke = 7.dp.toPx()
-                        val arcR = size.minDimension / 2.2f
-                        val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
+                Text(
+                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                    color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = SatoshiFontFamily
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = ssid,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 16.sp,
+                    fontFamily = SatoshiFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = networkSpeed,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = SatoshiFontFamily
+                )
+            }
+        }
+    }
+}
 
-                        drawArc(
-                            color = powerIconColor,
-                            startAngle = -135f,
-                            sweepAngle = -270f,
-                            useCenter = false,
-                            style = Stroke(width = stroke, cap = StrokeCap.Round),
-                            size = Size(arcR * 2, arcR * 2),
-                            topLeft = topLeft
-                        )
 
-                        val cx = size.width / 2
-                        val cy = size.height / 2
-                        drawLine(
-                            color = powerIconColor,
-                            start = Offset(cx, cy - arcR * 1.2f),
-                            end = Offset(cx, cy - arcR * 0.6f),
-                            strokeWidth = stroke,
-                            cap = StrokeCap.Round
-                        )
+@Composable
+fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    val buttonDiameterDp = with(density) {
+        if (isPortrait) {
+            (LocalResources.current.displayMetrics.widthPixels * 0.5f).toDp()
+        } else {
+            (LocalResources.current.displayMetrics.heightPixels * 0.6f).toDp()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(buttonDiameterDp)
+            .drawBehind {
+                val shadowColor = ColorPowerButtonShadow
+                val radius = size.minDimension / 2
+                val paint = Paint()
+                    .asFrameworkPaint()
+                    .apply {
+                        isAntiAlias = true
+                        color = shadowColor.toArgb()
+                        maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.NORMAL)
                     }
-                }
+                drawContext.canvas.nativeCanvas.drawCircle(center.x, center.y + 20f, radius, paint)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Button(
+            onClick = onConnectClick,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape),
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+        ) {
+            val powerIconColor = MaterialTheme.colorScheme.onPrimary
+            // Use a fixed size for the icon canvas
+            Canvas(modifier = Modifier.size(64.dp)) {
+                val stroke = 7.dp.toPx()
+                val arcR = size.minDimension / 2.2f
+                val topLeft = Offset((size.width - arcR * 2) / 2f, (size.height - arcR * 2) / 2f)
+
+                drawArc(
+                    color = powerIconColor,
+                    startAngle = -135f,
+                    sweepAngle = -270f,
+                    useCenter = false,
+                    style = Stroke(width = stroke, cap = StrokeCap.Round),
+                    size = Size(arcR * 2, arcR * 2),
+                    topLeft = topLeft
+                )
+
+                val cx = size.width / 2
+                val cy = size.height / 2
+                drawLine(
+                    color = powerIconColor,
+                    start = Offset(cx, cy - arcR * 1.2f),
+                    end = Offset(cx, cy - arcR * 0.6f),
+                    strokeWidth = stroke,
+                    cap = StrokeCap.Round
+                )
             }
         }
     }
@@ -321,9 +391,8 @@ fun TopBarSection(
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
-                        modifier = Modifier.padding(0.dp),
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.tertiary
                     )
                 }
             }
@@ -368,30 +437,30 @@ fun TopBarSection(
     )
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
-fun HomeScreenPreview() {
-    AutoNetConnectorTheme {
+fun HomeScreenPortraitPreview() {
+    LatchTheme {
         HomeScreen(
-          isConnected = false,
-          networkSpeed = "6 mbps",
-          session = null,
-          ssid = "Not Connected",
-          onConnectClick = { },
+            isConnected = false,
+            networkSpeed = "6 mbps",
+            session = null,
+            ssid = "Not Connected",
+            onConnectClick = { },
         )
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:width=891dp,height=411dp")
 @Composable
-fun HomeScreenOnlinePreview() {
-    AutoNetConnectorTheme {
+fun HomeScreenLandscapePreview() {
+    LatchTheme {
         HomeScreen(
-          isConnected = true,
-          networkSpeed = "12 mbps",
-          session = null,
-          ssid = "VIT-WiFi",
-          onConnectClick = { },
+            isConnected = true,
+            networkSpeed = "12 mbps",
+            session = null,
+            ssid = "VIT-WiFi",
+            onConnectClick = { },
         )
     }
 }
