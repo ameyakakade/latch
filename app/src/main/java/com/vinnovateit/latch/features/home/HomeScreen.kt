@@ -5,7 +5,6 @@ import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -127,10 +126,10 @@ fun PortraitHomeScreen(
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+            painter = if(isDark) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
             contentDescription = "Background Pattern",
             modifier = Modifier.fillMaxSize(),
             alignment = Alignment.TopCenter
@@ -186,7 +185,7 @@ fun LandscapeHomeScreen(
                 .fillMaxHeight()
         ) {
             Image(
-                painter = if(isSystemInDarkTheme()) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+                painter = if(LocalIsDarkTheme.current) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
                 contentDescription = "Background Pattern",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -361,7 +360,7 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
 fun TopBarSection(
     onPreferencesClick: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
     var menuExpanded by remember { mutableStateOf(false) }
 
     CenterAlignedTopAppBar(
