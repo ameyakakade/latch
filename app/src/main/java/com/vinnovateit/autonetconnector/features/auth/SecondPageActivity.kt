@@ -26,6 +26,7 @@ import com.vinnovateit.autonetconnector.data.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -33,16 +34,13 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.paint
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.VisualTransformation
 import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.features.home.MainActivity
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import com.vinnovateit.autonetconnector.ui.theme.ColorCredentialText
-import com.vinnovateit.autonetconnector.ui.theme.OutfitFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
 import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
 class SecondPageActivity : ComponentActivity() {
@@ -50,7 +48,7 @@ class SecondPageActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val editMode = intent.getBooleanExtra("editMode", false)
         setContent {
-            AutoNetConnectorTheme {
+            LatchTheme {
                 CredentialsScreen(
                     editMode = editMode,
                     onCredentialsSaved = {
@@ -74,6 +72,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
+    val isDark = isSystemInDarkTheme()
 
     // Load from DB
     LaunchedEffect(Unit) {
@@ -93,8 +92,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             .fillMaxSize()
           .background(MaterialTheme.colorScheme.background)
             .paint(
-                painter = painterResource(id = R.drawable.backgroundline),
-                contentScale = ContentScale.FillBounds
+                painter = if (isDark) painterResource(R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+                contentScale = ContentScale.Crop
             )
             .padding(24.dp)
     ) {
@@ -127,13 +126,12 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = regNo,
                 onValueChange = { regNo = it },
-                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = ColorCredentialText) } } else null,
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.tertiary,) } } else null,
                 singleLine = true,
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = "Username Icon",
-                        tint = ColorCredentialText
                     )
                 },
                 modifier = Modifier
@@ -142,7 +140,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         regNoFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = ColorCredentialText,
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 18.sp,
                     fontFamily = SatoshiFontFamily
                 ),
@@ -168,14 +166,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = ColorCredentialText) } } else null,
+                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = MaterialTheme.colorScheme.tertiary,) } } else null,
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Icon(
                         imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
                         contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                        tint = Color(0xFFC01221),
                         modifier = Modifier.clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
@@ -188,7 +185,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         passwordFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = ColorCredentialText,
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 18.sp,
                     fontFamily = SatoshiFontFamily
                 ),
@@ -239,8 +236,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 Text(
                     text = if (editMode) stringResource(id = R.string.update_credentials) else stringResource(id = R.string.save_credentials),
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFamily = OutfitFontFamily,
+                    fontFamily = SatoshiFontFamily,
+                    fontWeight = FontWeight.Bold,
+
                 )
             }
 

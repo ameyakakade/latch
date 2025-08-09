@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,8 +42,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.common.util.generateCsvReport
 import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.domain.model.LiveConnectionStatus
@@ -59,7 +63,7 @@ import com.vinnovateit.autonetconnector.features.stats.components.HistoryItemCar
 import com.vinnovateit.autonetconnector.features.stats.components.HistorySessionList
 import com.vinnovateit.autonetconnector.features.stats.components.LiveSpeedSection
 import com.vinnovateit.autonetconnector.features.stats.components.SessionCard
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
 import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 
 class StatsActivity : ComponentActivity() {
@@ -84,7 +88,7 @@ class StatsActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     currentSsid = intent.getStringExtra("CURRENT_SSID")
     setContent {
-      AutoNetConnectorTheme {
+      LatchTheme {
         StatsScreen(
           overrideSsid = currentSsid,
           onDownloadReport = {
@@ -123,6 +127,7 @@ fun StatsScreen(
   Scaffold(
     modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     containerColor = MaterialTheme.colorScheme.background,
+    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
     topBar = {
       StatsTopAppBar(
         scrollBehavior = scrollBehavior,
@@ -272,12 +277,19 @@ private fun StatsTopAppBar(
       )
     },
     navigationIcon = {
-      TooltipHint(tooltipText = "Go Back") {
+      TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
         IconButton(onClick = onBackClick) {
           Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
         }
       }
     },
+    colors = TopAppBarDefaults.topAppBarColors(
+      containerColor = MaterialTheme.colorScheme.surface,
+      scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+      navigationIconContentColor = Color.Unspecified,
+      titleContentColor = Color.Unspecified,
+      actionIconContentColor = Color.Unspecified
+    ),
     scrollBehavior = scrollBehavior
   )
 }

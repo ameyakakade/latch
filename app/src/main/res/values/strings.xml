@@ -30,7 +30,7 @@
     <string name="home_no_data_for_graph">No data available for graph</string>
 
     <string name="stats_title">Stats</string>
-    <string name="stats_go_back">Go Back</string>
+    <string name="stats_go_back">Back</string>
     <string name="stats_reset_stats">Reset Stats</string>
     <string name="stats_report_saved_toast">Report saved successfully</string>
     <string name="stats_report_failed_toast">Failed to save report: %s</string>

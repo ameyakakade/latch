@@ -25,7 +25,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AutoNetConnector"
+        android:theme="@style/Theme.Latch"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="35">
 
@@ -34,18 +34,15 @@
             android:resource="@drawable/ic_launcher_foreground" />
         <meta-data
             android:name="android.theme.customization.adaptive_icon_background"
-            android:resource="@color/ic_launcher_background" />
+            android:resource="@drawable/ic_launcher_background" />
 
         <receiver android:name=".features.wifi.background.WiFiChangeReceiver"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
-            </intent-filter>
         </receiver>
         <activity
             android:name=".features.auth.LandingPageActivity"
             android:exported="true"
-            android:theme="@style/Theme.AutoNetConnector">
+            android:theme="@style/Theme.Latch">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -55,13 +52,13 @@
         <activity
             android:name=".features.auth.SecondPageActivity"
             android:exported="true"
-            android:theme="@style/Theme.AutoNetConnector" />
+            android:theme="@style/Theme.Latch" />
 
         <activity
             android:name=".features.home.MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
-            android:theme="@style/Theme.AutoNetConnector" />
+            android:theme="@style/Theme.Latch" />
 
         <activity android:name=".features.settings.SettingsActivity" android:exported="false" />
 
@@ -69,7 +66,7 @@
             android:name=".features.stats.StatsActivity"
             android:exported="true"
             android:label="Stats"
-            android:theme="@style/Theme.AutoNetConnector" />
+            android:theme="@style/Theme.Latch" />
 
         <receiver
             android:name=".features.wifi.widget.LatchWidgetReceiver"
