@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Auto Net Connector"
+rootProject.name = "Latch"
 include(":app")

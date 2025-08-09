@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.vinnovateit.autonetconnector"
+    namespace = "com.vinnovateit.latch"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vinnovateit.autonetconnector"
+        applicationId = "com.vinnovateit.latch"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
@@ -88,6 +88,11 @@ dependencies {
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
+
+    // Settings
+    implementation("androidx.preference:preference-ktx:1.2.1")
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // JSON
     implementation("com.google.code.gson:gson:2.11.0")
