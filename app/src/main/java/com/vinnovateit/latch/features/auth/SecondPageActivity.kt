@@ -26,7 +26,7 @@ import com.vinnovateit.latch.data.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -42,6 +42,7 @@ import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
+import com.vinnovateit.latch.utils.EncryptionUtils
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +73,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     // Load from DB
     LaunchedEffect(Unit) {
@@ -81,8 +82,14 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
         if (existing != null && !editMode) {
             onCredentialsSaved()
         } else if (existing != null && !loaded) {
-            regNo = existing.registrationNumber
-            password = existing.password
+            try {
+                regNo = EncryptionUtils.decrypt(existing.registrationNumber)
+                password = EncryptionUtils.decrypt(existing.password)
+            } catch (e: Exception) {
+                // If decryption fails, use the data as-is (for backward compatibility)
+                regNo = existing.registrationNumber
+                password = existing.password
+            }
             loaded = true
         }
     }
@@ -125,7 +132,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             TextField(
                 value = regNo,
-                onValueChange = { regNo = it },
+                onValueChange = { regNo = it.uppercase() },
                 label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.tertiary,) } } else null,
                 singleLine = true,
                 trailingIcon = {
@@ -212,13 +219,24 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 onClick = {
                     if (regNo.isNotBlank() && password.isNotBlank()) {
                         scope.launch {
-                            val db = CredentialDatabase.getInstance(context)
-                            db.credentialDao().insertCredential(
-                                CredentialEntity(id = "singleton", registrationNumber = regNo, password = password)
-                            )
+                            try {
+                                val db = CredentialDatabase.getInstance(context)
+                                val encryptedRegNo = EncryptionUtils.encrypt(regNo)
+                                val encryptedPassword = EncryptionUtils.encrypt(password)
+                                
+                                db.credentialDao().insertCredential(
+                                    CredentialEntity(
+                                        id = "singleton", 
+                                        registrationNumber = encryptedRegNo, 
+                                        password = encryptedPassword
+                                    )
+                                )
 
-                            Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
-                            onCredentialsSaved()
+                                Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
+                                onCredentialsSaved()
+                            } catch (e: Exception) {
+                                message = "Failed to save credentials: ${e.message}"
+                            }
                         }
                     } else {
                         message = context.getString(R.string.credentials_error_message)
