@@ -5,7 +5,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // --- Newly Extracted Colors ---
-val ColorCredentialText = Color(0xFFC01221)
 val ColorHomeScreenBackground = Color(0xFFC8102E)
 val ColorLatch = Color(0xFFC01221)
 // --- Button Colors ---
@@ -45,8 +44,10 @@ val ColorContainerTertiary = Color(0xFFFFC107) // Amber
 val ColorSurfaceContainer = Color(0xFFFAF3EB)
 
 // --- Status & Tags ---
-val ColorStatusConnected = Color(0xFF4CAF50)
-val ColorStatusDisconnected = Color(0xFFE53E3E)
+val ColorStatusConnected = Color(0xFF167D00)
+val ColorStatusDisconnected = Color(0xFFFF3434)
+val ColorBoxConnected = Color(0x3439FF14)
+val ColorBoxDisconnected = Color(0x34FF3434)
 val ColorLiveTag = Color(0xFFD32F2F)
 val ColorLastTag = Color(0xFF757575)
 
@@ -65,3 +66,7 @@ val ColorTooltipContent = Color(0xFFF5F5F5)
 // --- Misc ---
 val ColorTransparent = Color.Transparent
 val ColorCollapsedAppBar = Color(0xFFEEDFCA)
+
+val ColorSliderThumb = Color(0xFFC01221)
+val ColorSliderActiveTrack = Color(0xFFC01221)
+val ColorSliderInactiveTrack = Color(0xFFD55360)

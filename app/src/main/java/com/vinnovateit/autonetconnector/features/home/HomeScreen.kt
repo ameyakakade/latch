@@ -3,7 +3,6 @@ package com.vinnovateit.autonetconnector.features.home
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -65,13 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.features.home.components.SpectrumCard
 import com.vinnovateit.autonetconnector.features.settings.SettingsActivity
-import com.vinnovateit.autonetconnector.domain.model.SessionSummary
-import com.vinnovateit.autonetconnector.common.util.TooltipHint
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-import com.vinnovateit.autonetconnector.ui.theme.ColorPowerButtonShadow
-import com.vinnovateit.autonetconnector.ui.theme.ColorStatusDisconnected
-import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
-import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
+import com.vinnovateit.autonetconnector.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
 
 @Composable
@@ -298,12 +291,13 @@ fun HomeScreen(
 fun TopBarSection(
     onPreferencesClick: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     var menuExpanded by remember { mutableStateOf(false) }
 
     CenterAlignedTopAppBar(
         title = {
             Text(
-                modifier = Modifier.padding(top=5.dp),
+                modifier = Modifier.padding(top = 5.dp),
                 text = "LATCH",
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 23.sp,
@@ -314,11 +308,12 @@ fun TopBarSection(
         },
         navigationIcon = {
             Icon(
-                painter = painterResource(id = R.drawable.ic_latch),
+                painter = if(isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(R.drawable.ic_latch_light),
                 contentDescription = "LATCH Logo",
                 tint = Color.Unspecified,
                 modifier = Modifier
-                    .size(48.dp).padding(start = 10.dp)
+                    .size(48.dp)
+                    .padding(start = 12.dp)
             )
         },
         actions = {
@@ -337,7 +332,8 @@ fun TopBarSection(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.width(200.dp) // Increased width here
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                modifier = Modifier.width(200.dp)
             ) {
                 DropdownMenuItem(
                     text = {
@@ -363,7 +359,7 @@ fun TopBarSection(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent, // Transparent AppBar
+            containerColor = Color.Transparent,
             scrolledContainerColor = Color.Transparent,
             navigationIconContentColor = MaterialTheme.colorScheme.primary,
             titleContentColor = MaterialTheme.colorScheme.primary,

@@ -21,7 +21,7 @@ import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManage
 import com.vinnovateit.autonetconnector.features.stats.StatsViewModel
 import com.vinnovateit.autonetconnector.features.wifi.background.WiFiMonitor
 import com.vinnovateit.autonetconnector.features.wifi.manager.WiFiStatusViewModel
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
         WiFiMonitor.startMonitoring(applicationContext)
 
         setContent {
-            AutoNetConnectorTheme {
+            LatchTheme {
                 val statsViewModel: StatsViewModel = viewModel()
 
                 val isConnected by wifiStatusViewModel.isConnected.collectAsStateWithLifecycle()
@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                 val networkSpeedString = if (isConnected && liveStatus != null) {
                     "${formattedSpeed.first} ${formattedSpeed.second}"
                 } else {
-                    stringResource(id = R.string.network_speed_fallback)
+                    ""
                 }
 
                 val sessionForHomeScreen = if (isConnected && liveStatus != null) {

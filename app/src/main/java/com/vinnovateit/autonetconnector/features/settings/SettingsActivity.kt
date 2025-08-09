@@ -1,7 +1,6 @@
 package com.vinnovateit.autonetconnector.features.settings
 
 import android.annotation.SuppressLint
-import android.app.Application
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -37,7 +36,10 @@ import com.vinnovateit.autonetconnector.common.util.TooltipHint
 import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import com.vinnovateit.autonetconnector.features.auth.SecondPageActivity
 import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.ColorSliderActiveTrack
+import com.vinnovateit.autonetconnector.ui.theme.ColorSliderInactiveTrack
+import com.vinnovateit.autonetconnector.ui.theme.ColorSliderThumb
+import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
 import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 import kotlin.math.roundToInt
 
@@ -49,7 +51,7 @@ class SettingsActivity : ComponentActivity() {
     WindowCompat.setDecorFitsSystemWindows(window, false)
     SettingsManager.initialize(applicationContext)
     setContent {
-      AutoNetConnectorTheme {
+      LatchTheme {
         SettingsScreen(onBackClick = { finish() })
       }
     }
@@ -82,6 +84,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     containerColor = MaterialTheme.colorScheme.surface,
+    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
     topBar = {
       LargeTopAppBar(
         title = {
@@ -105,7 +108,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
         },
         colors = TopAppBarDefaults.topAppBarColors(
           containerColor = MaterialTheme.colorScheme.surface,
-          scrolledContainerColor = MaterialTheme.colorScheme.surface,
+          scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
           navigationIconContentColor = Color.Unspecified,
           titleContentColor = Color.Unspecified,
           actionIconContentColor = Color.Unspecified
@@ -398,6 +401,13 @@ fun DataThresholdSliderBottomSheet(
             sliderValue = ((it * 2).roundToInt() / 2.0f) // Snap to 0.5 steps
             isCustom = false
           },
+          colors = SliderDefaults.colors(
+            activeTickColor = Color(0xFFE5D4D4),
+            inactiveTickColor = Color(0xFFC01221),
+            thumbColor = ColorSliderThumb,
+            activeTrackColor = ColorSliderActiveTrack,
+            inactiveTrackColor = ColorSliderInactiveTrack,
+          ),
           valueRange = 1f..10f,
           steps = 17, // (10 - 1) / 0.5 - 1 = 17
           modifier = Modifier

@@ -1,4 +1,4 @@
-//package com.vinnovateit.autonetconnector
+//package com.vinnovateit.autonetconnector.features.auth
 //
 //import android.content.Intent
 //import android.os.Bundle
@@ -35,24 +35,14 @@
 //import androidx.compose.ui.layout.ContentScale
 //import androidx.compose.ui.res.painterResource
 //import androidx.compose.ui.unit.sp
-//import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
-//
-//// Define Outfit font family
-//val OutfitFontFamily = FontFamily(
-//    Font(R.font.outfit_regular, FontWeight.Normal),
-//)
-//
-//// Define Satoshi font family
-//val SatoshiRegularFontFamily = FontFamily(
-//    Font(R.font.satoshi_regular, FontWeight.Normal),
-//)
-//
+//import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
+
 //class SecondPageActivity : ComponentActivity() {
 //    override fun onCreate(savedInstanceState: Bundle?) {
 //        super.onCreate(savedInstanceState)
 //        val editMode = intent.getBooleanExtra("editMode", false)
 //        setContent {
-//            AutoNetConnectorTheme {
+//            LatchTheme {
 //                CredentialsScreen(
 //                    editMode = editMode,
 //                    onCredentialsSaved = {

@@ -26,9 +26,8 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.autonetconnector.R
 import com.vinnovateit.autonetconnector.features.home.MainActivity
 import com.vinnovateit.autonetconnector.data.CredentialDatabase
-import com.vinnovateit.autonetconnector.domain.model.SessionRepository
 import com.vinnovateit.autonetconnector.features.settings.manager.SettingsManager
-import com.vinnovateit.autonetconnector.ui.theme.AutoNetConnectorTheme
+import com.vinnovateit.autonetconnector.ui.theme.LatchTheme
 import com.vinnovateit.autonetconnector.ui.theme.ModernizFontFamily
 import com.vinnovateit.autonetconnector.ui.theme.SatoshiFontFamily
 
@@ -49,7 +48,7 @@ class LandingPageActivity : ComponentActivity() {
                 finish()
             } else {
                 setContent {
-                    AutoNetConnectorTheme {
+                    LatchTheme {
                         LandingPageScreen(onGetStarted = {
                             val intent = Intent(this@LandingPageActivity, SecondPageActivity::class.java)
                             startActivity(intent)
@@ -63,7 +62,7 @@ class LandingPageActivity : ComponentActivity() {
 
 @Composable
 fun LandingPageScreen(onGetStarted: () -> Unit) {
-    val logoRes = R.drawable.ic_latch_dark
+    val logoRes = if (isSystemInDarkTheme()) R.drawable.ic_latch_dark else R.drawable.ic_latch_light
 
 
 
