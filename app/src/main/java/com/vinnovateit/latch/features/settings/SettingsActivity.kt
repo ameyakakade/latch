@@ -1,3 +1,4 @@
+// main/java/com/vinnovateit/latch/features/settings/SettingsActivity.kt
 package com.vinnovateit.latch.features.settings
 
 import android.annotation.SuppressLint
@@ -68,7 +69,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
   val dataThreshold by SettingsManager.dataThreshold.collectAsStateWithLifecycle()
   val dataAlertEnabled by SettingsManager.dataAlertEnabled.collectAsStateWithLifecycle()
-  val detailedLogs by SettingsManager.detailedLogs.collectAsStateWithLifecycle()
 
   // Bottom sheet states
   var showSpeedUnitsSheet by remember { mutableStateOf(false) }
@@ -91,6 +91,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
           Text(
             "Preferences",
             fontSize = 23.sp,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
             fontFamily = ModernizFontFamily,
@@ -178,18 +179,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             }
           )
         )
-      }
-
-
-      // Advanced Category
-      item {
-        PreferenceCategory(title = "Advanced")
-      }
-      item {
-        val item = PreferenceData("Detailed Logs", "Enable verbose logging", Icons.Rounded.BugReport, trailing = {
-          Switch(checked = detailedLogs, onCheckedChange = { SettingsManager.setDetailedLogs(it) })
-        })
-        PreferenceItem(item)
       }
     }
   }
@@ -296,8 +285,8 @@ fun PreferenceItem(data: PreferenceData) {
       Text(
         data.title,
         style = MaterialTheme.typography.bodyLarge.copy(
-          fontWeight = FontWeight.Bold, // Emphasized
-          color = MaterialTheme.colorScheme.onSurface // Matches homepage
+          fontWeight = FontWeight.Bold,
+          color = MaterialTheme.colorScheme.onSurface
         )
       )
       Text(
@@ -310,7 +299,6 @@ fun PreferenceItem(data: PreferenceData) {
   }
 }
 
-// Bottom Sheet for Dropdowns (simple list selection)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSelectionBottomSheet(
@@ -325,8 +313,10 @@ fun SettingsSelectionBottomSheet(
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheetState,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
-      Column(modifier = Modifier.padding(vertical = 16.dp)) {
+      Column(modifier = Modifier.padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
           title,
           style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
@@ -347,7 +337,7 @@ fun SettingsSelectionBottomSheet(
               .padding(vertical = 12.dp, horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = if (isSelected) contentColor else LocalContentColor.current)
+            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = contentColor)
             Text(
               option.label,
               color = contentColor,
@@ -381,6 +371,7 @@ fun DataThresholdSliderBottomSheet(
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
       Column(
         modifier = Modifier
@@ -398,7 +389,7 @@ fun DataThresholdSliderBottomSheet(
         Slider(
           value = sliderValue,
           onValueChange = {
-            sliderValue = ((it * 2).roundToInt() / 2.0f) // Snap to 0.5 steps
+            sliderValue = ((it * 2).roundToInt() / 2.0f)
             isCustom = false
           },
           colors = SliderDefaults.colors(
@@ -409,7 +400,7 @@ fun DataThresholdSliderBottomSheet(
             inactiveTrackColor = ColorSliderInactiveTrack,
           ),
           valueRange = 1f..10f,
-          steps = 17, // (10 - 1) / 0.5 - 1 = 17
+          steps = 17,
           modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -442,9 +433,9 @@ fun DataThresholdSliderBottomSheet(
               customValue = it
               val customFloat = it.toFloatOrNull()
               if(customFloat != null) {
-                onThresholdChange(customFloat.unaryMinus()) // Store custom value as negative
+                onThresholdChange(customFloat.unaryMinus())
               } else {
-                onThresholdChange(-1f) // Indicate custom but invalid
+                onThresholdChange(-1f)
               }
             },
             label = { Text("Custom Threshold (GB)") },
@@ -471,6 +462,7 @@ fun SettingsActionBottomSheet(
 ) {
   ModalBottomSheet(
     onDismissRequest = onDismiss,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
       Column(
         modifier = Modifier
@@ -478,7 +470,7 @@ fun SettingsActionBottomSheet(
           .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold)) // Emphasized
+        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
         Spacer(Modifier.height(8.dp))
         Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface))
         Spacer(Modifier.height(24.dp))

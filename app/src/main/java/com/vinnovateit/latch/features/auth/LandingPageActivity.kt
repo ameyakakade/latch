@@ -1,9 +1,13 @@
 package com.vinnovateit.latch.features.auth
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
@@ -33,9 +38,25 @@ import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 class LandingPageActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+
+    private fun askNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         installSplashScreen()
+        askNotificationPermission()
         // Initialize SettingsManager to apply the correct theme immediately
         SettingsManager.initialize(this)
 
