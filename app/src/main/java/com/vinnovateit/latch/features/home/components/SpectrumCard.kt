@@ -22,15 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.stats.StatsActivity
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
-import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 @Composable
 fun SpectrumCard(
@@ -87,18 +84,9 @@ fun SpectrumCard(
             rateHistory = historyForHomeScreen
           )
         } else {
-          Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = stringResource(id = R.string.home_no_data_for_graph),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              fontSize = 14.sp,
-              fontFamily = SatoshiFontFamily,
-              textAlign = TextAlign.Center
-            )
-          }
+          NoDataPlaceholder(
+            messageRes = stringResource(R.string.home_no_data_for_graph)
+          )
         }
       }
     }
