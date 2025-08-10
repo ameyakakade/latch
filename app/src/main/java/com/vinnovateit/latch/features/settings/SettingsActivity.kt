@@ -1,3 +1,4 @@
+// main/java/com/vinnovateit/latch/features/settings/SettingsActivity.kt
 package com.vinnovateit.latch.features.settings
 
 import android.annotation.SuppressLint
@@ -68,7 +69,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
   val dataThreshold by SettingsManager.dataThreshold.collectAsStateWithLifecycle()
   val dataAlertEnabled by SettingsManager.dataAlertEnabled.collectAsStateWithLifecycle()
-  val detailedLogs by SettingsManager.detailedLogs.collectAsStateWithLifecycle()
 
   // Bottom sheet states
   var showSpeedUnitsSheet by remember { mutableStateOf(false) }
@@ -179,18 +179,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             }
           )
         )
-      }
-
-
-      // Advanced Category
-      item {
-        PreferenceCategory(title = "Advanced")
-      }
-      item {
-        val item = PreferenceData("Detailed Logs", "Enable verbose logging", Icons.Rounded.BugReport, trailing = {
-          Switch(checked = detailedLogs, onCheckedChange = { SettingsManager.setDetailedLogs(it) })
-        })
-        PreferenceItem(item)
       }
     }
   }
