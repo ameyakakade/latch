@@ -56,9 +56,9 @@ object SessionRepository {
             startTimestamp = it.startTime.time,
             endTimestamp = it.endTime.time,
             totalData = DataUsage(
-              it.dataUsed,
-              0
-            ), // DB only stores total data
+              rxBytes = it.rxBytes,
+              txBytes = it.txBytes
+            ),
             history = emptyList() // History is not persisted
           )
         }
@@ -119,7 +119,9 @@ object SessionRepository {
 
     UiNotifier.showToast(applicationContext!!, "Stopping stats for: ${sessionToFinalize.ssid}")
 
-    val totalDataUsed = sessionToFinalize.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
+    val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
+    val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
+    val totalDataUsed = totalRxBytes + totalTxBytes
 
     if (totalDataUsed < 1024) { // Don't save empty sessions
       triggerWidgetUpdate()
@@ -130,7 +132,8 @@ object SessionRepository {
       val session = Session(
         startTime = Date(sessionToFinalize.startTimeMillis),
         endTime = Date(System.currentTimeMillis()),
-        dataUsed = totalDataUsed
+        rxBytes = totalRxBytes,
+        txBytes = totalTxBytes
       )
       addSessionToDb(session)
     }
@@ -140,14 +143,14 @@ object SessionRepository {
   private suspend fun addSessionToDb(session: Session) {
     statsDao.insertSession(session)
     val sessionDate = getStartOfDay(session.startTime)
-    val dataUsed = session.dataUsed
     val existingDailyUsage = statsDao.getUsageForDay(sessionDate)
 
     if (existingDailyUsage == null) {
-      statsDao.insertDailyUsage(DailyUsage(date = sessionDate, totalDataUsed = dataUsed))
+      statsDao.insertDailyUsage(DailyUsage(date = sessionDate, totalRxBytes = session.rxBytes, totalTxBytes = session.txBytes))
     } else {
-      val updatedUsage = existingDailyUsage.totalDataUsed + dataUsed
-      statsDao.updateDailyUsage(existingDailyUsage.copy(totalDataUsed = updatedUsage))
+      val updatedRx = existingDailyUsage.totalRxBytes + session.rxBytes
+      val updatedTx = existingDailyUsage.totalTxBytes + session.txBytes
+      statsDao.updateDailyUsage(existingDailyUsage.copy(totalRxBytes = updatedRx, totalTxBytes = updatedTx))
     }
   }
 
