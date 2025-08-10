@@ -91,6 +91,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
           Text(
             "Preferences",
             fontSize = 23.sp,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.ExtraBold,
             maxLines = 1,
             fontFamily = ModernizFontFamily,
@@ -310,7 +311,6 @@ fun PreferenceItem(data: PreferenceData) {
   }
 }
 
-// Bottom Sheet for Dropdowns (simple list selection)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSelectionBottomSheet(
@@ -323,10 +323,9 @@ fun SettingsSelectionBottomSheet(
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
   ModalBottomSheet(
-    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    contentColor = MaterialTheme.colorScheme.onSurface,
     onDismissRequest = onDismiss,
     sheetState = sheetState,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
       Column(modifier = Modifier.padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
@@ -350,7 +349,7 @@ fun SettingsSelectionBottomSheet(
               .padding(vertical = 12.dp, horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = if (isSelected) contentColor else LocalContentColor.current)
+            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = contentColor)
             Text(
               option.label,
               color = contentColor,
@@ -384,6 +383,7 @@ fun DataThresholdSliderBottomSheet(
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
       Column(
         modifier = Modifier
@@ -474,6 +474,7 @@ fun SettingsActionBottomSheet(
 ) {
   ModalBottomSheet(
     onDismissRequest = onDismiss,
+    containerColor = MaterialTheme.colorScheme.surface,
     content = {
       Column(
         modifier = Modifier

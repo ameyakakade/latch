@@ -334,6 +334,7 @@ private fun StatsTopAppBar(
           "Stats",
           fontSize = 23.sp,
           maxLines = 1,
+          color = MaterialTheme.colorScheme.primary,
           fontFamily = ModernizFontFamily,
           overflow = TextOverflow.Ellipsis
         )
@@ -361,6 +362,7 @@ private fun StatsTopAppBar(
           "Stats",
           fontSize = 23.sp,
           maxLines = 1,
+          color = MaterialTheme.colorScheme.primary,
           fontFamily = ModernizFontFamily,
           overflow = TextOverflow.Ellipsis
         )
