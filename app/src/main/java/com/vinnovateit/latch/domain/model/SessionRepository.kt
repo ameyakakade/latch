@@ -1,12 +1,23 @@
+// main/java/com/vinnovateit/latch/domain/model/SessionRepository.kt
 package com.vinnovateit.latch.domain.model
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import androidx.core.app.NotificationCompat
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.vinnovateit.latch.R
+import com.vinnovateit.latch.common.util.formatBytes
 import com.vinnovateit.latch.data.DailyUsage
 import com.vinnovateit.latch.data.LatchDatabase
 import com.vinnovateit.latch.data.Session
 import com.vinnovateit.latch.data.StatsDao
+import com.vinnovateit.latch.features.home.MainActivity
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
 import com.vinnovateit.latch.features.wifi.manager.TrafficStatsLogger
 import com.vinnovateit.latch.features.wifi.manager.UiNotifier
@@ -28,7 +39,7 @@ object SessionRepository {
   private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var sessionUpdateJob: Job? = null
   private val isInitialized = AtomicBoolean(false)
-
+  private var notificationSent = false
   private val _liveStatus = MutableStateFlow<LiveConnectionStatus?>(null)
   val liveStatus = _liveStatus.asStateFlow()
 
@@ -41,7 +52,7 @@ object SessionRepository {
   fun initialize(context: Application) {
     if (isInitialized.getAndSet(true)) return
     applicationContext = context
-    val database = LatchDatabase.Companion.getDatabase(context)
+    val database = LatchDatabase.getDatabase(context)
     statsDao = database.statsDao()
     loadSessionsFromDb()
   }
@@ -72,12 +83,14 @@ object SessionRepository {
   fun startSession(ssid: String) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
+    notificationSent = false
+
 
     UiNotifier.showToast(context, "Starting stats for: $ssid")
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
-      _root_ide_package_.com.vinnovateit.latch.domain.model.LiveConnectionStatus(
+      LiveConnectionStatus(
         startTimeMillis = startTime,
         ssid = ssid,
         liveData = listOf(
@@ -99,14 +112,60 @@ object SessionRepository {
               System.currentTimeMillis(),
               dataUsage
             )
-          _liveStatus.value = currentStatus.copy(
+          val updatedStatus = currentStatus.copy(
             liveData = currentStatus.liveData + newPoint
           )
+          _liveStatus.value = updatedStatus
+          checkDataThreshold(updatedStatus)
         }
       }
     }
     triggerWidgetUpdate()
   }
+
+  private fun checkDataThreshold(status: LiveConnectionStatus) {
+    if (!SettingsManager.dataAlertEnabled.value || notificationSent) {
+      return
+    }
+
+    val thresholdGB = SettingsManager.dataThreshold.value
+    if (thresholdGB <= 0) return // Custom or invalid threshold ignored for now
+
+    val thresholdBytes = thresholdGB * 1024 * 1024 * 1024
+    val currentUsageBytes = status.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
+
+    if (currentUsageBytes >= thresholdBytes) {
+      sendDataUsageNotification(currentUsageBytes, thresholdBytes)
+      notificationSent = true
+    }
+  }
+
+  private fun sendDataUsageNotification(currentUsage: Long, threshold: Float) {
+    val context = applicationContext ?: return
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val channelId = "data_usage_alert_channel"
+
+    val channel = NotificationChannel(
+      channelId,
+      "Data Usage Alerts",
+      NotificationManager.IMPORTANCE_HIGH
+    )
+    notificationManager.createNotificationChannel(channel)
+
+    val intent = Intent(context, MainActivity::class.java)
+    val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    val notification = NotificationCompat.Builder(context, channelId)
+      .setContentTitle("Data Usage Alert")
+      .setContentText("You've used ${formatBytes(currentUsage).first} ${formatBytes(currentUsage).second} of your ${formatBytes(threshold.toLong()).first} ${formatBytes(threshold.toLong()).second} limit.")
+      .setSmallIcon(R.drawable.ic_launcher_foreground)
+      .setContentIntent(pendingIntent)
+      .setAutoCancel(true)
+      .build()
+
+    notificationManager.notify(2, notification)
+  }
+
 
   fun stopSession() {
     if (sessionUpdateJob == null && _liveStatus.value == null) return
@@ -165,7 +224,7 @@ object SessionRepository {
   private fun triggerWidgetUpdate() {
     val context = applicationContext ?: return
     val workRequest = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
-    WorkManager.Companion.getInstance(context).enqueue(workRequest)
+    WorkManager.getInstance(context).enqueue(workRequest)
   }
 
   private fun getStartOfDay(date: Date): Date {
