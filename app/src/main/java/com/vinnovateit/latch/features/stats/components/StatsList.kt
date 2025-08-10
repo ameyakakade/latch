@@ -1,7 +1,6 @@
 package com.vinnovateit.latch.features.stats.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +39,7 @@ fun StatsList(
   LazyColumn(
     modifier = modifier,
     contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(1.dp), // Spacing updated
+    verticalArrangement = Arrangement.spacedBy(2.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
     if(addSpacer){
@@ -56,7 +54,7 @@ fun StatsList(
           SessionCard(
             session = sessionToShow,
           )
-          Spacer(modifier = Modifier.height(15.dp)) // Maintain visual separation
+          Spacer(modifier = Modifier.height(15.dp))
         }
       }
       item {
@@ -71,7 +69,7 @@ fun StatsList(
       }
       item {
         HistoryBarChart(history = historyToShow)
-        Spacer(modifier = Modifier.height(15.dp)) // Maintain visual separation
+        Spacer(modifier = Modifier.height(15.dp))
       }
     } else {
       // WHEN NOT CONNECTED:
@@ -82,16 +80,15 @@ fun StatsList(
           isLive = false,
           downloadBps = allTimeMaxDownloadBps,
           uploadBps = allTimeMaxUploadBps,
-          onDownloadReport = {} // Removed button from here
+          onDownloadReport = {}
         )
       }
       item {
         HistoryBarChart(history = historyToShow)
-        Spacer(modifier = Modifier.height(15.dp)) // Maintain visual separation
+        Spacer(modifier = Modifier.height(15.dp))
       }
     }
 
-    // Integrated HistorySessionList logic
     if (historyToShow.isNotEmpty()) {
       stickyHeader {
         Column(modifier = Modifier
@@ -118,10 +115,9 @@ fun StatsList(
       }
     }
 
-    // Added download button at the end
     if (historyToShow.isNotEmpty()) {
       item {
-        Spacer(modifier = Modifier.height(15.dp)) // Maintain visual separation
+        Spacer(modifier = Modifier.height(15.dp))
         DownloadReportButton(onDownloadReport)
       }
     }
