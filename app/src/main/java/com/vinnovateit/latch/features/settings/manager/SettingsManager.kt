@@ -17,7 +17,6 @@ object SettingsManager {
   private const val KEY_THEME = "theme"
   private const val KEY_DATA_ALERT_ENABLED = "data_alert_enabled"
   private const val KEY_DATA_THRESHOLD = "data_threshold"
-  private const val KEY_DETAILED_LOGS = "detailed_logs"
 
   // Default Values
   private const val DEFAULT_AUTO_LOGIN = true
@@ -25,7 +24,6 @@ object SettingsManager {
   private const val DEFAULT_THEME = "System Default"
   private const val DEFAULT_DATA_ALERT_ENABLED = true
   private const val DEFAULT_DATA_THRESHOLD = 1.0f
-  private const val DEFAULT_DETAILED_LOGS = false
 
   // StateFlows to observe changes
   private val _autoLogin = MutableStateFlow(DEFAULT_AUTO_LOGIN)
@@ -43,9 +41,6 @@ object SettingsManager {
   private val _dataThreshold = MutableStateFlow(DEFAULT_DATA_THRESHOLD)
   val dataThreshold: StateFlow<Float> = _dataThreshold
 
-  private val _detailedLogs = MutableStateFlow(DEFAULT_DETAILED_LOGS)
-  val detailedLogs: StateFlow<Boolean> = _detailedLogs
-
 
   fun initialize(context: Context) {
     sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -58,7 +53,6 @@ object SettingsManager {
     _theme.value = sharedPreferences.getString(KEY_THEME, DEFAULT_THEME) ?: DEFAULT_THEME
     _dataAlertEnabled.value = sharedPreferences.getBoolean(KEY_DATA_ALERT_ENABLED, DEFAULT_DATA_ALERT_ENABLED)
     _dataThreshold.value = sharedPreferences.getFloat(KEY_DATA_THRESHOLD, DEFAULT_DATA_THRESHOLD)
-    _detailedLogs.value = sharedPreferences.getBoolean(KEY_DETAILED_LOGS, DEFAULT_DETAILED_LOGS)
   }
 
   fun setAutoLogin(enabled: Boolean) {
@@ -86,8 +80,4 @@ object SettingsManager {
     sharedPreferences.edit { putFloat(KEY_DATA_THRESHOLD, threshold) }
   }
 
-  fun setDetailedLogs(enabled: Boolean) {
-    _detailedLogs.value = enabled
-    sharedPreferences.edit { putBoolean(KEY_DETAILED_LOGS, enabled) }
-  }
 }

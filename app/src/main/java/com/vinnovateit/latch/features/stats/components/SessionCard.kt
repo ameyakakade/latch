@@ -2,486 +2,501 @@ package com.vinnovateit.latch.features.stats.components
 
 import android.annotation.SuppressLint
 import android.graphics.Paint
+import android.graphics.Typeface
+import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.latch.domain.model.DataUsage
-import com.vinnovateit.latch.domain.model.LiveDataPoint
-import com.vinnovateit.latch.domain.model.SessionSummary
-import com.vinnovateit.latch.common.util.Tag
 import com.vinnovateit.latch.common.util.DisplayMode
+import com.vinnovateit.latch.common.util.Tag
 import com.vinnovateit.latch.common.util.createGraphPaths
 import com.vinnovateit.latch.common.util.formatBytes
 import com.vinnovateit.latch.common.util.formatDurationDynamic
+import com.vinnovateit.latch.domain.model.DataUsage
+import com.vinnovateit.latch.domain.model.LiveDataPoint
+import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.features.home.components.GRAPH_HEIGHT_SCALE
+import com.vinnovateit.latch.features.home.components.POINTS_IN_30_SECONDS
 import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
+import com.vinnovateit.latch.ui.theme.ColorTransparent
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.atan2
-import kotlin.math.floor
 import kotlin.math.max
 
-private const val GRAPH_HEIGHT_SCALE = 0.7f
-private val POINT_SPACING = 6.dp
-private val AXIS_LABEL_HEIGHT = 20.dp
-private val CARD_CORNER_RADIUS = 24.dp
-
 @Composable
-fun SessionCard(
-    session: SessionSummary,
-    overrideSsid: String? = null
-) {
-    var isGraphExpanded by remember { mutableStateOf(false) }
-    var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val scrollState = rememberScrollState()
+fun SessionCard(session: SessionSummary) {
+    var lastInteraction by remember { mutableStateOf(0L) }
+    var showOverlay by remember { mutableStateOf(true) }
 
-    LaunchedEffect(isGraphExpanded, lastInteractionTime) {
-        if (isGraphExpanded) {
-            while (true) {
-                delay(1000)
-                if (System.currentTimeMillis() - lastInteractionTime >= 5000) {
-                    isGraphExpanded = false
-                }
-            }
+    LaunchedEffect(lastInteraction) {
+        if (lastInteraction != 0L) {
+            delay(3000)
+            showOverlay = true
         }
     }
 
-    AnimatedContent(
-        targetState = isGraphExpanded,
-        transitionSpec = {
-            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-        },
-        label = "SessionCardAnimation"
-    ) { expanded ->
-        if (expanded) {
-            ExpandedGraphCard(
-                rateHistory = session.history,
-                onInteraction = { lastInteractionTime = System.currentTimeMillis() },
-                onDismiss = { isGraphExpanded = false },
-                scrollState = scrollState,
-                lastInteractionTime = lastInteractionTime
-            )
-        } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Column(Modifier.padding(24.dp)) {
-                    SessionCardHeader(session, overrideSsid)
-                    Spacer(Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        DataUsageCircle(
-                            modifier = Modifier.size(80.dp),
-                            dataUsage = session.totalData
-                        )
-                        Spacer(Modifier.width(24.dp))
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clickable {
-                                    isGraphExpanded = true
-                                    lastInteractionTime = System.currentTimeMillis()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            SessionRateGraph(
-                                modifier = Modifier.fillMaxSize(),
-                                rateHistory = session.history.takeLast(60),
-                                isInteractive = false
-                            )
-                            FadedEdge(alignment = Alignment.CenterStart)
-                            FadedEdge(alignment = Alignment.CenterEnd)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+    val overlayAlpha by animateFloatAsState(targetValue = if (showOverlay) 1f else 0f, animationSpec = tween(durationMillis = 300))
 
-@Composable
-private fun ExpandedGraphCard(
-    rateHistory: List<LiveDataPoint>,
-    onInteraction: () -> Unit,
-    onDismiss: () -> Unit,
-    scrollState: ScrollState,
-    lastInteractionTime: Long
-) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(240.dp)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
+        modifier = Modifier.fillMaxWidth().height(240.dp),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        SessionRateGraph(
-            modifier = Modifier.fillMaxSize(),
-            rateHistory = rateHistory,
-            isInteractive = true,
-            scrollState = scrollState,
-            onInteraction = onInteraction,
-            lastInteractionTime = lastInteractionTime
-        )
+        Box(modifier = Modifier.fillMaxSize()) {
+            SessionRateGraph(
+                modifier = Modifier.fillMaxSize(),
+                rateHistory = session.history,
+                overlayAlpha = overlayAlpha,
+                onUserInteraction = { timestamp ->
+                    lastInteraction = timestamp
+                    showOverlay = false
+                }
+            )
+
+            SessionDetailsOverlay(
+                modifier = Modifier.graphicsLayer { alpha = overlayAlpha },
+                session = session,
+            )
+
+            MaxSpeedTag(
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp),
+                rateHistory = session.history
+            )
+        }
     }
 }
 
-@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-private fun SessionRateGraph(
+private fun SessionDetailsOverlay(
     modifier: Modifier = Modifier,
-    rateHistory: List<LiveDataPoint>,
-    isInteractive: Boolean,
-    scrollState: ScrollState = rememberScrollState(),
-    onInteraction: () -> Unit = {},
-    lastInteractionTime: Long = System.currentTimeMillis()
+    session: SessionSummary,
 ) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
-    var zoomLevel by remember { mutableFloatStateOf(1f) }
+    val overlayColor = MaterialTheme.colorScheme.surface
 
-    var isYAxisVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(lastInteractionTime) {
-        isYAxisVisible = true
-        delay(5000)
-        isYAxisVisible = false
-    }
-    val yAxisAlpha by animateFloatAsState(
-        targetValue = if (isYAxisVisible) 1f else 0f,
-        animationSpec = tween(500),
-        label = "YAxisAlpha"
-    )
-
-    val hapticFeedbackTrigger by remember { derivedStateOf { floor(zoomLevel / 0.5f) } }
-    LaunchedEffect(hapticFeedbackTrigger) {
-        if (zoomLevel > 1f && zoomLevel < 10f) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        }
-    }
-
-    val boundaryHapticTrigger by remember { derivedStateOf { zoomLevel == 1f || zoomLevel == 10f } }
-    LaunchedEffect(boundaryHapticTrigger) {
-        if (boundaryHapticTrigger) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-    }
-
-    BoxWithConstraints(
-        modifier = modifier
-            .clip(RoundedCornerShape(CARD_CORNER_RADIUS))
-            .pointerInput(Unit) {
-                if (isInteractive) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        val newZoomLevel = zoomLevel * zoom
-                        zoomLevel = newZoomLevel.coerceIn(1f, 10f)
-                        scale = zoomLevel
-                        onInteraction()
-                    }
-                }
-            }
-    ) {
-        val visibleMaxSpeedData by remember(rateHistory, scrollState.value, scale) {
-            derivedStateOf {
-                if (rateHistory.isEmpty()) {
-                    0L to true
-                } else if (!isInteractive) {
-                    val maxRx = rateHistory.maxOfOrNull { it.usage.rxBytes } ?: 0L
-                    val maxTx = rateHistory.maxOfOrNull { it.usage.txBytes } ?: 0L
-                    max(maxRx, maxTx) to (maxRx >= maxTx)
-                } else {
-                    val pointWidthPx = with(density) { (POINT_SPACING * scale).toPx() }
-                    val viewportWidthPx = with(density) { maxWidth.toPx() }
-                    val startPointIndex = (scrollState.value / pointWidthPx).toInt().coerceIn(0, rateHistory.size - 1)
-                    val visiblePointsCount = (viewportWidthPx / pointWidthPx).toInt().coerceAtLeast(2)
-                    val endPointIndex = (startPointIndex + visiblePointsCount).coerceAtMost(rateHistory.size)
-                    val sublist = if (startPointIndex < endPointIndex) rateHistory.subList(startPointIndex, endPointIndex) else emptyList()
-
-                    val maxRx = sublist.maxOfOrNull { it.usage.rxBytes } ?: 0L
-                    val maxTx = sublist.maxOfOrNull { it.usage.txBytes } ?: 0L
-                    max(maxRx, maxTx) to (maxRx >= maxTx)
-                }
-            }
-        }
-
-        val (maxSpeed, isDownloadMax) = visibleMaxSpeedData
-        val animatedMaxSpeed by animateFloatAsState(
-            targetValue = maxSpeed.toFloat(),
-            animationSpec = tween(500),
-            label = "MaxSpeed"
-        )
-
-        val graphData by remember(rateHistory, scale, animatedMaxSpeed) {
-            derivedStateOf {
-                val axisHeightPx = if (isInteractive) with(density) { AXIS_LABEL_HEIGHT.toPx() } else 0f
-                val graphWidthPx = with(density) { (POINT_SPACING * rateHistory.size * scale).toPx() }
-                val graphHeightPx = with(density) { maxHeight.toPx() } - axisHeightPx
-                createGraphPaths(rateHistory, graphWidthPx, graphHeightPx, animatedMaxSpeed.coerceAtLeast(1f), GRAPH_HEIGHT_SCALE)
-            }
-        }
-
-        val axisColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (isInteractive) Modifier.horizontalScroll(scrollState) else Modifier)
-        ) {
-            val canvasWidth: Dp = POINT_SPACING * rateHistory.size * scale
-            Canvas(modifier = Modifier.width(canvasWidth).fillMaxHeight()) {
-                val axisAreaHeight = if (isInteractive) AXIS_LABEL_HEIGHT.toPx() else 0f
-                val graphAreaHeight = size.height - axisAreaHeight
-
-                val dlBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
-                val ulBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(0.4f), Color.Transparent), endY = graphAreaHeight)
-
-                drawPath(graphData.downloadPath, brush = dlBrush)
-                drawPath(graphData.uploadPath, brush = ulBrush)
-                drawPath(graphData.lineDownloadPath, ColorGraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-                drawPath(graphData.lineUploadPath, ColorGraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-
-                if (isInteractive) {
-                    val axisY = graphAreaHeight
-                    val textPaint = Paint().apply {
-                        color = axisColor.toArgb()
-                        textAlign = Paint.Align.CENTER
-                        textSize = 10.sp.toPx()
-                        alpha = (yAxisAlpha * 255).toInt()
-                    }
-                    drawLine(axisColor.copy(alpha = yAxisAlpha), Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
-
-                    val labelMinSpacing = 70.dp.toPx()
-                    val maxLabels = (size.width / labelMinSpacing).toInt().coerceAtLeast(2)
-                    if (graphData.labels.isNotEmpty()) {
-                        val step = (graphData.labels.size / maxLabels).coerceAtLeast(1)
-                        graphData.labels.filterIndexed { i, _ -> i % step == 0 }.forEach { (txt, x) ->
-                            drawContext.canvas.nativeCanvas.drawText(txt, x, axisY + 12.dp.toPx(), textPaint)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (isInteractive && maxSpeed > 0) {
-            val (value, unit) = formatBytes(maxSpeed)
-            val tagColor = if (isDownloadMax) ColorGraphDownload else ColorGraphUpload
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(16.dp)
-            ) {
-                Tag(text = "MAX $value${unit}/s", color = tagColor)
-            }
-        }
-    }
-}
-
-
-@Composable
-private fun BoxScope.FadedEdge(alignment: Alignment) {
-    val colors = listOf(MaterialTheme.colorScheme.primary, Color.Transparent)
     Box(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(30.dp)
-            .align(alignment)
+        modifier = modifier
+            .fillMaxSize()
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = if (alignment == Alignment.CenterStart) colors else colors.reversed()
+                    colorStops = arrayOf(
+                        0.0f to overlayColor,
+                        0.9f to Color.Transparent
+                    ),
                 )
             )
-    )
+            .padding(24.dp)
+    ) {
+        Column {
+            SessionHeader(session)
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                DataUsageCircle(modifier = Modifier.size(100.dp), data = session.totalData)
+            }
+        }
+    }
 }
 
 @Composable
-fun SessionCardHeader(
-    session: SessionSummary,
-    overrideSsid: String?
-) {
+private fun SessionHeader(session: SessionSummary) {
     var duration by remember(session.startTimestamp) {
-        mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
+        mutableStateOf(System.currentTimeMillis() - session.startTimestamp)
     }
-
     LaunchedEffect(Unit) {
         while (true) {
             duration = System.currentTimeMillis() - session.startTimestamp
             delay(1000)
         }
     }
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.Start
     ) {
-        Column(Modifier.weight(1f, fill = false)) {
-            Text(
-                text = overrideSsid ?: session.ssid,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onPrimary
+        Text(
+            text = formatDurationDynamic(duration),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun SessionRateGraph(
+    modifier: Modifier = Modifier,
+    rateHistory: List<LiveDataPoint>,
+    overlayAlpha: Float,
+    onUserInteraction: (Long) -> Unit
+) {
+    val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
+        rateHistory.size.toFloat() / POINTS_IN_30_SECONDS
+    } else 1f
+
+    var scale by remember { mutableStateOf(initialScale) }
+    val scrollState = rememberScrollState()
+    var lastInteractionTime by remember { mutableLongStateOf(0L) }
+    var isAutoScrolling by remember { mutableStateOf(false) }
+
+    // Auto-scroll logic when new data arrives and user is idle
+    LaunchedEffect(rateHistory.size) {
+        val idleDuration = System.currentTimeMillis() - lastInteractionTime
+        if (lastInteractionTime == 0L || idleDuration > 5000L) { // Autoscroll on first load or after idle
+            isAutoScrolling = true
+            scrollState.animateScrollTo(
+                scrollState.maxValue,
+                animationSpec = tween(durationMillis = 300, easing = LinearEasing)
             )
-            Text(
-                text = formatDurationDynamic(duration),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-            )
+            isAutoScrolling = false
         }
+    }
+
+    // Reset scale after a period of inactivity
+    LaunchedEffect(lastInteractionTime) {
+        if (lastInteractionTime == 0L) return@LaunchedEffect // Don't run on initial composition
+        delay(5000L)
+        // Check again after delay in case of new interaction
+        if (System.currentTimeMillis() - lastInteractionTime >= 5000L) {
+            animate(initialValue = scale, targetValue = initialScale) { value, _ ->
+                scale = value
+            }
+        }
+    }
+
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val context = LocalContext.current
+    val timeFormat = remember(context) {
+        DateFormat.getTimeFormat(context)
+    }
+
+    Box(
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTransformGestures { _, _, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, initialScale * 3)
+                    val time = System.currentTimeMillis()
+                    lastInteractionTime = time
+                    onUserInteraction(time)
+                }
+            }
+    ) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val containerWidth = constraints.maxWidth
+            val containerHeight = constraints.maxHeight
+            val density = LocalDensity.current
+
+            // User interaction detection for scrolling
+            LaunchedEffect(scrollState.isScrollInProgress) {
+                if (scrollState.isScrollInProgress && !isAutoScrolling) {
+                    val time = System.currentTimeMillis()
+                    lastInteractionTime = time
+                    onUserInteraction(time)
+                }
+            }
+
+            if (containerWidth > 0 && rateHistory.size > 1) {
+                var maxSpeed by remember { mutableStateOf(1L) }
+                val xAxisSpace = with(density) { 30.dp.toPx() }
+                val graphDrawHeight = containerHeight - xAxisSpace
+
+
+                LaunchedEffect(rateHistory, scrollState.value, scale) {
+                    if (rateHistory.size < 2) return@LaunchedEffect
+                    val totalGraphWidthPx = containerWidth * scale
+                    val firstTimestamp = rateHistory.first().timestamp
+                    val totalDuration = rateHistory.last().timestamp - firstTimestamp
+                    if (totalDuration <= 0) return@LaunchedEffect
+
+                    val visibleStartRatio = scrollState.value / totalGraphWidthPx
+                    val visibleEndRatio = (scrollState.value + containerWidth) / totalGraphWidthPx
+
+                    val visibleStartTime = firstTimestamp + (totalDuration * visibleStartRatio).toLong()
+                    val visibleEndTime = firstTimestamp + (totalDuration * visibleEndRatio).toLong()
+
+                    val visiblePoints = rateHistory.filter {
+                        it.timestamp in visibleStartTime..visibleEndTime
+                    }
+
+                    maxSpeed = if (visiblePoints.isEmpty()) 1L else max(
+                        visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 1L,
+                        visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 1L
+                    )
+                }
+
+                val animatedMaxSpeed by animateFloatAsState(
+                    targetValue = maxSpeed.toFloat(),
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "maxSpeedAnimation"
+                )
+
+                val graphData by remember(rateHistory, containerWidth, containerHeight, scale, animatedMaxSpeed) {
+                    derivedStateOf {
+                        createGraphPaths(
+                            history = rateHistory,
+                            width = containerWidth * scale,
+                            height = graphDrawHeight,
+                            maxRate = animatedMaxSpeed.coerceAtLeast(1f),
+                            graphHeightScale = GRAPH_HEIGHT_SCALE
+                        )
+                    }
+                }
+
+                val canvasWidthDp = with(density) { (containerWidth * scale).toDp() }
+
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier.horizontalScroll(scrollState),
+                        contentAlignment = Alignment.CenterEnd
+                    ) {
+                        Canvas(
+                            modifier = Modifier
+                                .width(canvasWidthDp)
+                                .fillMaxHeight()
+                        ) {
+                            val downloadBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(alpha = 0.4f), Color.Transparent))
+                            val uploadBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(alpha = 0.4f), Color.Transparent))
+
+                            drawPath(graphData.downloadPath, brush = downloadBrush)
+                            drawPath(graphData.uploadPath, brush = uploadBrush)
+
+                            drawPath(graphData.lineDownloadPath, color = ColorGraphDownload, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+                            drawPath(graphData.lineUploadPath, color = ColorGraphUpload, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+
+                            val xAxisY = graphDrawHeight
+                            drawLine(
+                                color = onSurfaceColor.copy(alpha = 0.3f),
+                                start = Offset(0f, xAxisY),
+                                end = Offset(size.width, xAxisY),
+                                strokeWidth = 1.dp.toPx()
+                            )
+
+                            val axisPaint = Paint().apply {
+                                color = onSurfaceColor.copy(alpha = 0.7f).toArgb()
+                                textAlign = Paint.Align.CENTER
+                                textSize = 10.sp.toPx()
+                                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                            }
+                            val startTimestamp = rateHistory.first().timestamp
+                            val totalDuration = max(rateHistory.last().timestamp - startTimestamp, 1L)
+                            val divisions = 5
+                            for (i in 0..divisions) {
+                                val fraction = i.toFloat() / divisions
+                                val x = size.width * fraction
+                                val time = startTimestamp + (totalDuration * fraction).toLong()
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    timeFormat.format(Date(time)),
+                                    x,
+                                    xAxisY + 18.dp.toPx(),
+                                    axisPaint
+                                )
+                            }
+                        }
+                    }
+
+                    // Blur overlay covering the graph area, controlled by overlayAlpha
+                    if (overlayAlpha > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .graphicsLayer { alpha = overlayAlpha }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MaxSpeedTag(modifier: Modifier = Modifier, rateHistory: List<LiveDataPoint>) {
+    val maxSpeed by remember(rateHistory) { derivedStateOf { rateHistory.maxOfOrNull { max(it.usage.rxBytes, it.usage.txBytes) } ?: 0L } }
+    if (maxSpeed > 0) {
+        val (v, u) = formatBytes(maxSpeed)
+        val isDl = (rateHistory.maxOfOrNull { it.usage.rxBytes } ?: 0L) >= (rateHistory.maxOfOrNull { it.usage.txBytes } ?: 0L)
+        Tag(text = "MAX ${v}${u}/s", color = if (isDl) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
     }
 }
 
 @Composable
 fun DataUsageCircle(
     modifier: Modifier = Modifier,
-    dataUsage: DataUsage
+    data: DataUsage
 ) {
-    var displayMode by remember { mutableStateOf(DisplayMode.TOTAL) }
-
-    LaunchedEffect(displayMode) {
-        if (displayMode != DisplayMode.TOTAL) {
-            delay(3_000)
-            displayMode = DisplayMode.TOTAL
+    var mode by remember { mutableStateOf(DisplayMode.TOTAL) }
+    LaunchedEffect(mode) {
+        if (mode != DisplayMode.TOTAL) {
+            delay(3000)
+            mode = DisplayMode.TOTAL
         }
     }
 
-    val totalBytes = dataUsage.rxBytes + dataUsage.txBytes
-    val downloadFraction by animateFloatAsState(
-        targetValue = if (totalBytes > 0) dataUsage.rxBytes.toFloat() / totalBytes else 0f,
-        animationSpec = tween(500),
-        label = "DownloadFraction"
-    )
+    val totalBytes = (data.rxBytes + data.txBytes).coerceAtLeast(1L)
+    val rawDownloadFraction = data.rxBytes.toFloat() / totalBytes
+    val rawUploadFraction = data.txBytes.toFloat() / totalBytes
+
+    val minFraction = 0.05f
+    val (downloadFraction, uploadFraction) = when {
+        rawDownloadFraction < minFraction && rawUploadFraction < minFraction -> 0.5f to 0.5f
+        rawDownloadFraction < minFraction -> minFraction to 1f - minFraction
+        rawUploadFraction < minFraction -> 1f - minFraction to minFraction
+        else -> rawDownloadFraction to rawUploadFraction
+    }
+
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
 
     Box(
         modifier = modifier.pointerInput(Unit) {
-            detectTapGestures { tap ->
-                val cx = size.width / 2f
-                val cy = size.height / 2f
-                val angle = (Math.toDegrees(atan2(tap.y - cy, tap.x - cx).toDouble()) + 450) % 360
-                displayMode = if (angle < downloadFraction * 360) DisplayMode.DOWNLOAD else DisplayMode.UPLOAD
+            detectTapGestures { offset ->
+                val centerX = size.width / 2f
+                val centerY = size.height / 2f
+                val angle = (atan2(offset.y - centerY, offset.x - centerX) * 180 / Math.PI + 450) % 360
+
+                mode = if (angle < downloadFraction * 360) DisplayMode.DOWNLOAD else DisplayMode.UPLOAD
             }
         },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val stroke = 10.dp.toPx()
-            drawArc(color = ColorGraphUpload, -90f, 360f, useCenter = false, style = Stroke(stroke))
-            drawArc(ColorGraphDownload, -90f, downloadFraction * 360f, false, style = Stroke(stroke, cap = StrokeCap.Round))
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 12.dp.toPx()
+            val gapAngle = 4f
+            val totalSweep = 360f - gapAngle * 2
+
+            val downloadSweep = downloadFraction * totalSweep
+            val uploadSweep = uploadFraction * totalSweep
+
+            drawArc(
+                color = outlineColor.copy(alpha = 0.2f),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+            )
+            drawArc(
+                color = ColorGraphDownload,
+                startAngle = -90f + gapAngle,
+                sweepAngle = downloadSweep,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+            )
+            drawArc(
+                color = ColorGraphUpload,
+                startAngle = -90f + gapAngle + downloadSweep + gapAngle,
+                sweepAngle = uploadSweep,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+            )
         }
 
-        val (valueStr, unitStr) = remember(dataUsage, displayMode) {
-            val bytes = when (displayMode) {
-                DisplayMode.TOTAL -> totalBytes
-                DisplayMode.DOWNLOAD -> dataUsage.rxBytes
-                DisplayMode.UPLOAD -> dataUsage.txBytes
+        AnimatedContent(
+            targetState = mode,
+            transitionSpec = {
+                (slideInVertically { height -> height } + fadeIn()).togetherWith(
+                    slideOutVertically { height -> -height } + fadeOut()
+                ).using(SizeTransform(clip = false))
+            },
+            label = "DataUsageCircleTransition"
+        ) { targetMode ->
+            val (value, unit, color, icon) = when (targetMode) {
+                DisplayMode.DOWNLOAD -> Quadruple(
+                    formatBytes(data.rxBytes).first,
+                    formatBytes(data.rxBytes).second,
+                    ColorGraphDownload,
+                    Icons.Rounded.ArrowDownward
+                )
+                DisplayMode.UPLOAD -> Quadruple(
+                    formatBytes(data.txBytes).first,
+                    formatBytes(data.txBytes).second,
+                    ColorGraphUpload,
+                    Icons.Rounded.ArrowUpward
+                )
+                DisplayMode.TOTAL -> Quadruple(
+                    formatBytes(totalBytes).first,
+                    formatBytes(totalBytes).second,
+                    MaterialTheme.colorScheme.onSurface,
+                    null
+                )
             }
-            formatBytes(bytes)
+            DataUsageValueBlock(value, unit, color, icon)
         }
+    }
+}
 
-        AnimatedContent(targetState = displayMode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "DataCircleContent") { mode ->
-            val icon = when (mode) {
-                DisplayMode.DOWNLOAD -> Icons.Default.ArrowDownward
-                DisplayMode.UPLOAD -> Icons.Default.ArrowUpward
-                else -> null
-            }
-            val tint = when (mode) {
-                DisplayMode.DOWNLOAD -> ColorGraphDownload
-                DisplayMode.UPLOAD -> ColorGraphUpload
-                else -> MaterialTheme.colorScheme.onPrimary
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (icon != null) {
-                    Icon(icon, mode.name, tint = tint, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.height(2.dp))
-                }
-                Text(
-                    valueStr,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-                Text(
-                    unitStr,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
-                )
-            }
+data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)
+
+@Composable
+private fun DataUsageValueBlock(
+    value: String,
+    unit: String,
+    color: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector?
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.height(5.dp))
         }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = unit,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

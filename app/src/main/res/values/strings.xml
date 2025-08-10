@@ -27,7 +27,7 @@
     <string name="home_status_disconnected">DISCONNECTED</string>
     <string name="home_network_statistics">STATS</string>
     <string name="home_go_to_statistics">Go to Statistics</string>
-    <string name="home_no_data_for_graph">No data available for graph</string>
+    <string name="home_no_data_for_graph">Connect for curves!</string>
 
     <string name="stats_title">Stats</string>
     <string name="stats_go_back">Back</string>

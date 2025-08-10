@@ -5,6 +5,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -54,14 +55,14 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlinx.coroutines.delay
 
-private const val GRAPH_HEIGHT_SCALE = 0.77f
-private val Y_AXIS_WIDTH = 70.dp
-private const val POINTS_IN_30_SECONDS = 20
+const val GRAPH_HEIGHT_SCALE = 0.77f
+val Y_AXIS_WIDTH = 70.dp
+const val POINTS_IN_30_SECONDS = 20
 
 /**
  * Calculates a "nice" rounded number for the top of the Y-axis.
  */
-private fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
+fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
   if (maxSpeed <= 0f) return 1f // CRASH FIX: Handle zero or negative maxSpeed
   val exponent = floor(log10(maxSpeed))
   val fraction = maxSpeed / 10f.pow(exponent)
@@ -88,45 +89,37 @@ fun HomeScreenGraph(
   }
   var scale by remember { mutableStateOf(initialScale) }
   val scrollState = rememberScrollState()
-  var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
+  var lastInteraction by remember { mutableLongStateOf(0L) }
   var yAxisVisible by remember { mutableStateOf(true) }
   var isAutoScrolling by remember { mutableStateOf(false) }
 
-  // Update interaction time on user-initiated scroll
-  LaunchedEffect(scrollState.isScrollInProgress) {
-    if (scrollState.isScrollInProgress && !isAutoScrolling) {
-      lastInteraction = System.currentTimeMillis()
+  // Auto-scroll logic when new data arrives and user is idle
+  LaunchedEffect(rateHistory.size) {
+    val idleDuration = System.currentTimeMillis() - lastInteraction
+    if (lastInteraction == 0L || idleDuration > 5000L) { // Autoscroll on first load or after being idle
+      isAutoScrolling = true
+      scrollState.animateScrollTo(
+        scrollState.maxValue,
+        animationSpec = tween(durationMillis = 500)
+      )
+      isAutoScrolling = false
     }
   }
 
-  // Timer for Y-axis visibility and auto-scrolling
-  LaunchedEffect(lastInteraction, rateHistory.size) {
-    while (true) {
-      val timeSinceInteraction = System.currentTimeMillis() - lastInteraction
+  // Timer for Y-axis visibility and scale reset
+  LaunchedEffect(lastInteraction) {
+    if (lastInteraction == 0L) return@LaunchedEffect // Don't run on initial composition
 
-      // Visibility logic: Visible if user is interacting or within 5s of last interaction
-      val isUserInteracting = scrollState.isScrollInProgress && !isAutoScrolling
-      val shouldBeVisible = isUserInteracting || timeSinceInteraction < 5000L
-      if (yAxisVisible != shouldBeVisible) {
-        yAxisVisible = shouldBeVisible
-      }
-
-      // Auto-scroll logic: If idle for more than 5 seconds, scroll to the end
-      if (!scrollState.isScrollInProgress && timeSinceInteraction > 5000) {
-        if (scrollState.value != scrollState.maxValue) {
-          isAutoScrolling = true
-          scrollState.animateScrollTo(
-            scrollState.maxValue,
-            animationSpec = tween(durationMillis = 500)
-          )
-          isAutoScrolling = false
+    yAxisVisible = true
+    delay(5000L)
+    // Check again after delay in case of new interaction
+    if (System.currentTimeMillis() - lastInteraction >= 5000L) {
+      yAxisVisible = false
+      if (scale != initialScale) {
+        animate(initialValue = scale, targetValue = initialScale) { value, _ ->
+          scale = value
         }
       }
-      if (timeSinceInteraction > 5000 && scale != initialScale) {
-        scale = initialScale
-      }
-
-      delay(200)
     }
   }
 
@@ -143,6 +136,13 @@ fun HomeScreenGraph(
     BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
       val containerWidthPx = constraints.maxWidth
       val containerHeightPx = constraints.maxHeight
+
+      // Detect user interaction on scroll
+      LaunchedEffect(scrollState.isScrollInProgress) {
+        if (scrollState.isScrollInProgress && !isAutoScrolling) {
+          lastInteraction = System.currentTimeMillis()
+        }
+      }
 
       if (containerWidthPx > 0 && rateHistory.size > 1) {
 

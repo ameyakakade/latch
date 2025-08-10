@@ -39,20 +39,20 @@ import java.util.Locale
  * with a customizable shape for grouping.
  */
 @Composable
-fun HistoryItemCard(
+fun StatsItemCard(
   session: SessionSummary,
-  shape: Shape = RoundedCornerShape(16.dp) // Default shape
+  shape: Shape = RoundedCornerShape(16.dp)
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
-    shape = shape, // Apply the dynamic shape
+    shape = shape,
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .padding(20.dp), // Increased padding for better spacing
+        .padding(20.dp),
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -63,15 +63,9 @@ fun HistoryItemCard(
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(4.dp)) // Added space between date and next lines
-        // Added WiFi SSID display
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-          text = "WiFi: ${session.ssid}",
-          style = MaterialTheme.typography.bodyMedium,
-          color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-          text = "Duration: ${formatDurationDynamic(session.endTimestamp - session.startTimestamp)}",
+          text = formatDurationDynamic(session.endTimestamp - session.startTimestamp),
           style = MaterialTheme.typography.bodySmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -92,7 +86,7 @@ fun HistoryItemCard(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
-          Spacer(modifier = Modifier.width(12.dp)) // Adjusted spacer for better data row spacing
+          Spacer(modifier = Modifier.width(12.dp))
           val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
           Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
