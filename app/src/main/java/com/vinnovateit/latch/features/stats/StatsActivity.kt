@@ -9,12 +9,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
@@ -103,6 +108,9 @@ class StatsActivity : ComponentActivity() {
 /**
  * Main screen composable, responsible for the overall layout (Scaffold) and state management for dialogs.
  */
+/**
+ * Main screen composable, responsible for the overall layout (Scaffold) and state management for dialogs.
+ */
 @SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,33 +125,22 @@ fun StatsScreen(
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
   val isLive = remember(liveStatus) { liveStatus != null }
 
-  val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
-  Scaffold(
-    modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-    containerColor = MaterialTheme.colorScheme.background,
-    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-    topBar = {
-      StatsTopAppBar(
-        scrollBehavior = scrollBehavior,
-        onBackClick = { context.finish() }
-      )
-    }
-  ) { innerPadding ->
-    StatsScreenContent(
-      modifier = Modifier.padding(innerPadding),
-      isLive = isLive,
-      sessionToShow = sessionToShow,
-      historyToShow = historyToShow,
-      liveStatus = liveStatus,
-      onDownloadReport = onDownloadReport
-    )
-  }
+  StatsScreenContent(
+    modifier = modifier,
+    isLive = isLive,
+    sessionToShow = sessionToShow,
+    historyToShow = historyToShow,
+    liveStatus = liveStatus,
+    onDownloadReport = onDownloadReport,
+    onBackClick = { context.finish() }
+  )
 }
+
 
 /**
  * Handles the content of the screen, deciding whether to show the stats list or an empty state message.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsScreenContent(
   modifier: Modifier = Modifier,
@@ -151,30 +148,111 @@ private fun StatsScreenContent(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
-  onDownloadReport: () -> Unit
+  onDownloadReport: () -> Unit,
+  onBackClick: () -> Unit
 ) {
   if (!isLive && historyToShow.isEmpty()) {
-    EmptyStatsView(modifier = modifier.fillMaxSize())
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+      modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+      topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+    ) { innerPadding ->
+      EmptyStatsView(modifier = Modifier.padding(innerPadding).fillMaxSize())
+    }
   } else {
-    StatsList(
-      modifier = modifier.fillMaxSize(),
-      isLive = isLive,
-      sessionToShow = sessionToShow,
-      historyToShow = historyToShow,
-      liveStatus = liveStatus,
-      onDownloadReport = onDownloadReport
-    )
+    BoxWithConstraints(modifier = modifier) {
+      val isPortrait = maxHeight > maxWidth
+
+      if (!isPortrait && isLive && sessionToShow != null) {
+        // Landscape, Live Session: Split layout
+        Row(modifier = Modifier.fillMaxSize()) {
+          val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+          Scaffold(
+            modifier = Modifier
+              .weight(0.5f) // 50% width
+              .fillMaxHeight()
+              .nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant, // Darker background
+            topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick, isLarge = false) } // Normal TopAppBar
+          ) { innerPadding ->
+            Box(
+              modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              SessionCard(session = sessionToShow)
+            }
+          }
+
+          StatsList(
+            modifier = Modifier
+              .weight(0.5f) // 50% width
+              .fillMaxHeight()
+              .background(MaterialTheme.colorScheme.surfaceVariant), // Matching background
+            isLive = true,
+            showSessionCard = false, // Card is already shown on the left
+            sessionToShow = sessionToShow,
+            historyToShow = historyToShow,
+            liveStatus = liveStatus,
+            onDownloadReport = onDownloadReport,
+            addSpacer = true // Add spacer for TopAppBar height
+          )
+        }
+      } else {
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+        // Portrait or Not Live: Single column layout
+        Scaffold(
+          modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+          topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+        ) { innerPadding ->
+          StatsList(
+            modifier = (if (isPortrait) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=32.dp))
+              .padding(innerPadding),
+            isLive = isLive,
+            showSessionCard = true, // Show card within the list
+            sessionToShow = sessionToShow,
+            historyToShow = historyToShow,
+            liveStatus = liveStatus,
+            onDownloadReport = onDownloadReport
+          )
+        }
+      }
+    }
   }
 }
 
 @Composable
+private fun DownloadReportButton(onDownloadReport: () -> Unit) {
+  TooltipHint(tooltipText = "Download a CSV report of all sessions") {
+    OutlinedButton(
+      onClick = onDownloadReport,
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(50.dp)
+    ) {
+      Icon(
+        imageVector = Icons.Default.Download,
+        contentDescription = "Download Report"
+      )
+      Spacer(modifier = Modifier.width(8.dp))
+      Text("Download Usage Report", fontWeight = FontWeight.Bold)
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 private fun StatsList(
   modifier: Modifier = Modifier,
   isLive: Boolean,
+  showSessionCard: Boolean = true,
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
-  onDownloadReport: () -> Unit
+  onDownloadReport: () -> Unit,
+  addSpacer: Boolean = false
 ) {
   LazyColumn(
     modifier = modifier,
@@ -182,12 +260,19 @@ private fun StatsList(
     verticalArrangement = Arrangement.spacedBy(16.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
+    if(addSpacer){
+      item {
+        Spacer(modifier = Modifier.height(20.dp))
+      }
+    }
     if (isLive && sessionToShow != null) {
       // WHEN CONNECTED:
-      item {
-        SessionCard(
-          session = sessionToShow,
-        )
+      if (showSessionCard) {
+        item {
+          SessionCard(
+            session = sessionToShow,
+          )
+        }
       }
       item {
         val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
@@ -225,21 +310,7 @@ private fun StatsList(
     // Added download button at the end
     if (historyToShow.isNotEmpty()) {
       item {
-        TooltipHint(tooltipText = "Download a CSV report of all sessions") {
-          OutlinedButton(
-            onClick = onDownloadReport,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(50.dp)
-          ) {
-            Icon(
-              imageVector = Icons.Default.Download,
-              contentDescription = "Download Report"
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Download Usage Report", fontWeight = FontWeight.Bold)
-          }
-        }
+        DownloadReportButton(onDownloadReport)
       }
     }
     item { Spacer(modifier = Modifier.height(100.dp)) }
@@ -254,33 +325,63 @@ private fun StatsList(
 private fun StatsTopAppBar(
   scrollBehavior: TopAppBarScrollBehavior,
   onBackClick: () -> Unit,
+  isLarge: Boolean = true
 ) {
-  LargeTopAppBar(
-    title = {
-      Text(
-        "Stats",
-        fontSize = 23.sp,
-        maxLines = 1,
-        fontFamily = ModernizFontFamily,
-        overflow = TextOverflow.Ellipsis
-      )
-    },
-    navigationIcon = {
-      TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
-        IconButton(onClick = onBackClick) {
-          Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+  if(isLarge) {
+    LargeTopAppBar(
+      title = {
+        Text(
+          "Stats",
+          fontSize = 23.sp,
+          maxLines = 1,
+          fontFamily = ModernizFontFamily,
+          overflow = TextOverflow.Ellipsis
+        )
+      },
+      navigationIcon = {
+        TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
+          IconButton(onClick = onBackClick) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          }
         }
-      }
-    },
-    colors = TopAppBarDefaults.topAppBarColors(
-      containerColor = MaterialTheme.colorScheme.surface,
-      scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-      navigationIconContentColor = Color.Unspecified,
-      titleContentColor = Color.Unspecified,
-      actionIconContentColor = Color.Unspecified
-    ),
-    scrollBehavior = scrollBehavior
-  )
+      },
+      colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        navigationIconContentColor = Color.Unspecified,
+        titleContentColor = Color.Unspecified,
+        actionIconContentColor = Color.Unspecified
+      ),
+      scrollBehavior = scrollBehavior
+    )
+  } else {
+    TopAppBar(
+      title = {
+        Text(
+          "Stats",
+          fontSize = 23.sp,
+          maxLines = 1,
+          fontFamily = ModernizFontFamily,
+          overflow = TextOverflow.Ellipsis
+        )
+      },
+      navigationIcon = {
+        TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
+          IconButton(onClick = onBackClick) {
+            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+          }
+        }
+      },
+      colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        navigationIconContentColor = Color.Unspecified,
+        titleContentColor = Color.Unspecified,
+        actionIconContentColor = Color.Unspecified
+      ),
+      scrollBehavior = scrollBehavior
+    )
+  }
 }
 
 /**
