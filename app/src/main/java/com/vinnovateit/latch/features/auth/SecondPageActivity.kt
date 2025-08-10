@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 class SecondPageActivity : ComponentActivity() {
@@ -72,7 +73,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
     // Load from DB
     LaunchedEffect(Unit) {
