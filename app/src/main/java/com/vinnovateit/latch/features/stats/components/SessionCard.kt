@@ -50,13 +50,12 @@ import com.vinnovateit.latch.features.home.components.POINTS_IN_30_SECONDS
 import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
 import com.vinnovateit.latch.ui.theme.ColorTransparent
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.atan2
 import kotlin.math.max
-
-private val CARD_CORNER_RADIUS = 24.dp
 
 @Composable
 fun SessionCard(session: SessionSummary) {
@@ -74,9 +73,9 @@ fun SessionCard(session: SessionSummary) {
 
     Card(
         modifier = Modifier.fillMaxWidth().height(240.dp),
-        shape = RoundedCornerShape(CARD_CORNER_RADIUS),
-        elevation = CardDefaults.cardElevation(0.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             SessionRateGraph(
@@ -107,14 +106,17 @@ private fun SessionDetailsOverlay(
     modifier: Modifier = Modifier,
     session: SessionSummary,
 ) {
+    val overlayColor = MaterialTheme.colorScheme.surface
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f), Color.Transparent),
-                    startY = 0f,
-                    endY = Float.POSITIVE_INFINITY
+                brush = Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0.0f to overlayColor,
+                        0.9f to Color.Transparent
+                    ),
                 )
             )
             .padding(24.dp)
@@ -168,36 +170,31 @@ private fun SessionRateGraph(
 
     var scale by remember { mutableStateOf(initialScale) }
     val scrollState = rememberScrollState()
-    var lastInteractionTime by remember { mutableStateOf(System.currentTimeMillis()) }
+    var lastInteractionTime by remember { mutableLongStateOf(0L) }
     var isAutoScrolling by remember { mutableStateOf(false) }
 
-    LaunchedEffect(scrollState.isScrollInProgress) {
-        if (scrollState.isScrollInProgress && !isAutoScrolling) {
-            lastInteractionTime = System.currentTimeMillis()
-            onUserInteraction(lastInteractionTime)
+    // Auto-scroll logic when new data arrives and user is idle
+    LaunchedEffect(rateHistory.size) {
+        val idleDuration = System.currentTimeMillis() - lastInteractionTime
+        if (lastInteractionTime == 0L || idleDuration > 5000L) { // Autoscroll on first load or after idle
+            isAutoScrolling = true
+            scrollState.animateScrollTo(
+                scrollState.maxValue,
+                animationSpec = tween(durationMillis = 300, easing = LinearEasing)
+            )
+            isAutoScrolling = false
         }
     }
 
-    LaunchedEffect(rateHistory.size, scrollState.isScrollInProgress) {
-        while (true) {
-            val idleDuration = System.currentTimeMillis() - lastInteractionTime
-            if (!scrollState.isScrollInProgress && idleDuration > 5000) {
-                if (scrollState.value != scrollState.maxValue) {
-                    isAutoScrolling = true
-                    scrollState.animateScrollTo(
-                        scrollState.maxValue,
-                        animationSpec = tween(durationMillis = 300, easing = LinearEasing)
-                    )
-                    isAutoScrolling = false
-                }
-                if (scale != initialScale) {
-                    // Animate scale back to initial
-                    animate(initialValue = scale, targetValue = initialScale) { value, _ ->
-                        scale = value
-                    }
-                }
+    // Reset scale after a period of inactivity
+    LaunchedEffect(lastInteractionTime) {
+        if (lastInteractionTime == 0L) return@LaunchedEffect // Don't run on initial composition
+        delay(5000L)
+        // Check again after delay in case of new interaction
+        if (System.currentTimeMillis() - lastInteractionTime >= 5000L) {
+            animate(initialValue = scale, targetValue = initialScale) { value, _ ->
+                scale = value
             }
-            delay(200)
         }
     }
 
@@ -212,8 +209,9 @@ private fun SessionRateGraph(
             .pointerInput(Unit) {
                 detectTransformGestures { _, _, zoom, _ ->
                     scale = (scale * zoom).coerceIn(1f, initialScale * 3)
-                    lastInteractionTime = System.currentTimeMillis()
-                    onUserInteraction(lastInteractionTime)
+                    val time = System.currentTimeMillis()
+                    lastInteractionTime = time
+                    onUserInteraction(time)
                 }
             }
     ) {
@@ -223,6 +221,15 @@ private fun SessionRateGraph(
             val containerWidth = constraints.maxWidth
             val containerHeight = constraints.maxHeight
             val density = LocalDensity.current
+
+            // User interaction detection for scrolling
+            LaunchedEffect(scrollState.isScrollInProgress) {
+                if (scrollState.isScrollInProgress && !isAutoScrolling) {
+                    val time = System.currentTimeMillis()
+                    lastInteractionTime = time
+                    onUserInteraction(time)
+                }
+            }
 
             if (containerWidth > 0 && rateHistory.size > 1) {
                 var maxSpeed by remember { mutableStateOf(1L) }
