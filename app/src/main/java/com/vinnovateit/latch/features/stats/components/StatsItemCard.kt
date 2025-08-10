@@ -39,7 +39,7 @@ import java.util.Locale
  * with a customizable shape for grouping.
  */
 @Composable
-fun HistoryItemCard(
+fun StatsItemCard(
   session: SessionSummary,
   shape: Shape = RoundedCornerShape(16.dp)
 ) {
