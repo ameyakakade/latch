@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,6 +66,8 @@ import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -132,6 +135,41 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
             ?.coerceAtLeast(1L) ?: 1L
     }
 
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.layoutInfo }
+            .map { layoutInfo ->
+                val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+                layoutInfo.visibleItemsInfo.minByOrNull {
+                    val itemCenter = it.offset + it.size / 2
+                    abs(itemCenter - viewportCenter)
+                }?.index ?: -1
+            }
+            .distinctUntilChanged()
+            .collect { centerIndex ->
+                if (centerIndex != -1 && selectedIndex != centerIndex) {
+                    haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                    selectedIndex = centerIndex
+
+                    val item = chartItems[centerIndex]
+                    if (item is HistoryChartItem.BarData) {
+                        displayedData = item.usage to dateFormatter.format(Date(item.timestamp))
+                        revertJob?.cancel()
+                        revertJob = coroutineScope.launch {
+                            delay(7000)
+                            displayedData = totalUsageData to totalUsageLabel
+                        }
+                    }
+                }
+            }
+    }
+
+    LaunchedEffect(lazyListState.isScrollInProgress) {
+        if (!lazyListState.isScrollInProgress && selectedIndex != -1) {
+            delay(100)
+            lazyListState.scrollToItem(selectedIndex)
+        }
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val halfScreenWidth = this.maxWidth / 2
@@ -145,45 +183,6 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
                     lazyListState.scrollToItem(todayIdx)
                 }
                 displayedData = totalUsageData to totalUsageLabel
-            }
-
-            // **MODIFIED:** This effect now centers the bar and provides haptic feedback.
-            LaunchedEffect(lazyListState.isScrollInProgress) {
-                if (!lazyListState.isScrollInProgress) {
-                    delay(250) // A slightly longer debounce for a smoother feel.
-                    val layoutInfo = lazyListState.layoutInfo
-                    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-                    val closestItemInfo = layoutInfo.visibleItemsInfo.minByOrNull {
-                        val itemCenter = it.offset + it.size / 2
-                        abs(itemCenter - viewportCenter)
-                    }
-
-                    closestItemInfo?.let {
-                        if (selectedIndex != it.index) {
-                            // 1. Update the selected index.
-                            selectedIndex = it.index
-
-                            // 2. Provide strong haptic feedback for the auto-selection.
-                            haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
-
-                            // 3. Update the displayed data.
-                            val closestItem = chartItems[it.index]
-                            if (closestItem is HistoryChartItem.BarData) {
-                                displayedData = closestItem.usage to dateFormatter.format(Date(closestItem.timestamp))
-                                revertJob?.cancel()
-                                revertJob = coroutineScope.launch {
-                                    delay(7000)
-                                    displayedData = totalUsageData to totalUsageLabel
-                                }
-                            }
-
-                            // 4. Animate the newly selected bar to the center.
-                            coroutineScope.launch {
-                                lazyListState.animateScrollToItem(it.index)
-                            }
-                        }
-                    }
-                }
             }
 
             LazyRow(
@@ -208,23 +207,14 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
                                 usage = item.usage,
                                 maxUsage = maxDailyUsage,
                                 dayLabel = item.label,
-                                isSelected = (idx == selectedIndex && !lazyListState.isScrollInProgress),
+                                isSelected = (idx == selectedIndex),
                                 barAreaHeight = barAreaHeight,
                                 onTap = {
+                                    // Tapping now just instantly scrolls to the item.
                                     if (selectedIndex != idx) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    }
-                                    revertJob?.cancel()
-                                    displayedData = item.usage to dateFormatter.format(Date(item.timestamp))
-                                    selectedIndex = idx
-
-                                    revertJob = coroutineScope.launch {
-                                        delay(7000)
-                                        displayedData = totalUsageData to totalUsageLabel
-                                    }
-
-                                    coroutineScope.launch {
-                                        lazyListState.animateScrollToItem(idx)
+                                        coroutineScope.launch {
+                                            lazyListState.scrollToItem(idx)
+                                        }
                                     }
                                 }
                             )
@@ -274,14 +264,13 @@ private fun Bar(
     usage: DataUsage,
     maxUsage: Long,
     dayLabel: String,
-    isSelected: Boolean, // isSelected is kept for potential future use (e.g., changing color)
+    isSelected: Boolean,
     barAreaHeight: Dp,
     onTap: () -> Unit
 ) {
     val total = usage.rxBytes + usage.txBytes
     val rawFrac = if (maxUsage > 0) total.toFloat() / maxUsage else 0f
 
-    // The bar height animation is the only one needed for a clean, fast UI.
     val heightFrac by animateFloatAsState(
         targetValue = rawFrac.coerceAtLeast(0.1f),
         animationSpec = spring(
@@ -290,8 +279,6 @@ private fun Bar(
         ),
         label = "BarHeight"
     )
-
-    // **REMOVED:** The scale animation is no longer here for a cleaner look.
 
     val uploadFrac = if (total > 0) usage.txBytes.toFloat() / total else 0f
     val downloadFrac = 1f - uploadFrac
@@ -326,7 +313,6 @@ private fun Bar(
                     val dlH = h * downloadFrac
                     val ulH = h * uploadFrac
 
-                    // Draw download part
                     if (dlH > 0) {
                         drawRect(
                             color = ColorGraphDownload,
@@ -334,7 +320,6 @@ private fun Bar(
                             size = Size(w, dlH)
                         )
                     }
-                    // Draw upload part
                     if (ulH > 0) {
                         drawRect(
                             color = ColorGraphUpload,
