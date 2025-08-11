@@ -1,7 +1,9 @@
 package com.vinnovateit.latch.features.stats.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -106,10 +108,9 @@ fun HistoryBarChart(history: List<SessionSummary>) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HistoryBarChartContent(sessions: List<SessionSummary>) {
-    val calendar = remember { Calendar.getInstance() }
 
     val chartItems = remember(sessions) {
-        if (sessions.isEmpty()) return@remember emptyList<HistoryChartItem>()
+        if (sessions.isEmpty()) return@remember emptyList()
         val calendar = Calendar.getInstance() // Reused single instance
         val groupedByDay = sessions.groupBy {
             calendar.timeInMillis = it.startTimestamp
@@ -328,7 +329,10 @@ private fun Bar(
     val total = usage.rxBytes + usage.txBytes
     val heightFrac by animateFloatAsState(
         targetValue = if (maxUsage > 0) total.toFloat() / maxUsage else 0f,
-        animationSpec = tween(500),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "BarHeight"
     )
     val scale by animateFloatAsState(

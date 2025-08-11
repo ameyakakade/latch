@@ -38,7 +38,10 @@ data class DailyUsage(
 @Dao
 interface StatsDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insertSession(session: Session)
+  suspend fun insertSession(session: Session): Long
+
+  @Update
+  suspend fun updateSession(session: Session)
 
   @Query("SELECT * FROM sessions ORDER BY startTime DESC")
   fun getAllSessions(): Flow<List<Session>>
