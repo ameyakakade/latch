@@ -103,7 +103,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             IconButton(
               onClick = onBackClick
             ) {
-              Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", modifier = Modifier.size(24.dp))
+              Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
             }
           }
         },
