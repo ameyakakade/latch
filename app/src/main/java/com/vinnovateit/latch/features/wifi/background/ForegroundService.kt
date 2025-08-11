@@ -17,14 +17,10 @@ class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // The themeChangeReceiver has been REMOVED from this file.
-
     override fun onCreate() {
         super.onCreate()
         Log.d("ForegroundService", "Service created")
-        startForeground(1, createNotification())
         registerNetworkCallback()
-        // The receiver registration has been REMOVED.
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -34,30 +30,10 @@ class ForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d("ForegroundService", "Service destroyed")
-        // The receiver unregistration has been REMOVED.
         serviceScope.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-
-    private fun createNotification(): Notification {
-        val notificationChannelId = "WIFI_LOGIN_CHANNEL"
-        val channelName = "VIT Wi-Fi Auto Login"
-
-        val chan = NotificationChannel(
-            notificationChannelId,
-            channelName,
-            NotificationManager.IMPORTANCE_LOW
-        )
-        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        manager.createNotificationChannel(chan)
-
-        return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Latch Running")
-            .setContentText("Monitoring VIT Wi-Fi connection...")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .build()
-    }
 
     private fun registerNetworkCallback() {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
