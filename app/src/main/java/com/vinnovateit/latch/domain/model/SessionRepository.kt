@@ -25,9 +25,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
@@ -38,6 +40,7 @@ object SessionRepository {
   private lateinit var statsDao: StatsDao
   private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var sessionUpdateJob: Job? = null
+  private var sessionDbUpdateJob: Job? = null // For periodic DB updates
   private val isInitialized = AtomicBoolean(false)
   private var notificationSent = false
   private val _liveStatus = MutableStateFlow<LiveConnectionStatus?>(null)
@@ -83,7 +86,7 @@ object SessionRepository {
   fun startSession(ssid: String) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
-    notificationSent = false
+    notificationSent = false // Reset notification flag for new session
 
 
     UiNotifier.showToast(context, "Starting stats for: $ssid")
@@ -102,6 +105,25 @@ object SessionRepository {
       )
     _liveStatus.value = initialStatus
     TrafficStatsLogger.start()
+
+    // Insert initial session record to get an ID
+    repoScope.launch {
+      val initialSession = Session(startTime = Date(startTime), endTime = Date(startTime), rxBytes = 0, txBytes = 0)
+      val currentSessionId = statsDao.insertSession(initialSession)
+
+      // Start periodic DB updates for the history chart
+      sessionDbUpdateJob = launch {
+        while(isActive) {
+          delay(10000) // Update every 10 seconds
+          _liveStatus.value?.let { status ->
+            val totalRx = status.liveData.sumOf { p -> p.usage.rxBytes }
+            val totalTx = status.liveData.sumOf { p -> p.usage.txBytes }
+            val sessionUpdate = Session(id = currentSessionId, startTime = Date(status.startTimeMillis), endTime = Date(System.currentTimeMillis()), rxBytes = totalRx, txBytes = totalTx)
+            statsDao.updateSession(sessionUpdate)
+          }
+        }
+      }
+    }
 
     sessionUpdateJob = repoScope.launch {
       TrafficStatsLogger.dataUsageFlow.collect { dataUsage ->
@@ -172,7 +194,9 @@ object SessionRepository {
     val sessionToFinalize = _liveStatus.value ?: return
 
     sessionUpdateJob?.cancel()
+    sessionDbUpdateJob?.cancel()
     sessionUpdateJob = null
+    sessionDbUpdateJob = null
     TrafficStatsLogger.stop()
     _liveStatus.value = null
 
