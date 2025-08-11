@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.data
 
 import android.content.Context
+import com.vinnovateit.latch.utils.EncryptionUtils
 
 object StoredCredentials {
     /**
@@ -8,11 +9,27 @@ object StoredCredentials {
      */
     suspend fun getUserId(context: Context): String? {
         val db = CredentialDatabase.getInstance(context)
-        return db.credentialDao().getCredential()?.registrationNumber
+        val encryptedRegNo = db.credentialDao().getCredential()?.registrationNumber
+        return encryptedRegNo?.let { 
+            try {
+                EncryptionUtils.decrypt(it)
+            } catch (e: Exception) {
+                // Return as-is for backward compatibility
+                it
+            }
+        }
     }
 
     suspend fun getPassword(context: Context): String? {
         val db = CredentialDatabase.getInstance(context)
-        return db.credentialDao().getCredential()?.password
+        val encryptedPassword = db.credentialDao().getCredential()?.password
+        return encryptedPassword?.let { 
+            try {
+                EncryptionUtils.decrypt(it)
+            } catch (e: Exception) {
+                // Return as-is for backward compatibility
+                it
+            }
+        }
     }
 }
