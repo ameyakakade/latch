@@ -117,10 +117,10 @@ class StatsActivity : ComponentActivity() {
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
-  statsViewModel: StatsViewModel = viewModel(),
   onDownloadReport: () -> Unit
 ) {
   val context = LocalContext.current as Activity
+  val statsViewModel: StatsViewModel by (context as ComponentActivity).viewModels()
   val sessionToShow by statsViewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()

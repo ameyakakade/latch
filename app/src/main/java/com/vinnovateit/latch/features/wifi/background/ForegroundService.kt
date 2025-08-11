@@ -20,6 +20,7 @@ class ForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         Log.d("ForegroundService", "Service created")
+        startForeground(1,createNotification())
         registerNetworkCallback()
     }
 
@@ -35,6 +36,24 @@ class ForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private fun createNotification(): Notification {
+        val notificationChannelId = "WIFI_LOGIN_CHANNEL"
+        val channelName = "VIT Wi-Fi Auto Login"
+
+        val chan = NotificationChannel(
+            notificationChannelId,
+            channelName,
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(chan)
+
+        return NotificationCompat.Builder(this, notificationChannelId)
+            .setContentTitle("Latch Running")
+            .setContentText("Monitoring VIT Wi-Fi connection...")
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .build()
+    }
     private fun registerNetworkCallback() {
         val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         val request = NetworkRequest.Builder().build()

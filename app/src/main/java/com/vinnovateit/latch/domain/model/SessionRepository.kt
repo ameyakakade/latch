@@ -131,8 +131,11 @@ object SessionRepository {
       return
     }
 
-    val thresholdGB = SettingsManager.dataThreshold.value
-    if (thresholdGB <= 0) return // Custom or invalid threshold ignored for now
+    var thresholdGB = SettingsManager.dataThreshold.value
+    if (thresholdGB == 0f) return // A zero threshold makes no sense, so we ignore it.
+    if (thresholdGB < 0) {
+      thresholdGB = -thresholdGB
+    }
 
     val thresholdBytes = thresholdGB * 1024 * 1024 * 1024
     val currentUsageBytes = status.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
