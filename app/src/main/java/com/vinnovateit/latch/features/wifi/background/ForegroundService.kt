@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.features.wifi.background
 
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -13,12 +14,14 @@ import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
+import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
 import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import com.vinnovateit.latch.features.wifi.manager.LoginResult
 import kotlinx.coroutines.*
+
 class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -82,9 +85,27 @@ class ForegroundService : Service() {
 
     private fun checkNetworkAndAct(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            // If no internet, proceed directly to the login attempt which now also serves as verification.
-            Log.d("ForegroundService", "No internet access. Attempting to authenticate portal.")
-            handleCaptivePortal(network)
+            // First, check for general internet access. If we have it, we're done.
+            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Checking internet..."))
+            val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
+            if (internetStatus == 204) {
+                connectivityManager.reportNetworkConnectivity(network, true)
+                val ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext, network) ?: "Wi-Fi"
+                ConnectionStatusManager.postStatus(ConnectionStatus.Success)
+                SessionRepository.startSession(network)
+                startHealthCheck(network)
+                return@launch
+            }
+
+            // If no internet, check if it's our specific target portal.
+            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Verifying network..."))
+            if (AutoLoginManager.isTargetCaptivePortal(network)) {
+                Log.d("ForegroundService", "Target captive portal confirmed.")
+                handleCaptivePortal(network)
+            } else {
+                Log.d("ForegroundService", "Network is not the target captive portal.")
+                ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Unsupported Network"))
+            }
         }
     }
 
@@ -121,13 +142,12 @@ class ForegroundService : Service() {
         healthCheckJob?.cancel()
         healthCheckJob = serviceScope.launch {
             while (isActive) {
-                delay(60_000) // Check every 60 seconds
+                delay(60_000)
                 Log.d("ForegroundService", "Performing periodic health check...")
                 val status = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
                 if (status != 204) {
                     Log.w("ForegroundService", "Health check failed (status: $status). Session may have expired. Triggering re-login.")
-                    checkNetworkAndAct(network) // Re-run the full check/login process
-                    // No need to delay here, checkNetworkAndAct has its own async logic
+                    checkNetworkAndAct(network)
                 } else {
                     Log.d("ForegroundService", "Health check passed.")
                 }
@@ -152,7 +172,7 @@ class ForegroundService : Service() {
             override fun onLost(network: Network) {
                 super.onLost(network)
                 Log.d("ForegroundService", "Network lost: $network")
-                healthCheckJob?.cancel() // Stop checking when network is lost
+                healthCheckJob?.cancel()
                 SessionRepository.stopSession()
             }
         }
