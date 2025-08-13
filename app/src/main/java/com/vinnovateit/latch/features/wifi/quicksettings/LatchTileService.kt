@@ -12,7 +12,7 @@ import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.latch.domain.model.WifiStatsManager
 import com.vinnovateit.latch.data.StoredCredentials
-import com.vinnovateit.latch.domain.model.SessionRepository
+import com.vinnovateit.latch.features.wifi.manager.LoginResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +24,6 @@ class LatchTileService : TileService() {
 
   private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
   private var isProcessing = false
-  private lateinit var sessionRepository: SessionRepository
 
   override fun onCreate() {
     super.onCreate()
@@ -108,9 +107,9 @@ class LatchTileService : TileService() {
                 val success = AutoLoginManager.attemptLogin(user, pass)
                 Log.d(TAG, "AutoLoginManager.attemptLogin returned: $success")
 
-                if (success) {
+                if (success == LoginResult.Success) {
                     Log.d(TAG, "Login successful! Starting WiFi logging...")
-                    WifiStatsManager.startLogging(this@LatchTileService, currentSSID)
+                    WifiStatsManager.startLogging(this@LatchTileService)
                     Log.d(TAG, "WiFi logging started for SSID: $currentSSID")
                 } else {
                     Log.w(TAG, "Login failed - AutoLoginManager returned false")

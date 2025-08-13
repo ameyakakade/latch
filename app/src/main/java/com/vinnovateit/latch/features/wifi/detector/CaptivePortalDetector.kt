@@ -3,42 +3,44 @@ package com.vinnovateit.latch.features.wifi.detector
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.util.Log
 import java.net.HttpURLConnection
 import java.net.URL
 
 object CaptivePortalDetector {
 
     /**
-     * Checks if a captive portal is active on the current Wi-Fi network.
-     * Ensures the request is made specifically over the connected Wi-Fi.
+     * Checks for a captive portal by connecting to a known endpoint.
+     * Ensures the request is made specifically over the provided network.
      *
      * @param context Application context
-     * @return true if captive portal is active (i.e., login required), false if full internet access
+     * @param network The network to check. If null, uses the active network.
+     * @return The HTTP response code from the check. Returns 204 for success, other codes
+     * for a captive portal, or -1 for an exception.
      */
-    fun isCaptivePortalActive(context: Context): Boolean {
+    fun checkPortalStatus(context: Context, network: Network? = null): Int {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        val activeNetwork: Network? = connectivityManager.activeNetwork
-        if (activeNetwork == null) return true // No network → assume captive portal
+        // Prioritize the passed network, fall back to the active one.
+        val targetNetwork = network ?: connectivityManager.activeNetwork ?: return -1 // No network
 
         return try {
-            // Bind this connection to the current Wi-Fi network only (so as even if user connected to mobile data, we can use this method of detection)
+            // Bind this connection to the target Wi-Fi network
             val url = URL("http://clients3.google.com/generate_204")
-            val connection = activeNetwork.openConnection(url) as HttpURLConnection
+            val connection = targetNetwork.openConnection(url) as HttpURLConnection
             connection.instanceFollowRedirects = false
-            connection.connectTimeout = 3000
-            connection.readTimeout = 3000
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.useCaches = false
             connection.connect()
 
             val responseCode = connection.responseCode
-            val location = connection.getHeaderField("Location")
-
-            // If response isn't 204 or it redirects, it's likely a captive portal
-            responseCode != 204 || location != null
+            connection.disconnect()
+            responseCode
         } catch (e: Exception) {
-            // On error (no network, timeout, etc.), assume captive portal might be present
-            true
+            Log.e("CaptivePortalDetector", "Portal check failed with exception", e)
+            -1 // On error, assume portal might be present
         }
     }
 }

@@ -1,6 +1,5 @@
 package com.vinnovateit.latch.features.stats.components
 
-import android.annotation.SuppressLint
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.format.DateFormat
@@ -49,10 +48,7 @@ import com.vinnovateit.latch.features.home.components.GRAPH_HEIGHT_SCALE
 import com.vinnovateit.latch.features.home.components.POINTS_IN_30_SECONDS
 import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
-import com.vinnovateit.latch.ui.theme.ColorTransparent
-import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.atan2
 import kotlin.math.max
@@ -61,6 +57,9 @@ import kotlin.math.max
 fun SessionCard(session: SessionSummary) {
     var lastInteraction by remember { mutableStateOf(0L) }
     var showOverlay by remember { mutableStateOf(true) }
+    var visibleMaxSpeed by remember { mutableLongStateOf(0L) }
+    var visibleMaxSpeedIsDownload by remember { mutableStateOf(true) }
+
 
     LaunchedEffect(lastInteraction) {
         if (lastInteraction != 0L) {
@@ -85,6 +84,10 @@ fun SessionCard(session: SessionSummary) {
                 onUserInteraction = { timestamp ->
                     lastInteraction = timestamp
                     showOverlay = false
+                },
+                onMaxSpeedUpdate = { maxSpeed, isDl ->
+                    visibleMaxSpeed = maxSpeed
+                    visibleMaxSpeedIsDownload = isDl
                 }
             )
 
@@ -95,7 +98,8 @@ fun SessionCard(session: SessionSummary) {
 
             MaxSpeedTag(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp),
-                rateHistory = session.history
+                maxSpeed = visibleMaxSpeed,
+                isDownload = visibleMaxSpeedIsDownload
             )
         }
     }
@@ -136,7 +140,7 @@ private fun SessionDetailsOverlay(
 @Composable
 private fun SessionHeader(session: SessionSummary) {
     var duration by remember(session.startTimestamp) {
-        mutableStateOf(System.currentTimeMillis() - session.startTimestamp)
+      mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
     }
     LaunchedEffect(Unit) {
         while (true) {
@@ -162,7 +166,8 @@ private fun SessionRateGraph(
     modifier: Modifier = Modifier,
     rateHistory: List<LiveDataPoint>,
     overlayAlpha: Float,
-    onUserInteraction: (Long) -> Unit
+    onUserInteraction: (Long) -> Unit,
+    onMaxSpeedUpdate: (Long, Boolean) -> Unit
 ) {
     val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
         rateHistory.size.toFloat() / POINTS_IN_30_SECONDS
@@ -254,10 +259,10 @@ private fun SessionRateGraph(
                         it.timestamp in visibleStartTime..visibleEndTime
                     }
 
-                    maxSpeed = if (visiblePoints.isEmpty()) 1L else max(
-                        visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 1L,
-                        visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 1L
-                    )
+                    val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 0L
+                    val maxTx = visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 0L
+                    maxSpeed = if (visiblePoints.isEmpty()) 1L else max(maxRx, maxTx)
+                    onMaxSpeedUpdate(maxSpeed, maxRx >= maxTx)
                 }
 
                 val animatedMaxSpeed by animateFloatAsState(
@@ -318,7 +323,8 @@ private fun SessionRateGraph(
                             val startTimestamp = rateHistory.first().timestamp
                             val totalDuration = max(rateHistory.last().timestamp - startTimestamp, 1L)
                             val divisions = 5
-                            for (i in 0..divisions) {
+                            // Corrected loop to draw N-1 labels, avoiding the duplicate end time
+                            for (i in 0 until divisions) {
                                 val fraction = i.toFloat() / divisions
                                 val x = size.width * fraction
                                 val time = startTimestamp + (totalDuration * fraction).toLong()
@@ -347,12 +353,10 @@ private fun SessionRateGraph(
 }
 
 @Composable
-private fun MaxSpeedTag(modifier: Modifier = Modifier, rateHistory: List<LiveDataPoint>) {
-    val maxSpeed by remember(rateHistory) { derivedStateOf { rateHistory.maxOfOrNull { max(it.usage.rxBytes, it.usage.txBytes) } ?: 0L } }
+private fun MaxSpeedTag(modifier: Modifier = Modifier, maxSpeed: Long, isDownload: Boolean) {
     if (maxSpeed > 0) {
         val (v, u) = formatBytes(maxSpeed)
-        val isDl = (rateHistory.maxOfOrNull { it.usage.rxBytes } ?: 0L) >= (rateHistory.maxOfOrNull { it.usage.txBytes } ?: 0L)
-        Tag(text = "MAX ${v}${u}/s", color = if (isDl) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
+        Tag(text = "MAX ${v}${u}/s", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
     }
 }
 

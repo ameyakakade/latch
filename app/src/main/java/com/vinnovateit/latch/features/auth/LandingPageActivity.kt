@@ -31,7 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
-import com.vinnovateit.latch.data.CredentialDatabase
+import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
@@ -61,9 +61,7 @@ class LandingPageActivity : ComponentActivity() {
         SettingsManager.initialize(this)
 
         lifecycleScope.launch {
-            val db = CredentialDatabase.getInstance(this@LandingPageActivity)
-            val existing = db.credentialDao().getCredential()
-            if (existing != null) {
+            if (StoredCredentials.credentialsExist(this@LandingPageActivity)) {
                 // Credentials exist, go straight to MainActivity
                 val intent = Intent(this@LandingPageActivity, MainActivity::class.java)
                 startActivity(intent)

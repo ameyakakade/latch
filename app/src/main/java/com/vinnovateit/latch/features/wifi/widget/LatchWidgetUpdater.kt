@@ -12,8 +12,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
-import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
 import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.domain.model.SessionRepository
 import kotlinx.coroutines.flow.firstOrNull
@@ -58,7 +56,7 @@ class LatchWidgetUpdater(
 
     // Read current state
     val isConnectedToWifi = WiFiConnectionDetector.isConnectedToWiFi(applicationContext)
-    val hasInternet = isConnectedToWifi && !CaptivePortalDetector.isCaptivePortalActive(applicationContext)
+    val hasInternet = isConnectedToWifi && true
     val widgetState = if (hasInternet) {
       val liveSession = try {
         SessionRepository.liveStatus.firstOrNull()
@@ -81,7 +79,6 @@ class LatchWidgetUpdater(
       } ?: applicationContext.getString(R.string.widget_duration_fallback)
       LatchWidgetState(
         status = applicationContext.getString(R.string.widget_status_connected),
-        ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext) ?: applicationContext.getString(R.string.widget_ssid_vit_wifi),
         connectedDuration = durationString,
         isConnected = true,
         isLightTheme = !isDarkMode
@@ -89,7 +86,6 @@ class LatchWidgetUpdater(
     } else {
       LatchWidgetState(
         status = applicationContext.getString(R.string.widget_status_disconnected),
-        ssid = if (isConnectedToWifi) applicationContext.getString(R.string.widget_login_required) else applicationContext.getString(R.string.widget_ssid_na),
         connectedDuration = applicationContext.getString(R.string.widget_duration_fallback),
         isConnected = false,
         isLightTheme = !isDarkMode
