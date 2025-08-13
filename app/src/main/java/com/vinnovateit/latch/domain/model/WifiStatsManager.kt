@@ -23,9 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 data class DataUsage(val rxBytes: Long, val txBytes: Long)
 data class LiveDataPoint(val timestamp: Long, val usage: DataUsage)
-data class LiveConnectionStatus(val startTimeMillis: Long, val ssid: String, val liveData: List<LiveDataPoint>)
+data class LiveConnectionStatus(val startTimeMillis: Long, val liveData: List<LiveDataPoint>)
 data class SessionSummary(
-  val ssid: String,
   val startTimestamp: Long,
   val endTimestamp: Long,
   val totalData: DataUsage,
@@ -33,7 +32,6 @@ data class SessionSummary(
 )
 
 object WifiStatsManager {
-  private const val TAG = "WifiStatsManager"
   private const val PREFS_NAME = "wifi_stats_prefs"
   private const val KEY_SESSIONS = "session_summaries"
   private const val KEY_LIVE_SESSION = "live_session_status"
@@ -68,10 +66,10 @@ object WifiStatsManager {
     resumeLiveSession()
   }
 
-  fun startLogging(context: Context, ssid: String) {
+  fun startLogging(context: Context) {
     if (loggingJob?.isActive == true) return
 
-    showToast("Starting stats for: $ssid")
+    showToast("Starting stats")
     startRxBytes = TrafficStats.getTotalRxBytes()
     startTxBytes = TrafficStats.getTotalTxBytes()
 
@@ -83,7 +81,6 @@ object WifiStatsManager {
     val startTime = System.currentTimeMillis()
     val initialStatus = LiveConnectionStatus(
       startTimeMillis = startTime,
-      ssid = ssid,
       liveData = listOf(LiveDataPoint(startTime, DataUsage(0, 0)))
     )
     _liveStatus.value = initialStatus
@@ -125,7 +122,7 @@ object WifiStatsManager {
     val session = _liveStatus.value ?: return
 
     _liveStatus.value = null
-    showToast("Stopping stats for: ${session.ssid}")
+    showToast("Stopping stats")
 
     val duration = System.currentTimeMillis() - session.startTimeMillis
     val totalRx = (TrafficStats.getTotalRxBytes() - startRxBytes).coerceAtLeast(0)
@@ -138,7 +135,6 @@ object WifiStatsManager {
     }
 
     val summary = SessionSummary(
-      ssid = session.ssid,
       startTimestamp = session.startTimeMillis,
       endTimestamp = System.currentTimeMillis(),
       totalData = DataUsage(totalRx, totalTx),
@@ -165,7 +161,7 @@ object WifiStatsManager {
       if (json != null) {
         val type = object : com.google.gson.reflect.TypeToken<LiveConnectionStatus>() {}.type
         val resumedSession: LiveConnectionStatus = gson.fromJson(json, type)
-        startLogging(context, resumedSession.ssid)
+        startLogging(context)
       }
     }
   }

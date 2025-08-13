@@ -54,19 +54,15 @@
 
     <string name="widget_status_disconnected">Disconnected</string>
     <string name="latch_widget_description">Quick status and control for Latch.</string>
-    <string name="widget_ssid_na">N/A</string>
     <string name="widget_duration_fallback">-</string>
     <string name="widget_connect">Connect</string>
     <string name="widget_disconnect">Disconnect</string>
     <string name="widget_login_required">Login Required</string>
     <string name="widget_loading">Loading…</string>
-
-    <string name="permission_location_required">Location permission is required to detect WiFi network.</string>
     <string name="not_connected">Not Connected</string>
     <string name="unknown_wifi">Unknown Wi‑Fi</string>
     <string name="other_network">Other Network</string>
     <string name="name_uppercase">LATCH</string>
     <string name="widget_status_connected">Connected</string>
     <string name="widget_duration_just_now">Just Now</string>
-    <string name="widget_ssid_vit_wifi">X-VIT</string>
 </resources>
