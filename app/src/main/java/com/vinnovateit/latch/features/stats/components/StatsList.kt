@@ -15,14 +15,17 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.stats.DownloadReportButton
+import com.vinnovateit.latch.features.stats.StatsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -34,7 +37,8 @@ fun StatsList(
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
   onDownloadReport: () -> Unit,
-  addSpacer: Boolean = false
+  addSpacer: Boolean = false,
+  statsViewModel: StatsViewModel
 ) {
   LazyColumn(
     modifier = modifier,
@@ -68,7 +72,8 @@ fun StatsList(
         )
       }
       item {
-        HistoryBarChart(history = historyToShow)
+        val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
+        HistoryBarChart(history = chartItems)
         Spacer(modifier = Modifier.height(15.dp))
       }
     } else {
@@ -84,13 +89,14 @@ fun StatsList(
         )
       }
       item {
-        HistoryBarChart(history = historyToShow)
+        val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
+        HistoryBarChart(history = chartItems)
         Spacer(modifier = Modifier.height(15.dp))
       }
     }
 
     if (historyToShow.isNotEmpty()) {
-      stickyHeader {
+      item {
         Column(modifier = Modifier
           .padding(vertical = 8.dp)) {
           Text(
@@ -105,13 +111,38 @@ fun StatsList(
         }
       }
       itemsIndexed(historyToShow) { index, session ->
+        val cornerRadius = 24.dp
+
         val shape = when {
-          historyToShow.size == 1 -> RoundedCornerShape(16.dp)
-          index == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-          index == historyToShow.size - 1 -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
-          else -> RoundedCornerShape(0.dp)
+          // Case 1: There is only ONE item in the list.
+          // All four corners should be rounded.
+          historyToShow.size == 1 -> RoundedCornerShape(cornerRadius)
+
+          // Case 2: This is the FIRST item in a multi-item list.
+          // Only the top-left and top-right corners are rounded.
+          index == 0 -> RoundedCornerShape(
+            topStart = cornerRadius,
+            topEnd = cornerRadius,
+            bottomStart = 5.dp,
+            bottomEnd = 5.dp
+          )
+
+          // Case 3: This is the LAST item in a multi-item list.
+          // Only the bottom-left and bottom-right corners are rounded.
+          index == historyToShow.size - 1 -> RoundedCornerShape(
+            topStart = 5.dp,
+            topEnd = 5.dp,
+            bottomStart = cornerRadius,
+            bottomEnd = cornerRadius
+          )
+
+          // Case 4: This is any item in the MIDDLE.
+          // No corners are rounded.
+          else -> RoundedCornerShape(5.dp)
         }
-        StatsItemCard(session = session, shape = shape)
+        if(!isLive || index > 0) {
+          StatsItemCard(session = session, shape = shape)
+        }
       }
     }
 

@@ -40,6 +40,8 @@ object SessionRepository {
   private var sessionUpdateJob: Job? = null
   private val isInitialized = AtomicBoolean(false)
   private var notificationSent = false
+
+
   private val _liveStatus = MutableStateFlow<LiveConnectionStatus?>(null)
   val liveStatus = _liveStatus.asStateFlow()
 
@@ -63,7 +65,6 @@ object SessionRepository {
         // Map Room Session entities to UI SessionSummary objects
         dbSessions.map {
           SessionSummary(
-            ssid = "VIT-WiFi", // SSID is not stored in DB, using a placeholder
             startTimestamp = it.startTime.time,
             endTimestamp = it.endTime.time,
             totalData = DataUsage(
@@ -80,19 +81,20 @@ object SessionRepository {
     }
   }
 
-  fun startSession(ssid: String) {
+  fun startSession(network: android.net.Network) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
-    notificationSent = false
+    notificationSent = false // Reset notification flag for new session
 
-
-    UiNotifier.showToast(context, "Starting stats for: $ssid")
+    // Bind the process to the validated Wi-Fi network
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(network)
+    UiNotifier.showToast(context, "Connected to a VIT Wifi")
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
       LiveConnectionStatus(
         startTimeMillis = startTime,
-        ssid = ssid,
         liveData = listOf(
           LiveDataPoint(
             startTime,
@@ -128,8 +130,11 @@ object SessionRepository {
       return
     }
 
-    val thresholdGB = SettingsManager.dataThreshold.value
-    if (thresholdGB <= 0) return // Custom or invalid threshold ignored for now
+    var thresholdGB = SettingsManager.dataThreshold.value
+    if (thresholdGB == 0f) return // A zero threshold makes no sense, so we ignore it.
+    if (thresholdGB < 0) {
+      thresholdGB = -thresholdGB
+    }
 
     val thresholdBytes = thresholdGB * 1024 * 1024 * 1024
     val currentUsageBytes = status.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
@@ -168,15 +173,20 @@ object SessionRepository {
 
 
   fun stopSession() {
+    val context = applicationContext ?: return
     if (sessionUpdateJob == null && _liveStatus.value == null) return
     val sessionToFinalize = _liveStatus.value ?: return
 
     sessionUpdateJob?.cancel()
     sessionUpdateJob = null
     TrafficStatsLogger.stop()
+
+    // Release the network binding
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(null)
     _liveStatus.value = null
 
-    UiNotifier.showToast(applicationContext!!, "Stopping stats for: ${sessionToFinalize.ssid}")
+    UiNotifier.showToast(applicationContext!!, "Disconnected")
 
     val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
     val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }

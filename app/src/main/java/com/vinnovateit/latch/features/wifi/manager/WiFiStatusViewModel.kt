@@ -1,21 +1,18 @@
 package com.vinnovateit.latch.features.wifi.manager
 
 import android.app.Application
-import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
-import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
-import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
+import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
+import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -23,9 +20,7 @@ import kotlinx.coroutines.withContext
 
 class WiFiStatusViewModel(application: Application) : AndroidViewModel(application) {
     private val ctx = application.applicationContext
-    private val connectivityManager = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-    // Expose the connection state from the repository, which is the single source of truth
+    val connectionStatus: StateFlow<ConnectionStatus> = ConnectionStatusManager.status
     val isConnected: StateFlow<Boolean> = SessionRepository.liveStatus
         .map { it != null }
         .stateIn(
@@ -35,7 +30,6 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         )
 
     private val _ssid = MutableStateFlow("Not Connected")
-    val ssid: StateFlow<String> = _ssid.asStateFlow()
 
     // The NetworkCallback will now live in the ForegroundService to run persistently.
     // The ViewModel will simply observe the results from the SessionRepository.
@@ -54,25 +48,13 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
      */
     fun refreshStatus() {
         viewModelScope.launch(Dispatchers.IO) {
-            val currentSSID = VITWiFiIdentifier.getCurrentSSID(ctx)
+            // Check both if Wi-Fi is connected AND if a session is active
+            val isSessionActive = SessionRepository.liveStatus.value != null
 
-            if (currentSSID != null && currentSSID.contains("vit", ignoreCase = true)) {
-                withContext(Dispatchers.Main) {
-                    _ssid.value = currentSSID
-                }
-                val authenticated = !CaptivePortalDetector.isCaptivePortalActive(ctx)
-
-                if (authenticated) {
-                    SessionRepository.startSession(currentSSID)
-                } else {
-                    SessionRepository.stopSession()
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    _ssid.value = currentSSID ?: "Not Connected"
-                }
-                SessionRepository.stopSession()
+            withContext(Dispatchers.Main) {
+                _ssid.value = if (isSessionActive) "Connected" else "Not Connected"
             }
+            Log.d("WiFiStatusViewModel", "UI Refreshed: SSID is ${_ssid.value}, IsSessionActive is $isSessionActive")
         }
     }
 
@@ -80,16 +62,25 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
      * Initiates a manual login attempt.
      */
     fun authenticatePortal() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val user = StoredCredentials.getUserId(ctx) ?: return@launch
-            val pass = StoredCredentials.getPassword(ctx) ?: return@launch
-            val success = AutoLoginManager.attemptLogin(user, pass)
-            if (success) {
-                // After a successful login, force a refresh. The service's NetworkCallback
-                // will also detect this change, ensuring the session starts reliably.
-                refreshStatus()
-            }
+        if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
+            UiNotifier.showToast(ctx, "Wi-Fi is turned off.")
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is turned off"))
+            return
         }
+
+        if (!WiFiConnectionDetector.isConnectedToWiFi(ctx)) {
+            UiNotifier.showToast(ctx, "Not connected to a Wi-Fi network.")
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not connected to Wi-Fi"))
+            return
+        }
+
+        ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
+
+        Log.d("WiFiStatusViewModel", "Delegating network check to ForegroundService.")
+        val serviceIntent = Intent(getApplication(), ForegroundService::class.java).apply {
+            action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+        }
+        getApplication<Application>().startService(serviceIntent)
     }
 
     /**

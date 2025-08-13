@@ -21,12 +21,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.latch.data.CredentialDatabase
-import com.vinnovateit.latch.data.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
@@ -39,9 +37,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.VisualTransformation
 import com.vinnovateit.latch.R
+import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
-import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 class SecondPageActivity : ComponentActivity() {
@@ -69,22 +67,16 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
-    var loaded by remember { mutableStateOf(false) }
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
     val isDark = LocalIsDarkTheme.current
 
     // Load from DB
-    LaunchedEffect(Unit) {
-        val db = CredentialDatabase.getInstance(context)
-        val existing = db.credentialDao().getCredential()
-        if (existing != null && !editMode) {
-            onCredentialsSaved()
-        } else if (existing != null && !loaded) {
-            regNo = existing.registrationNumber
-            password = existing.password
-            loaded = true
+    LaunchedEffect(editMode) {
+        if (editMode) {
+            regNo = StoredCredentials.getUserId(context) ?: ""
+            password = StoredCredentials.getPassword(context) ?: ""
         }
     }
 
@@ -126,7 +118,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             TextField(
                 value = regNo,
-                onValueChange = { regNo = it },
+                onValueChange = { regNo = it.uppercase() },
                 label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.tertiary,) } } else null,
                 singleLine = true,
                 trailingIcon = {
@@ -213,11 +205,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 onClick = {
                     if (regNo.isNotBlank() && password.isNotBlank()) {
                         scope.launch {
-                            val db = CredentialDatabase.getInstance(context)
-                            db.credentialDao().insertCredential(
-                                CredentialEntity(id = "singleton", registrationNumber = regNo, password = password)
-                            )
-
+                            StoredCredentials.saveCredentials(context, regNo, password)
                             Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
                             onCredentialsSaved()
                         }

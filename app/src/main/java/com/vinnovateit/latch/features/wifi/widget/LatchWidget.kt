@@ -59,7 +59,6 @@ private val BUTTON_FONT_SIZE = 18.sp
 @Serializable
 data class LatchWidgetState(
   val status: String = "Disconnected",
-  val ssid: String = "N/A",
   val connectedDuration: String = "-",
   val isConnected: Boolean = false,
   val isLightTheme: Boolean = true  // Flag for theme mode
@@ -126,7 +125,7 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
 
       Spacer(modifier = GlanceModifier.height(16.dp))
       Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(text = state.ssid, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold))
+        Text(text = "", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold))
         Spacer(modifier = GlanceModifier.defaultWeight())
         Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
           Text(text = state.connectedDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = 14.sp))

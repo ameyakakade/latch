@@ -82,7 +82,7 @@ class StatsActivity : ComponentActivity() {
         try {
           val viewModel: StatsViewModel by viewModels()
           contentResolver.openOutputStream(it)?.use { outputStream ->
-            generateCsvReport(viewModel.sessionHistory.value, outputStream)
+            generateCsvReport(viewModel.historyToShow.value, outputStream)
           }
           Toast.makeText(this, "Report saved successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -112,20 +112,17 @@ class StatsActivity : ComponentActivity() {
 /**
  * Main screen composable, responsible for the overall layout (Scaffold) and state management for dialogs.
  */
-/**
- * Main screen composable, responsible for the overall layout (Scaffold) and state management for dialogs.
- */
 @SuppressLint("ContextCastToActivity")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
-  statsViewModel: StatsViewModel = viewModel(),
   onDownloadReport: () -> Unit
 ) {
   val context = LocalContext.current as Activity
+  val statsViewModel: StatsViewModel by (context as ComponentActivity).viewModels()
   val sessionToShow by statsViewModel.sessionToShow.collectAsStateWithLifecycle()
-  val historyToShow by statsViewModel.sessionHistory.collectAsStateWithLifecycle()
+  val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
   val isLive = remember(liveStatus) { liveStatus != null }
 
@@ -136,7 +133,8 @@ fun StatsScreen(
     historyToShow = historyToShow,
     liveStatus = liveStatus,
     onDownloadReport = onDownloadReport,
-    onBackClick = { context.finish() }
+    onBackClick = { context.finish() },
+    statsViewModel = statsViewModel
   )
 }
 
@@ -153,7 +151,8 @@ private fun StatsScreenContent(
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
   onDownloadReport: () -> Unit,
-  onBackClick: () -> Unit
+  onBackClick: () -> Unit,
+  statsViewModel: StatsViewModel
 ) {
   if (!isLive && historyToShow.isEmpty()) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -196,17 +195,18 @@ private fun StatsScreenContent(
               .fillMaxHeight()
               .background(MaterialTheme.colorScheme.surfaceVariant), // Matching background
             isLive = true,
-            showSessionCard = false, // Card is already shown on the left
+            showSessionCard = false,
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
             onDownloadReport = onDownloadReport,
-            addSpacer = true // Add spacer for TopAppBar height
+            addSpacer = true,
+            statsViewModel = statsViewModel
           )
         }
       } else {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-        // Portrait or Not Live: Single column layout
+
         Scaffold(
           modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
           topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
@@ -219,7 +219,8 @@ private fun StatsScreenContent(
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
-            onDownloadReport = onDownloadReport
+            onDownloadReport = onDownloadReport,
+            statsViewModel = statsViewModel
           )
         }
       }
@@ -309,7 +310,7 @@ private fun StatsTopAppBar(
       navigationIcon = {
         TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
           IconButton(onClick = onBackClick) {
-            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back",  tint = MaterialTheme.colorScheme.primary)
           }
         }
       },
