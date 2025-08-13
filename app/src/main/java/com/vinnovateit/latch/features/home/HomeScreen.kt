@@ -40,6 +40,8 @@ import com.vinnovateit.latch.features.home.components.SpectrumCard
 import com.vinnovateit.latch.features.settings.SettingsActivity
 import com.vinnovateit.latch.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
+import com.vinnovateit.latch.domain.model.LiveDataPoint
+import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -74,15 +76,14 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
+    connectionStatus: ConnectionStatus
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
@@ -95,21 +96,21 @@ fun HomeScreen(
 
         if (isPortrait) {
             PortraitHomeScreen(
-                isConnected,
-                networkSpeed,
-                session,
-                ssid,
-                onConnectClick,
-                historyForHomeScreen
+              isConnected,
+              networkSpeed,
+              session,
+              onConnectClick,
+              historyForHomeScreen,
+              connectionStatus
             )
         } else {
             LandscapeHomeScreen(
                 isConnected,
                 networkSpeed,
                 session,
-                ssid,
                 onConnectClick,
-                historyForHomeScreen
+                historyForHomeScreen,
+                connectionStatus
             )
         }
     }
@@ -121,9 +122,9 @@ fun PortraitHomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
-    historyForHomeScreen: List<com.vinnovateit.latch.domain.model.LiveDataPoint>
+    historyForHomeScreen: List<LiveDataPoint>,
+    connectionStatus: ConnectionStatus
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
@@ -143,7 +144,7 @@ fun PortraitHomeScreen(
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                HomeTopSection(isConnected, ssid, networkSpeed)
+                HomeTopSection(isConnected, networkSpeed)
             }
             // Bottom Section with Canvas Cutout
             Box(
@@ -153,7 +154,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, ssid, historyForHomeScreen)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus)
             }
         }
         // Power Button Overlay
@@ -172,9 +173,9 @@ fun LandscapeHomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
-    historyForHomeScreen: List<com.vinnovateit.latch.domain.model.LiveDataPoint>
+    historyForHomeScreen: List<LiveDataPoint>,
+    connectionStatus: ConnectionStatus
 ) {
     Row(
         modifier = Modifier
@@ -200,7 +201,7 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                HomeTopSection(isConnected, ssid, networkSpeed, isLandscape = true)
+                HomeTopSection(isConnected, networkSpeed, isLandscape = true)
                 Spacer(modifier = Modifier.height(32.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
@@ -214,13 +215,13 @@ fun LandscapeHomeScreen(
             modifier = Modifier
                 .weight(0.55f)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant), // Darker background
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             SpectrumCard(
                 session,
-                ssid,
                 historyForHomeScreen,
+                connectionStatus
             )
         }
     }
@@ -229,7 +230,6 @@ fun LandscapeHomeScreen(
 @Composable
 fun HomeTopSection(
     isConnected: Boolean,
-    ssid: String,
     networkSpeed: String,
     isLandscape: Boolean = false
 ) {
@@ -270,7 +270,7 @@ fun HomeTopSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = ssid,
+                    text = "Not Connected",
                     color = MaterialTheme.colorScheme.tertiary,
                     fontSize = 16.sp,
                     fontFamily = SatoshiFontFamily,
@@ -452,8 +452,8 @@ fun HomeScreenPortraitPreview() {
             isConnected = false,
             networkSpeed = "6 mbps",
             session = null,
-            ssid = "Not Connected",
             onConnectClick = { },
+            connectionStatus = ConnectionStatus.Idle
         )
     }
 }
@@ -466,8 +466,8 @@ fun HomeScreenLandscapePreview() {
             isConnected = true,
             networkSpeed = "12 mbps",
             session = null,
-            ssid = "VIT-WiFi",
             onConnectClick = { },
+            connectionStatus = ConnectionStatus.Idle
         )
     }
 }

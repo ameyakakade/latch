@@ -69,6 +69,7 @@ dependencies {
     // Data
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.androidx.security.crypto)
 
     // Compose Core UI modules
     implementation("androidx.compose.foundation:foundation")

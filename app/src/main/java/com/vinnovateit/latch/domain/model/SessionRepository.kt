@@ -65,7 +65,6 @@ object SessionRepository {
         // Map Room Session entities to UI SessionSummary objects
         dbSessions.map {
           SessionSummary(
-            ssid = "VIT-WiFi", // SSID is not stored in DB, using a placeholder
             startTimestamp = it.startTime.time,
             endTimestamp = it.endTime.time,
             totalData = DataUsage(
@@ -82,19 +81,20 @@ object SessionRepository {
     }
   }
 
-  fun startSession(ssid: String) {
+  fun startSession(network: android.net.Network) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
     notificationSent = false // Reset notification flag for new session
 
-
-    UiNotifier.showToast(context, "Starting stats for: $ssid")
+    // Bind the process to the validated Wi-Fi network
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(network)
+    UiNotifier.showToast(context, "Connected to a VIT Wifi")
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
       LiveConnectionStatus(
         startTimeMillis = startTime,
-        ssid = ssid,
         liveData = listOf(
           LiveDataPoint(
             startTime,
@@ -126,7 +126,6 @@ object SessionRepository {
   }
 
   private fun checkDataThreshold(status: LiveConnectionStatus) {
-    val context = applicationContext ?: return
     if (!SettingsManager.dataAlertEnabled.value || notificationSent) {
       return
     }
@@ -141,7 +140,7 @@ object SessionRepository {
     val currentUsageBytes = status.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
 
     if (currentUsageBytes >= thresholdBytes) {
-      sendDataUsageNotification(currentUsageBytes, thresholdBytes.toFloat())
+      sendDataUsageNotification(currentUsageBytes, thresholdBytes)
       notificationSent = true
     }
   }
@@ -174,15 +173,20 @@ object SessionRepository {
 
 
   fun stopSession() {
+    val context = applicationContext ?: return
     if (sessionUpdateJob == null && _liveStatus.value == null) return
     val sessionToFinalize = _liveStatus.value ?: return
 
     sessionUpdateJob?.cancel()
     sessionUpdateJob = null
     TrafficStatsLogger.stop()
+
+    // Release the network binding
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(null)
     _liveStatus.value = null
 
-    UiNotifier.showToast(applicationContext!!, "Stopping stats for: ${sessionToFinalize.ssid}")
+    UiNotifier.showToast(applicationContext!!, "Disconnected")
 
     val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
     val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }

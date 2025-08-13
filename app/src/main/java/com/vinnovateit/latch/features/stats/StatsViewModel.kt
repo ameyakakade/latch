@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.util.Calendar
-import java.util.concurrent.TimeUnit
 
 class StatsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,7 +33,6 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
       live?.let {
         // Create a temporary summary for the UI from the live data
         SessionSummary(
-          ssid = it.ssid,
           startTimestamp = it.startTimeMillis,
           endTimestamp = System.currentTimeMillis(), // It's ongoing
           totalData = DataUsage(
@@ -52,7 +50,6 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
     ) { history, live ->
       live?.let {
         val liveSummary = SessionSummary(
-          ssid = it.ssid,
           startTimestamp = it.startTimeMillis,
           endTimestamp = System.currentTimeMillis(),
           totalData = DataUsage(
