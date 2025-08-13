@@ -11,12 +11,29 @@ sealed class LoginResult {
     object Failure : LoginResult()
     object UnsupportedNetwork : LoginResult()
 }
-
 object AutoLoginManager {
 
     private const val LOGIN_URL =
         "http://phc.prontonetworks.com/cgi-bin/authlogin?URI=http://example.com"
     private const val LOGOUT_URL = "http://phc.prontonetworks.com/cgi-bin/authlogout"
+
+    fun isTargetCaptivePortal(network: Network?): Boolean {
+        return try {
+            val url = URL(LOGIN_URL)
+            val connection = (network?.openConnection(url) ?: url.openConnection()) as HttpURLConnection
+            connection.instanceFollowRedirects = false
+            connection.connectTimeout = 3000 // Short timeout for a quick check
+            connection.readTimeout = 3000
+            connection.requestMethod = "GET"
+            connection.connect()
+            val responseCode = connection.responseCode
+            connection.disconnect()
+            responseCode == HttpURLConnection.HTTP_OK // Success is ONLY a 200 response
+        } catch (e: Exception) {
+            Log.d("AutoLoginManager", "Target portal check failed: ${e.message}")
+            false
+        }
+    }
 
     fun attemptLogin(userId: String, password: String, network: Network? = null): LoginResult {
         val openConnection: (URL) -> HttpURLConnection = { url ->
@@ -61,9 +78,6 @@ object AutoLoginManager {
         }
     }
 
-    /**
-     * Attempts to log out by making a GET request to the logout URL.
-     */
     fun attemptLogout(): Boolean {
         return try {
             val url = URL(LOGOUT_URL)
@@ -76,7 +90,6 @@ object AutoLoginManager {
             val responseCode = connection.responseCode
             Log.d("AutoLoginManager", "Logout response code: $responseCode")
             connection.inputStream.close()
-            // Assume success if we get a 200-299 response code.
             responseCode in 200..299
         } catch (e: Exception) {
             Log.e("AutoLoginManager", "Logout failed: ${e.message}")
