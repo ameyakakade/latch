@@ -1,55 +1,97 @@
 package com.vinnovateit.latch.features.onboarding
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.auth.LandingPageActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 
+data class OnboardingPage(
+    val title: String,
+    val description: AnnotatedString,
+    val foregroundIcon: ImageVector? = null
+)
+
 class OnboardingActivity : ComponentActivity() {
+
+    @Composable
+    private fun createOnboardingPages(): List<OnboardingPage> {
+        return listOf(
+            OnboardingPage(
+                title = "Welcome to LATCH",
+                description = buildAnnotatedString { append("Auto-login to VIT Wi-Fi effortlessly.") },
+                foregroundIcon = ImageVector.vectorResource(id = R.drawable.ic_latch)
+            ),
+            OnboardingPage(
+                title = "No Sign-in Hassle",
+                description = buildAnnotatedString { append("Latch logs you in automatically — no typing.") },
+                foregroundIcon = Icons.Rounded.WifiLock
+            ),
+            OnboardingPage(
+                title = "How it Works",
+                description = buildAnnotatedString {
+                    append("• Enter your VIT credentials once.\n• Latch auto-submits on hostel Wi-Fi.\n")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Credentials stored securely.") }
+                },
+                foregroundIcon = Icons.Rounded.Key
+            ),
+            OnboardingPage(
+                title = "Set Up Account",
+                description = buildAnnotatedString { append("Enter VIT ID & password to start auto-login.") },
+                foregroundIcon = Icons.Rounded.Person
+            ),
+            OnboardingPage(
+                title = "Widgets & Tile",
+                description = buildAnnotatedString { append("Add Latch widget or Quick Settings tile for one-tap access.") },
+                foregroundIcon = Icons.Rounded.Widgets
+            ),
+            OnboardingPage(
+                title = "You’re Ready!",
+                description = buildAnnotatedString { append("Latch will auto-login whenever in range.") },
+                foregroundIcon = Icons.Rounded.CheckCircle
+            )
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LatchTheme {
-                OnboardingScreen(
-                    onSkip = { finishOnboarding() },
-                    onNext = { finishOnboarding() }
+                OnboardingEntry(
+                    pages = createOnboardingPages(),
+                    onFinish = { finishOnboarding() }
                 )
             }
         }
     }
 
     private fun finishOnboarding() {
-        getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        getSharedPreferences("app_prefs", MODE_PRIVATE)
             .edit()
             .putBoolean("hasSeenOnboarding", true)
             .apply()
@@ -59,42 +101,69 @@ class OnboardingActivity : ComponentActivity() {
 }
 
 @Composable
-fun OnboardingScreen(
-    onSkip: () -> Unit = {},
-    onNext: () -> Unit = {}
+fun OnboardingEntry(
+    pages: List<OnboardingPage>,
+    onFinish: () -> Unit
 ) {
-    var step by remember { mutableStateOf(0) }
+    Box(Modifier.fillMaxSize()) {
+        OnboardingScreen(pages = pages, onFinish = onFinish)
+    }
+}
 
+@Composable
+fun OnboardingScreen(
+    pages: List<OnboardingPage>,
+    onFinish: () -> Unit
+) {
+    var currentStep by remember { mutableStateOf(0) }
     val satoshiFont = FontFamily(Font(R.font.satoshi_regular))
     val modernizFont = FontFamily(Font(R.font.moderniz))
 
-    val slides: List<Any> = listOf(
-        buildAnnotatedString {
-            append("Welcome to Latch!\t")
-            appendInlineContent("logo_inline", "[logo]")
-            append("\n\nYour gateway to smarter, faster WiFi at VIT.")
-        },
-        "Step 1: Sign in with your VIT WiFi credentials:\n\n• Username: Your Registration Number\n\n• Password: Your WiFi Password",
-        "Step 2: Allow all requested permissions.\n\nStep 3: Manually select your WiFi network\n\n(don't tap \"Sign In\" yet!)",
-        "Step 4: Switch off mobile data.\n\nStep 5: Hit \"Connect\" in Latch.\n\nYou're now ready to browse!\n\n\n(Pro tip: If connection fails, repeat these steps.)"
-    )
-
-    val inlineContent = mapOf(
-        "logo_inline" to InlineTextContent(
-            Placeholder(
-                width = 20.sp,
-                height = 20.sp,
-                placeholderVerticalAlign = PlaceholderVerticalAlign.Center
-            )
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_latch_light),
-                contentDescription = "Inline Logo"
+    Surface(modifier = Modifier.fillMaxSize()) {
+        AnimatedContent(
+            targetState = currentStep,
+            transitionSpec = {
+                (slideInHorizontally(
+                    initialOffsetX = { width -> if (targetState > initialState) width else -width },
+                    animationSpec = tween(550, easing = FastOutSlowInEasing)
+                ) + fadeIn(tween(500)) + scaleIn(initialScale = 0.95f, animationSpec = tween(550))) togetherWith
+                        (slideOutHorizontally(
+                            targetOffsetX = { width -> if (targetState > initialState) -width else width },
+                            animationSpec = tween(550)
+                        ) + fadeOut(tween(500)) + scaleOut(targetScale = 1.05f, animationSpec = tween(550)))
+            },
+            label = "onboarding_slide"
+        ) { targetStep ->
+            OnboardingPageContent(
+                page = pages[targetStep],
+                currentStep = targetStep,
+                totalSteps = pages.size,
+                satoshiFont = satoshiFont,
+                modernizFont = modernizFont,
+                onNext = {
+                    if (currentStep < pages.size - 1) {
+                        currentStep++
+                    } else {
+                        onFinish()
+                    }
+                },
+                onSkip = onFinish
             )
         }
-    )
+    }
+}
 
-    Surface(modifier = Modifier.fillMaxSize()) {
+@Composable
+fun OnboardingPageContent(
+    page: OnboardingPage,
+    currentStep: Int,
+    totalSteps: Int,
+    satoshiFont: FontFamily,
+    modernizFont: FontFamily,
+    onNext: () -> Unit,
+    onSkip: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,61 +171,46 @@ fun OnboardingScreen(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.vinnovate),
-                contentDescription = "App Logo",
-                modifier = Modifier
-                    .padding(top = 48.dp)
-                    .height(80.dp)
-            )
+            Spacer(modifier = Modifier.height(48.dp))
 
-            AnimatedContent(
-                targetState = step,
-                transitionSpec = {
-                    slideInHorizontally(
-                        initialOffsetX = { width ->
-                            if (targetState > initialState) width else -width
-                        },
-                        animationSpec = tween(300)
-                    ) + fadeIn(animationSpec = tween(300)) togetherWith
-                            slideOutHorizontally(
-                                targetOffsetX = { width ->
-                                    if (targetState > initialState) -width else width
-                                },
-                                animationSpec = tween(300)
-                            ) + fadeOut(animationSpec = tween(300))
-                },
-                label = "onboarding_slide"
-            ) { targetStep ->
-                when (val content = slides[targetStep]) {
-                    is AnnotatedString -> {
-                        Text(
-                            text = content,
-                            inlineContent = inlineContent,
-                            fontSize = 18.sp,
-                            lineHeight = 30.sp,
-                            fontFamily = satoshiFont,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier
-                                .fillMaxWidth(0.95f)
-                                .padding(top = 32.dp, bottom = 32.dp)
-                        )
-                    }
-                    is String -> {
-                        Text(
-                            text = content,
-                            fontSize = 18.sp,
-                            lineHeight = 30.sp,
-                            fontFamily = satoshiFont,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier
-                                .fillMaxWidth(0.95f)
-                                .padding(top = 32.dp, bottom = 32.dp)
-                        )
-                    }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                page.foregroundIcon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        tint = if (page.title == "You’re Ready!") Color(0xFF1BA83C) else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(60.dp)
+                            .padding(bottom = 30.dp)
+                    )
                 }
+
+                Text(
+                    text = page.title,
+                    fontSize = 20.sp,
+                    fontFamily = modernizFont,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp)
+                )
+
+                Text(
+                    text = page.description,
+                    fontSize = 18.sp,
+                    lineHeight = 30.sp,
+                    fontFamily = satoshiFont,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier
+                        .fillMaxWidth(0.95f)
+                        .padding(horizontal = 16.dp)
+                )
             }
 
             Row(
@@ -173,29 +227,39 @@ fun OnboardingScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Button(
-                    onClick = {
-                        if (step < slides.size - 1) {
-                            step++
-                        } else {
-                            onNext()
-                        }
+
+                Row {
+                    repeat(totalSteps) { index ->
+                        val isSelected = index == currentStep
+                        val dotSize by animateDpAsState(
+                            targetValue = if (isSelected) 12.dp else 8.dp,
+                            animationSpec = tween(300),
+                            label = "dotSize"
+                        )
+                        val dotColor by animateColorAsState(
+                            targetValue = if (isSelected)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f),
+                            animationSpec = tween(300),
+                            label = "dotColor"
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(dotSize)
+                                .padding(horizontal = 3.dp)
+                                .background(dotColor, CircleShape)
+                        )
                     }
-                ) {
+                }
+
+                Button(onClick = onNext) {
                     Text(
-                        if (step < slides.size - 1) "Next" else "Finish",
+                        if (currentStep < totalSteps - 1) "Next" else "Get Started",
                         fontFamily = modernizFont
                     )
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun OnboardingPreview() {
-    LatchTheme {
-        OnboardingScreen()
     }
 }
