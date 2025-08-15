@@ -61,6 +61,8 @@ dependencies {
     implementation("com.materialkolor:material-kolor:3.0.0")
     implementation(libs.androidx.core.splashscreen)
 
+    implementation("androidx.compose.animation:animation")
+
     // Widget
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")

@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.features.auth
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -32,6 +33,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.data.StoredCredentials
+import com.vinnovateit.latch.features.onboarding.OnboardingActivity
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
@@ -59,6 +61,16 @@ class LandingPageActivity : ComponentActivity() {
         askNotificationPermission()
         // Initialize SettingsManager to apply the correct theme immediately
         SettingsManager.initialize(this)
+
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val hasSeenOnboarding = prefs.getBoolean("hasSeenOnboarding", false)
+
+        if (!hasSeenOnboarding) {
+            // Show onboarding
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
 
         lifecycleScope.launch {
             if (StoredCredentials.credentialsExist(this@LandingPageActivity)) {
