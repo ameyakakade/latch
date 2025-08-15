@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
+import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
 import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import kotlinx.coroutines.Dispatchers
@@ -30,37 +31,27 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         )
 
     private val _ssid = MutableStateFlow("Not Connected")
-
-    // The NetworkCallback will now live in the ForegroundService to run persistently.
-    // The ViewModel will simply observe the results from the SessionRepository.
+    val ssid: StateFlow<String> = _ssid
 
     init {
-        // When the ViewModel is created, ensure the ForegroundService is running
-        // and perform an initial status check.
         startStatsService()
         refreshStatus()
     }
 
-    /**
-     * Evaluates the current network connection to determine SSID and authentication status.
-     * It then updates the SessionRepository, which is the single source of truth for the app.
-     * This logic is now also mirrored in the ForegroundService for background operation.
-     */
     fun refreshStatus() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Check both if Wi-Fi is connected AND if a session is active
+            val isActuallyConnected = WiFiConnectionDetector.isConnectedToWiFi(ctx)
             val isSessionActive = SessionRepository.liveStatus.value != null
+            val currentSSID = if (isActuallyConnected) VITWiFiIdentifier.getCurrentSSID(ctx) else null
 
             withContext(Dispatchers.Main) {
-                _ssid.value = if (isSessionActive) "Connected" else "Not Connected"
-            }
+                _ssid.value = if (isSessionActive) "Connected" else ("Not Connected")
+                }
+
             Log.d("WiFiStatusViewModel", "UI Refreshed: SSID is ${_ssid.value}, IsSessionActive is $isSessionActive")
         }
     }
 
-    /**
-     * Initiates a manual login attempt.
-     */
     fun authenticatePortal() {
         if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
             UiNotifier.showToast(ctx, "Wi-Fi is turned off.")
@@ -74,7 +65,11 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
-        ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
+        if (SessionRepository.liveStatus.value != null) {
+            UiNotifier.showToast(ctx, "Re-validating connection...")
+        } else {
+            UiNotifier.showToast(ctx, "Checking network...")
+        }
 
         Log.d("WiFiStatusViewModel", "Delegating network check to ForegroundService.")
         val serviceIntent = Intent(getApplication(), ForegroundService::class.java).apply {
@@ -83,9 +78,6 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         getApplication<Application>().startService(serviceIntent)
     }
 
-    /**
-     * Starts the ForegroundService to ensure stats are collected even when the app is closed.
-     */
     private fun startStatsService() {
         val serviceIntent = Intent(getApplication(), ForegroundService::class.java)
         getApplication<Application>().startForegroundService(serviceIntent)
