@@ -43,6 +43,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Onboarding Slides -->
+        <activity
+            android:name=".features.onboarding.OnboardingActivity"
+            android:exported="false" />
+
         <activity
             android:name=".features.auth.SecondPageActivity"
             android:exported="true"
