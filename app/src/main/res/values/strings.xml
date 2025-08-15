@@ -53,7 +53,7 @@
     <string name="stats_max_upload">Max Upload</string>
 
     <string name="widget_status_disconnected">Disconnected</string>
-    <string name="latch_widget_description">Quick status and control for Latch.</string>
+    <string name="widget_description">Quick status and control for Latch.</string>
     <string name="widget_duration_fallback">-</string>
     <string name="widget_connect">Connect</string>
     <string name="widget_disconnect">Disconnect</string>
