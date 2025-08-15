@@ -1,10 +1,9 @@
 package com.vinnovateit.latch.features.wifi.widget
 
 import android.content.Context
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import android.content.Intent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -40,12 +39,12 @@ import androidx.glance.text.FontFamily
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.features.wifi.background.DirectLoginWorker
-import com.vinnovateit.latch.features.wifi.background.DirectLogoutWorker
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
+import com.vinnovateit.latch.ui.theme.DarkColorScheme
+import com.vinnovateit.latch.ui.theme.LightColorScheme
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -82,27 +81,16 @@ class LatchWidget : GlanceAppWidget() {
 
 @Composable
 private fun LatchWidgetContent(state: LatchWidgetState) {
-  // Custom colors with light and dark theme as per requirement
   val colors = ColorProviders(
-    light = lightColorScheme(
-      background = Color(0xFFFDF0D5),
-      onBackground = Color(0xFFB71D25),
-      primary = Color(0xFFB71D25),
-      onPrimary = Color(0xFFFDF0D5)
-    ),
-    dark = darkColorScheme(
-      background = Color(0xFFB71D25),
-      onBackground = Color(0xFFFDF0D5),
-      primary = Color(0xFFFDF0D5),
-      onPrimary = Color(0xFFB71D25)
-    )
+    light = LightColorScheme,
+    dark = DarkColorScheme
   )
 
   GlanceTheme(colors = colors) {
     val logo = if (state.isLightTheme) {
-      ImageProvider(R.drawable.ic_latch_dark)
-    } else {
       ImageProvider(R.drawable.ic_latch_light)
+    } else {
+      ImageProvider(R.drawable.ic_latch_dark)
     }
 
     Column(
@@ -120,14 +108,14 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
           Text(text = "Status:", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp, fontFamily = FontFamily.Monospace))
           Text(text = state.status, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = STATUS_FONT_SIZE, fontWeight = FontWeight.Bold))
         }
-        Image(provider = logo, contentDescription = "App Logo", modifier = GlanceModifier.size(40.dp))
+        Image(ImageProvider(R.drawable.ic_latch), contentDescription = "App Logo", modifier = GlanceModifier.size(40.dp))
       }
 
       Spacer(modifier = GlanceModifier.height(16.dp))
-      Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(text = "", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 20.sp, fontWeight = FontWeight.Bold))
-        Spacer(modifier = GlanceModifier.defaultWeight())
-        Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+
+      // Centered duration
+      Box(modifier = GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp)) {
           Text(text = state.connectedDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = 14.sp))
         }
       }
@@ -167,12 +155,16 @@ class ConnectAction : ActionCallback {
       LatchWidgetState()
     }
 
-    val actionRequest = if (state.isConnected) {
-      OneTimeWorkRequestBuilder<DirectLogoutWorker>().build()
-    } else {
-      OneTimeWorkRequestBuilder<DirectLoginWorker>().build()
+    val intent = Intent(context, ForegroundService::class.java).apply {
+      action = if (state.isConnected) {
+        ForegroundService.ACTION_TRIGGER_LOGOUT
+      } else {
+        ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+      }
     }
-    WorkManager.getInstance(context).enqueue(actionRequest)
+    context.startService(intent)
+
+    // Give the service a moment to act before updating the widget
     delay(1500)
     LatchWidgetUpdater.enqueueOneTimeUpdate(context)
   }
