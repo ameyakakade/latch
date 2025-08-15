@@ -36,9 +36,8 @@ object VITWiFiIdentifier {
     }
 
 
-    fun isConnectedToVITWiFi(context: Context, network: Network? = null): Boolean {
-        val ssid = getCurrentSSID(context, network)
-        Log.d("VITWiFiIdentifier", "Current SSID: $ssid")
-        return ssid != null && ssid.lowercase().contains("vit")
-    }
+//    fun isConnectedToVITWiFi(context: Context, network: Network? = null): Boolean {
+//        Log.d("VITWiFiIdentifier", "SSID check bypassed – returning true.")
+//        return true
+//    }
 }

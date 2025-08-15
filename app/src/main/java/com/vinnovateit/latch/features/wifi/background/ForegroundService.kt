@@ -30,7 +30,9 @@ class ForegroundService : Service() {
 
     companion object {
         const val ACTION_TRIGGER_LOGIN_CHECK = "com.vinnovateit.latch.ACTION_TRIGGER_LOGIN_CHECK"
+        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT" // ADD
     }
+
 
     override fun onCreate() {
         super.onCreate()
@@ -41,20 +43,30 @@ class ForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_TRIGGER_LOGIN_CHECK) {
-            Log.d("ForegroundService", "Manual login check triggered via intent.")
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
-            if (!WiFiStateDetector.isWiFiEnabled(this)) {
-                Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
-                ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is disabled"))
-                return START_STICKY
+        when (intent?.action) {
+            ACTION_TRIGGER_LOGIN_CHECK -> {
+                Log.d("ForegroundService", "Manual login check triggered via intent.")
+                ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
+                if (!WiFiStateDetector.isWiFiEnabled(this)) {
+                    Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is disabled"))
+                    return START_STICKY
+                }
+                connectivityManager.activeNetwork?.let { activeNetwork ->
+                    checkNetworkAndAct(activeNetwork)
+                }
             }
-            connectivityManager.activeNetwork?.let { activeNetwork ->
-                checkNetworkAndAct(activeNetwork)
+            ACTION_TRIGGER_LOGOUT -> {
+                Log.d("ForegroundService", "Manual logout triggered via intent.")
+                serviceScope.launch(Dispatchers.IO) { logoutAndStop() }   // ADD
+            }
+            else -> {
+
             }
         }
         return START_STICKY
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -85,7 +97,7 @@ class ForegroundService : Service() {
 
     private fun checkNetworkAndAct(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            // First, check for general internet access. If we have it, we're done.
+            // checking for internet access first
             ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Checking internet..."))
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
             if (internetStatus == 204) {
@@ -97,7 +109,7 @@ class ForegroundService : Service() {
                 return@launch
             }
 
-            // If no internet, check if it's our specific target portal.
+
             ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Verifying network..."))
             if (AutoLoginManager.isTargetCaptivePortal(network)) {
                 Log.d("ForegroundService", "Target captive portal confirmed.")
@@ -137,6 +149,39 @@ class ForegroundService : Service() {
             }
         }
     }
+
+    private suspend fun logoutAndStop() {
+        ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Logging out..."))
+        healthCheckJob?.cancel()
+
+        val network = connectivityManager.activeNetwork
+        if (network != null) {
+
+            connectivityManager.bindProcessToNetwork(network)
+            try {
+                val ok = AutoLoginManager.attemptLogout()
+                if (ok) {
+                    Log.d("ForegroundService", "Logout success.")
+
+                    SessionRepository.stopSession()
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Disconnected"))
+                } else {
+                    Log.w("ForegroundService", "Logout failed.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Logout failed"))
+                }
+            } finally {
+                connectivityManager.bindProcessToNetwork(null)
+            }
+        } else {
+            Log.w("ForegroundService", "No active network during logout.")
+            SessionRepository.stopSession()
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Disconnected"))
+        }
+
+        // kill service
+        stopSelf()
+    }
+
 
     private fun startHealthCheck(network: Network) {
         healthCheckJob?.cancel()

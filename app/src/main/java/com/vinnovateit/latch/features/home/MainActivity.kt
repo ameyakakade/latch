@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                         networkSpeed = networkSpeedString,
                         session = sessionForHomeScreen,
                         onConnectClick = {
-                            wifiStatusViewModel.authenticatePortal()
+                            wifiStatusViewModel.toggleConnection()
                         },
                         connectionStatus = connectionStatus
                     )
