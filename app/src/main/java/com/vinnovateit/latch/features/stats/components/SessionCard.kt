@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.common.util.DisplayMode
 import com.vinnovateit.latch.common.util.Tag
 import com.vinnovateit.latch.common.util.createGraphPaths
+import com.vinnovateit.latch.common.util.formatBitsPerSecond
 import com.vinnovateit.latch.common.util.formatBytes
 import com.vinnovateit.latch.common.util.formatDurationDynamic
 import com.vinnovateit.latch.domain.model.DataUsage
@@ -54,7 +55,7 @@ import kotlin.math.atan2
 import kotlin.math.max
 
 @Composable
-fun SessionCard(session: SessionSummary) {
+fun SessionCard(session: SessionSummary, speedUnit: String) {
     var lastInteraction by remember { mutableStateOf(0L) }
     var showOverlay by remember { mutableStateOf(true) }
     var visibleMaxSpeed by remember { mutableLongStateOf(0L) }
@@ -99,7 +100,8 @@ fun SessionCard(session: SessionSummary) {
             MaxSpeedTag(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp),
                 maxSpeed = visibleMaxSpeed,
-                isDownload = visibleMaxSpeedIsDownload
+                isDownload = visibleMaxSpeedIsDownload,
+                speedUnit = speedUnit
             )
         }
     }
@@ -353,10 +355,10 @@ private fun SessionRateGraph(
 }
 
 @Composable
-private fun MaxSpeedTag(modifier: Modifier = Modifier, maxSpeed: Long, isDownload: Boolean) {
+private fun MaxSpeedTag(modifier: Modifier = Modifier, maxSpeed: Long, isDownload: Boolean, speedUnit: String) {
     if (maxSpeed > 0) {
-        val (v, u) = formatBytes(maxSpeed)
-        Tag(text = "MAX ${v}${u}/s", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
+        val (v, u) = formatBitsPerSecond(maxSpeed, speedUnit)
+        Tag(text = "MAX ${v}${u}", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
     }
 }
 

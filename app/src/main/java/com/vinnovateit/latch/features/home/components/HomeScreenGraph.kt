@@ -80,7 +80,8 @@ fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
 @Composable
 fun HomeScreenGraph(
   modifier: Modifier = Modifier,
-  rateHistory: List<LiveDataPoint>
+  rateHistory: List<LiveDataPoint>,
+  speedUnit: String
 ) {
   val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
     rateHistory.size.toFloat() / POINTS_IN_30_SECONDS.toFloat()
@@ -264,7 +265,7 @@ fun HomeScreenGraph(
                   val fraction = i.toFloat() / numLines
                   val yValue = rulerTopValue * fraction
                   val yPos = size.height - ((yValue / rulerTopValue) * (size.height * GRAPH_HEIGHT_SCALE))
-                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), includeUnit = i == numLines)
+                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), speedUnit)
                   val markingEnd = (4 + i * 2).dp.toPx()
 
                   if (i > 0) {

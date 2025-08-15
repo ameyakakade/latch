@@ -39,37 +39,28 @@ data class GraphData(
     }
 }
 
-
-fun formatBytes(bytes: Long): Pair<String, String> = when {
-    bytes < 1_024L                    -> bytes.toString() to "B"
-    bytes < 1_048_576L               -> {
-        val kbFormatted = "%.1f".format(bytes / 1_024f)
-        if (kbFormatted == "1024.0") {
-            "1.0" to "MB"
-        } else {
-            kbFormatted to "KB"
-        }
-    }
-    bytes < 1_073_741_824L           -> {
-        val mbFormatted = "%.1f".format(bytes / 1_048_576f)
-        if (mbFormatted == "1024.0") {
-            "1.0" to "GB"
-        } else {
-            mbFormatted to "MB"
-        }
-    }
-    else                             -> "%.2f".format(bytes / 1_073_741_824f)    to "GB"
+fun formatBytes(bytes: Long, unit: String = "B/s"): Pair<String, String> = when {
+    unit == "bps" -> formatBitsPerSecond(bytes)
+    bytes < 1_024L -> bytes.toString() to "B"
+    bytes < 1_048_576L -> "%.1f".format(bytes / 1_024f) to "KB"
+    bytes < 1_073_741_824L -> "%.1f".format(bytes / 1_048_576f) to "MB"
+    else -> "%.2f".format(bytes / 1_073_741_824f) to "GB"
 }
 
-fun formatBitsPerSecond(bytesPerSecond: Long, includeUnit: Boolean = true): Pair<String, String> {
+fun formatBitsPerSecond(bytesPerSecond: Long, unit: String = "bps"): Pair<String, String> {
+    if (unit == "B/s") {
+        val (value, byteUnit) = formatBytes(bytesPerSecond, "B/s")
+        return value to "$byteUnit/s"
+    }
+
     val bitsPerSecond = bytesPerSecond * 8
-    val (value, unit) = when {
+    val (value, bitUnit) = when {
         bitsPerSecond < 1_000L -> bitsPerSecond.toString() to "bps"
         bitsPerSecond < 1_000_000L -> "%.1f".format(bitsPerSecond / 1_000f) to "Kbps"
         bitsPerSecond < 1_000_000_000L -> "%.1f".format(bitsPerSecond / 1_000_000f) to "Mbps"
         else -> "%.2f".format(bitsPerSecond / 1_000_000_000f) to "Gbps"
     }
-    return if (includeUnit) value to unit else value to ""
+    return value to bitUnit
 }
 
 

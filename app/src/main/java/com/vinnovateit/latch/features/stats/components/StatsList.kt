@@ -36,6 +36,7 @@ fun StatsList(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
+  speedUnits: String,
   onDownloadReport: () -> Unit,
   addSpacer: Boolean = false,
   statsViewModel: StatsViewModel
@@ -57,6 +58,7 @@ fun StatsList(
         item {
           SessionCard(
             session = sessionToShow,
+            speedUnit = speedUnits
           )
           Spacer(modifier = Modifier.height(15.dp))
         }
@@ -68,7 +70,7 @@ fun StatsList(
           isLive = true,
           downloadBps = liveDownloadBps,
           uploadBps = liveUploadBps,
-          onDownloadReport = {}
+          speedUnit = speedUnits,
         )
       }
       item {
@@ -85,7 +87,7 @@ fun StatsList(
           isLive = false,
           downloadBps = allTimeMaxDownloadBps,
           uploadBps = allTimeMaxUploadBps,
-          onDownloadReport = {}
+          speedUnit = speedUnits,
         )
       }
       item {
@@ -141,7 +143,7 @@ fun StatsList(
           else -> RoundedCornerShape(5.dp)
         }
         if(!isLive || index > 0) {
-          StatsItemCard(session = session, shape = shape)
+          StatsItemCard(session = session, shape = shape, speedUnit = speedUnits)
         }
       }
     }

@@ -70,6 +70,7 @@ import com.vinnovateit.latch.common.util.generateCsvReport
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.stats.components.SessionCard
 import com.vinnovateit.latch.features.stats.components.StatsList
 import com.vinnovateit.latch.ui.theme.LatchTheme
@@ -125,6 +126,7 @@ fun StatsScreen(
   val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
   val isLive = remember(liveStatus) { liveStatus != null }
+  val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
 
   StatsScreenContent(
     modifier = modifier,
@@ -132,6 +134,7 @@ fun StatsScreen(
     sessionToShow = sessionToShow,
     historyToShow = historyToShow,
     liveStatus = liveStatus,
+    speedUnits = speedUnits,
     onDownloadReport = onDownloadReport,
     onBackClick = { context.finish() },
     statsViewModel = statsViewModel
@@ -150,6 +153,7 @@ private fun StatsScreenContent(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
+  speedUnits: String,
   onDownloadReport: () -> Unit,
   onBackClick: () -> Unit,
   statsViewModel: StatsViewModel
@@ -185,7 +189,7 @@ private fun StatsScreenContent(
                 .padding(16.dp),
               contentAlignment = Alignment.Center
             ) {
-              SessionCard(session = sessionToShow)
+              SessionCard(session = sessionToShow, speedUnit = speedUnits)
             }
           }
 
@@ -199,6 +203,7 @@ private fun StatsScreenContent(
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
+            speedUnits = speedUnits,
             onDownloadReport = onDownloadReport,
             addSpacer = true,
             statsViewModel = statsViewModel
@@ -219,6 +224,7 @@ private fun StatsScreenContent(
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
+            speedUnits = speedUnits,
             onDownloadReport = onDownloadReport,
             statsViewModel = statsViewModel
           )

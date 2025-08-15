@@ -34,7 +34,8 @@ import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 fun SpectrumCard(
   session: SessionSummary?,
   historyForHomeScreen: List<LiveDataPoint>,
-  connectionStatus: ConnectionStatus
+  connectionStatus: ConnectionStatus,
+  speedUnit: String
 ) {
   val context = LocalContext.current
 
@@ -89,7 +90,8 @@ fun SpectrumCard(
           if (isGraphVisible) {
             HomeScreenGraph(
               modifier = Modifier.fillMaxSize(),
-              rateHistory = historyForHomeScreen
+              rateHistory = historyForHomeScreen,
+              speedUnit = speedUnit
             )
           } else {
             // Otherwise, show the status indicator.

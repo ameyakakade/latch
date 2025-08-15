@@ -41,7 +41,8 @@ import java.util.Locale
 @Composable
 fun StatsItemCard(
   session: SessionSummary,
-  shape: Shape = RoundedCornerShape(16.dp)
+  shape: Shape = RoundedCornerShape(16.dp),
+  speedUnit: String
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
@@ -71,7 +72,7 @@ fun StatsItemCard(
         )
       }
       Column(horizontalAlignment = Alignment.End) {
-        val total = remember(session.totalData) { formatBytes(session.totalData.rxBytes + session.totalData.txBytes) }
+        val total = remember(session.totalData, speedUnit) { formatBytes(session.totalData.rxBytes + session.totalData.txBytes, speedUnit) } // Use it here
         Text(
           text = "${total.first} ${total.second}",
           style = MaterialTheme.typography.titleMedium,
@@ -79,7 +80,7 @@ fun StatsItemCard(
           color = MaterialTheme.colorScheme.onSurface
         )
         Row {
-          val dl = remember(session.totalData) { formatBytes(session.totalData.rxBytes) }
+          val dl = remember(session.totalData, speedUnit) { formatBytes(session.totalData.rxBytes, speedUnit) } // And here
           Icon(Icons.Default.ArrowDownward, contentDescription = "Download data", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
           Text(
             text = "${dl.first} ${dl.second}",
@@ -87,7 +88,7 @@ fun StatsItemCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
           Spacer(modifier = Modifier.width(12.dp))
-          val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
+          val ul = remember(session.totalData, speedUnit) { formatBytes(session.totalData.txBytes, speedUnit) } // And here
           Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
             text = "${ul.first} ${ul.second}",

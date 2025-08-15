@@ -36,7 +36,7 @@ fun LiveSpeedSection(
   isLive: Boolean,
   downloadBps: Long,
   uploadBps: Long,
-  onDownloadReport: () -> Unit // Retained param but not used here
+  speedUnit: String,
 ) {
   val downloadLabel = if (isLive) "Download" else "Max Download"
   val uploadLabel = if (isLive) "Upload" else "Max Upload"
@@ -54,21 +54,21 @@ fun LiveSpeedSection(
       horizontalArrangement = Arrangement.SpaceEvenly,
       verticalAlignment = Alignment.CenterVertically
     ) {
-      SpeedIndicator(label = downloadLabel, bytesPerSecond = downloadBps)
+      SpeedIndicator(label = downloadLabel, bytesPerSecond = downloadBps, speedUnit = speedUnit)
       VerticalDivider(
         modifier = Modifier
           .height(80.dp)
           .width(1.dp),
         color = MaterialTheme.colorScheme.outline
       )
-      SpeedIndicator(label = uploadLabel, bytesPerSecond = uploadBps)
+      SpeedIndicator(label = uploadLabel, bytesPerSecond = uploadBps, speedUnit = speedUnit)
     }
   }
 }
 
 @Composable
-fun SpeedIndicator(label: String, bytesPerSecond: Long) {
-  val (value, unit) = formatBitsPerSecond(bytesPerSecond)
+fun SpeedIndicator(label: String, bytesPerSecond: Long, speedUnit: String) {
+  val (value, unit) = formatBitsPerSecond(bytesPerSecond, speedUnit)
   Column(
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(4.dp)
