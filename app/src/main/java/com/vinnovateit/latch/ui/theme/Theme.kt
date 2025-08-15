@@ -15,7 +15,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 
-private val LightColorScheme = lightColorScheme(
+val LightColorScheme = lightColorScheme(
     primary = Color(0xFFC01221),
     onPrimary = Color(0xFFFFDFB1),
     primaryContainer = Color(0xFFD2222C),
@@ -49,7 +49,7 @@ private val LightColorScheme = lightColorScheme(
     scrim = Color(0xFF000000),
 )
 
-private val DarkColorScheme = darkColorScheme(
+val DarkColorScheme = darkColorScheme(
     primary = Color(0xFFFF6B6B),
     onPrimary = Color(0xFF090F29),
     primaryContainer = Color(0xFFFF6B6B),

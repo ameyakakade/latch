@@ -30,6 +30,7 @@ class ForegroundService : Service() {
 
     companion object {
         const val ACTION_TRIGGER_LOGIN_CHECK = "com.vinnovateit.latch.ACTION_TRIGGER_LOGIN_CHECK"
+        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT"
     }
 
     override fun onCreate() {
@@ -41,16 +42,25 @@ class ForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_TRIGGER_LOGIN_CHECK) {
-            Log.d("ForegroundService", "Manual login check triggered via intent.")
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
-            if (!WiFiStateDetector.isWiFiEnabled(this)) {
-                Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
-                ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is disabled"))
-                return START_STICKY
+        when (intent?.action) {
+            ACTION_TRIGGER_LOGIN_CHECK -> {
+                Log.d("ForegroundService", "Manual login check triggered via intent.")
+                ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
+                if (!WiFiStateDetector.isWiFiEnabled(this)) {
+                    Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is disabled"))
+                    return START_STICKY
+                }
+                connectivityManager.activeNetwork?.let { activeNetwork ->
+                    checkNetworkAndAct(activeNetwork)
+                }
             }
-            connectivityManager.activeNetwork?.let { activeNetwork ->
-                checkNetworkAndAct(activeNetwork)
+            ACTION_TRIGGER_LOGOUT -> {
+                Log.d("ForegroundService", "Logout triggered via intent.")
+                serviceScope.launch {
+                    AutoLoginManager.attemptLogout()
+                    SessionRepository.stopSession()
+                }
             }
         }
         return START_STICKY
