@@ -83,7 +83,8 @@ fun HomeScreen(
     networkSpeed: String,
     session: SessionSummary?,
     onConnectClick: () -> Unit,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
@@ -96,12 +97,13 @@ fun HomeScreen(
 
         if (isPortrait) {
             PortraitHomeScreen(
-              isConnected,
-              networkSpeed,
-              session,
-              onConnectClick,
-              historyForHomeScreen,
-              connectionStatus
+                isConnected,
+                networkSpeed,
+                session,
+                onConnectClick,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit
             )
         } else {
             LandscapeHomeScreen(
@@ -110,7 +112,8 @@ fun HomeScreen(
                 session,
                 onConnectClick,
                 historyForHomeScreen,
-                connectionStatus
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -124,7 +127,8 @@ fun PortraitHomeScreen(
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
@@ -154,7 +158,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, historyForHomeScreen, connectionStatus)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit)
             }
         }
         // Power Button Overlay
@@ -175,7 +179,8 @@ fun LandscapeHomeScreen(
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     Row(
         modifier = Modifier
@@ -221,7 +226,8 @@ fun LandscapeHomeScreen(
             SpectrumCard(
                 session,
                 historyForHomeScreen,
-                connectionStatus
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -453,7 +459,8 @@ fun HomeScreenPortraitPreview() {
             networkSpeed = "6 mbps",
             session = null,
             onConnectClick = { },
-            connectionStatus = ConnectionStatus.Idle
+            connectionStatus = ConnectionStatus.Idle,
+            "B/s"
         )
     }
 }
@@ -467,7 +474,8 @@ fun HomeScreenLandscapePreview() {
             networkSpeed = "12 mbps",
             session = null,
             onConnectClick = { },
-            connectionStatus = ConnectionStatus.Idle
+            connectionStatus = ConnectionStatus.Idle,
+            speedUnit = "B/s"
         )
     }
 }
