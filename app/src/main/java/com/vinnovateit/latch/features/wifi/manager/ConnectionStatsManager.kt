@@ -38,7 +38,7 @@ object ConnectionStatusManager {
 
     if (newStatus is ConnectionStatus.Success || newStatus is ConnectionStatus.Failed) {
       scope.launch {
-        delay(4000)
+        delay(2000)
         if (_status.value == newStatus) {
           _status.value = ConnectionStatus.Idle
         }

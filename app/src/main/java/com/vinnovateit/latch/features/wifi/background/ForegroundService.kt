@@ -15,6 +15,7 @@ import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
 import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
+import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
@@ -47,21 +48,32 @@ class ForegroundService : Service() {
             ACTION_TRIGGER_LOGIN_CHECK -> {
                 Log.d("ForegroundService", "Manual login check triggered via intent.")
                 ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Initializing..."))
+
                 if (!WiFiStateDetector.isWiFiEnabled(this)) {
                     Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
                     ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is disabled"))
                     return START_STICKY
                 }
+
+                if (!WiFiConnectionDetector.isConnectedToWiFi(this)) {
+                    Log.w("ForegroundService", "Wi-Fi is enabled but not connected to a network.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not connected to Wi-Fi"))
+                    return START_STICKY
+                }
+
                 connectivityManager.activeNetwork?.let { activeNetwork ->
-                    checkNetworkAndAct(activeNetwork)
+                    val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
+                    if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
+                        checkNetworkAndAct(activeNetwork)
+                    } else {
+                        Log.w("ForegroundService", "Active network is not Wi-Fi. Aborting check.")
+                        ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not on a Wi-Fi network"))
+                    }
                 }
             }
             ACTION_TRIGGER_LOGOUT -> {
                 Log.d("ForegroundService", "Manual logout triggered via intent.")
-                serviceScope.launch(Dispatchers.IO) { logoutAndStop() }   // ADD
-            }
-            else -> {
-
+                serviceScope.launch(Dispatchers.IO) { logoutAndStop() }
             }
         }
         return START_STICKY
