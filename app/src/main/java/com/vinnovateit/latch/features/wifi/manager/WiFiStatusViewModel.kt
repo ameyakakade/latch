@@ -34,7 +34,7 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     val ssid: StateFlow<String> = _ssid
 
     init {
-        startStatsService()
+        //startStatsService()
         refreshStatus()
     }
 
@@ -82,4 +82,33 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
         val serviceIntent = Intent(getApplication(), ForegroundService::class.java)
         getApplication<Application>().startForegroundService(serviceIntent)
     }
+
+    fun toggleConnection() {
+        if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
+            UiNotifier.showToast(ctx, "Wi-Fi is turned off.")
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is turned off"))
+            return
+        }
+
+        if (!WiFiConnectionDetector.isConnectedToWiFi(ctx)) {
+            UiNotifier.showToast(ctx, "Not connected to a Wi-Fi network.")
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not connected to Wi-Fi"))
+            return
+        }
+
+        val serviceIntent = Intent(getApplication(), ForegroundService::class.java)
+
+        val sessionActive = SessionRepository.liveStatus.value != null
+        if (sessionActive) {
+            UiNotifier.showToast(ctx, "Disconnecting...")
+            serviceIntent.action = ForegroundService.ACTION_TRIGGER_LOGOUT
+        } else {
+            // Reuse your current connect flow
+            UiNotifier.showToast(ctx, "Checking network...")
+            serviceIntent.action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+        }
+
+        getApplication<Application>().startService(serviceIntent)
+    }
+
 }
