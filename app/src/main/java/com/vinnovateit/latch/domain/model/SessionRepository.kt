@@ -73,7 +73,6 @@ object SessionRepository {
 
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
     connectivityManager.bindProcessToNetwork(network)
-    UiNotifier.showToast(context, "Connected!")
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
