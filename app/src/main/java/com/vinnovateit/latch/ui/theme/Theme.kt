@@ -36,7 +36,7 @@ val LightColorScheme = lightColorScheme(
     onBackground = Color(0xFF201A19),
     surface = Color(0xFFFDF0D5),
     surfaceContainer = Color(0xFFFFF1D4),
-    surfaceContainerHighest = Color(0xFFFFF1D4),
+    surfaceContainerHighest = Color(0xFFFFF8E8),
     onSurface = Color(0xFF0d0d0d),
     surfaceVariant = Color(0xFFFFF8E8),
     onSurfaceVariant = Color(0xFF534341),
@@ -71,8 +71,8 @@ val DarkColorScheme = darkColorScheme(
     surface = Color(0xFF00092E),
     onSurface = Color(0xFFe0e0e0),
     surfaceContainer = Color(0xFF000C38),
-    surfaceContainerHighest = Color(0xFF2A2A2A),
-    surfaceVariant = Color(0xFF000A3D),
+    surfaceContainerHighest = Color(0xFF000A3D),
+    surfaceVariant = Color(0xFF000A65),
     onSurfaceVariant = Color(0xFFD7C1BE),
     outline = Color(0xFFA08C8A),
     inverseOnSurface = Color(0xFF000A3D),
@@ -124,7 +124,9 @@ fun LatchTheme(
 }
 
 val ColorScheme.tooltipContainer: Color
-    @Composable get() = ColorTooltipContainer
+    @Composable
+    get() = if (LocalIsDarkTheme.current) Color(0xFFE0E0E0) else Color(0xFF3A3A3A)
 
 val ColorScheme.tooltipContent: Color
-    @Composable get() = ColorTooltipContent
+    @Composable
+    get() = if (LocalIsDarkTheme.current) Color.Black else Color.White

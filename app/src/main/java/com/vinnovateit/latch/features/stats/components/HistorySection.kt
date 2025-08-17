@@ -52,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -94,7 +95,7 @@ fun HistoryBarChart(history: List<HistoryChartItem>) {
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp, start = 8.dp)
+                .padding(16.dp)
         )
         if (history.isNotEmpty()) {
             HistoryBarChartContent(chartItems = history)
@@ -269,10 +270,14 @@ private fun Bar(
     onTap: () -> Unit
 ) {
     val total = usage.rxBytes + usage.txBytes
+    // Calculate the raw fraction of the bar's height compared to the max usage.
     val rawFrac = if (maxUsage > 0) total.toFloat() / maxUsage else 0f
 
+    // Enforce a minimum height of 10% for visual consistency, even for zero-usage days.
+    val targetFrac = rawFrac.coerceAtLeast(0.15f)
+
     val heightFrac by animateFloatAsState(
-        targetValue = rawFrac.coerceAtLeast(0.1f),
+        targetValue = targetFrac,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -327,6 +332,9 @@ private fun Bar(
                             size = Size(w, ulH)
                         )
                     }
+                } else {
+                    // Draw a faint gray bar for zero-usage days
+                    drawRect(color = Color.Gray)
                 }
             }
         }

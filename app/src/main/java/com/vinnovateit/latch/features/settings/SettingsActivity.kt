@@ -1,4 +1,3 @@
-// main/java/com/vinnovateit/latch/features/settings/SettingsActivity.kt
 package com.vinnovateit.latch.features.settings
 
 import android.annotation.SuppressLint
@@ -12,8 +11,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -27,7 +24,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,12 +33,8 @@ import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.auth.SecondPageActivity
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
-import com.vinnovateit.latch.ui.theme.ColorSliderActiveTrack
-import com.vinnovateit.latch.ui.theme.ColorSliderInactiveTrack
-import com.vinnovateit.latch.ui.theme.ColorSliderThumb
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 class SettingsActivity : ComponentActivity() {
@@ -67,14 +59,11 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
   val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
-  val dataThreshold by SettingsManager.dataThreshold.collectAsStateWithLifecycle()
-  val dataAlertEnabled by SettingsManager.dataAlertEnabled.collectAsStateWithLifecycle()
 
   // Bottom sheet states
   var showSpeedUnitsSheet by remember { mutableStateOf(false) }
   var showThemeSheet by remember { mutableStateOf(false) }
   var showClearStatsSheet by remember { mutableStateOf(false) }
-  var showDataThresholdSheet by remember { mutableStateOf(false) }
 
   val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -163,23 +152,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       item {
         PreferenceItem(PreferenceData("Clear Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true }))
       }
-      item {
-        val thresholdSubtitle = when {
-          dataThreshold < 0 -> "Custom"
-          else -> "$dataThreshold GB"
-        }
-        PreferenceItem(
-          PreferenceData(
-            "Data Alert Threshold",
-            subtitle = "Current: $thresholdSubtitle",
-            Icons.Rounded.DataUsage,
-            onClick = { showDataThresholdSheet = true },
-            trailing = {
-              Switch(checked = dataAlertEnabled, onCheckedChange = { SettingsManager.setDataAlertEnabled(it) })
-            }
-          )
-        )
-      }
     }
   }
 
@@ -214,14 +186,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
         showThemeSheet = false
       },
       onDismiss = { showThemeSheet = false }
-    )
-  }
-
-  if (showDataThresholdSheet) {
-    DataThresholdSliderBottomSheet(
-      currentThreshold = dataThreshold,
-      onThresholdChange = { SettingsManager.setDataThreshold(it) },
-      onDismiss = { showDataThresholdSheet = false }
     )
   }
 
@@ -344,105 +308,6 @@ fun SettingsSelectionBottomSheet(
               fontWeight = FontWeight.Bold
             )
           }
-        }
-      }
-    }
-  )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DataThresholdSliderBottomSheet(
-  currentThreshold: Float,
-  onThresholdChange: (Float) -> Unit,
-  onDismiss: () -> Unit
-) {
-  var isCustom by remember { mutableStateOf(currentThreshold < 0) }
-  var sliderValue by remember { mutableFloatStateOf(if (isCustom || currentThreshold > 10f || currentThreshold < 1f) 1f else currentThreshold) }
-  var customValue by remember { mutableStateOf(if (isCustom) currentThreshold.unaryMinus().toString() else "") }
-
-  LaunchedEffect(isCustom) {
-    if (!isCustom) {
-      onThresholdChange(sliderValue)
-    } else {
-      onThresholdChange(customValue.toFloatOrNull()?.unaryMinus() ?: -1f)
-    }
-  }
-
-  ModalBottomSheet(
-    onDismissRequest = onDismiss,
-    containerColor = MaterialTheme.colorScheme.surface,
-    content = {
-      Column(
-        modifier = Modifier
-          .padding(16.dp)
-          .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-      ) {
-        Text("Data Alert Threshold", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
-        Text(
-          "Get a notification when you're about to exceed your data limit.",
-          style = MaterialTheme.typography.bodyMedium,
-          modifier = Modifier.padding(vertical = 8.dp)
-        )
-
-        Slider(
-          value = sliderValue,
-          onValueChange = {
-            sliderValue = ((it * 2).roundToInt() / 2.0f)
-            isCustom = false
-          },
-          colors = SliderDefaults.colors(
-            activeTickColor = Color(0xFFE5D4D4),
-            inactiveTickColor = Color(0xFFC01221),
-            thumbColor = ColorSliderThumb,
-            activeTrackColor = ColorSliderActiveTrack,
-            inactiveTrackColor = ColorSliderInactiveTrack,
-          ),
-          valueRange = 1f..10f,
-          steps = 17,
-          modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-        )
-
-        Text(
-          if (isCustom) "Custom" else "$sliderValue GB",
-          style = MaterialTheme.typography.bodyLarge,
-          color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-          modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isCustom = !isCustom }
-            .padding(vertical = 8.dp),
-          verticalAlignment = Alignment.CenterVertically
-        ) {
-          Checkbox(checked = isCustom, onCheckedChange = { isCustom = it })
-          Text("Custom Threshold")
-        }
-
-        if (isCustom) {
-          Spacer(Modifier.height(8.dp))
-          OutlinedTextField(
-            value = customValue,
-            onValueChange = {
-              customValue = it
-              val customFloat = it.toFloatOrNull()
-              if(customFloat != null) {
-                onThresholdChange(customFloat.unaryMinus())
-              } else {
-                onThresholdChange(-1f)
-              }
-            },
-            label = { Text("Custom Threshold (GB)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            shape = CircleShape
-          )
         }
       }
     }

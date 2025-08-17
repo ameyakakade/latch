@@ -1,7 +1,6 @@
 package com.vinnovateit.latch.features.wifi.background
 
 import android.app.*
-import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
@@ -114,7 +113,6 @@ class ForegroundService : Service() {
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
             if (internetStatus == 204) {
                 connectivityManager.reportNetworkConnectivity(network, true)
-                val ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext, network) ?: "Wi-Fi"
                 ConnectionStatusManager.postStatus(ConnectionStatus.Success)
                 SessionRepository.startSession(network)
                 startHealthCheck(network)
@@ -162,7 +160,7 @@ class ForegroundService : Service() {
         }
     }
 
-    private suspend fun logoutAndStop() {
+    private fun logoutAndStop() {
         ConnectionStatusManager.postStatus(ConnectionStatus.Connecting("Logging out..."))
         healthCheckJob?.cancel()
 
