@@ -82,6 +82,7 @@ class ForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d("ForegroundService", "Service destroyed")
+        stopForeground(STOP_FOREGROUND_REMOVE)
         serviceScope.cancel()
     }
 
@@ -100,9 +101,9 @@ class ForegroundService : Service() {
         manager.createNotificationChannel(chan)
 
         return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle("Latch Running")
-            .setContentText("Monitoring Wi-Fi connection...")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Latch Service")
+            .setContentText("Monitoring Wi-Fi connection")
+            .setSmallIcon(R.drawable.ic_latch)
             .build()
     }
 
