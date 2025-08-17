@@ -22,11 +22,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.auth.SecondPageActivity
@@ -209,10 +211,10 @@ fun SettingsScreen(onBackClick: () -> Unit) {
 
   if (showClearStatsSheet) {
     SettingsActionBottomSheet(
-      title = "Clear Stats",
-      description = "This will reset all usage history. Continue?",
-      confirmText = "Clear",
-      cancelText = "Cancel",
+      title = stringResource(R.string.stats_reset_dialog_title),
+      description = stringResource(R.string.stats_reset_dialog_message),
+      confirmText = stringResource(R.string.stats_reset_dialog_confirm),
+      cancelText = stringResource(R.string.stats_reset_dialog_cancel),
       onConfirm = {
         SessionRepository.clearHistory()
         showClearStatsSheet = false
@@ -307,11 +309,11 @@ fun SettingsSelectionBottomSheet(
       ) {
         Text(
           title,
-          style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), // Larger title
+          style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
           modifier = Modifier.padding(horizontal = 16.dp)
         )
         Text(
-          description, // Add description text
+          description,
           style = MaterialTheme.typography.bodyMedium,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)

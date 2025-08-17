@@ -69,7 +69,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // Load from DB
     LaunchedEffect(editMode) {
         if (editMode) {
             regNo = StoredCredentials.getUserId(context) ?: ""
@@ -83,7 +82,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             .background(MaterialTheme.colorScheme.background)
     ) {
         LeafOverlay(
-            contentDescription = "Background Pattern",
+            contentDescription = stringResource(R.string.home_background_pattern_content_description),
             modifier = Modifier.fillMaxHeight(),
             contentScale = ContentScale.Crop,
             alignment = Alignment.Center
@@ -123,7 +122,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 trailingIcon = {
                     Icon(
                         imageVector = Icons.Rounded.Person,
-                        contentDescription = "Username Icon",
+                        contentDescription = stringResource(R.string.username_icon_content_description),
                     )
                 },
                 modifier = Modifier

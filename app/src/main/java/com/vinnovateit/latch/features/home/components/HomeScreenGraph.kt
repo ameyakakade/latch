@@ -63,7 +63,7 @@ const val POINTS_IN_30_SECONDS = 20
  * Calculates a "nice" rounded number for the top of the Y-axis.
  */
 fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
-  if (maxSpeed <= 0f) return 1f // CRASH FIX: Handle zero or negative maxSpeed
+  if (maxSpeed <= 0f) return 1f
   val exponent = floor(log10(maxSpeed))
   val fraction = maxSpeed / 10f.pow(exponent)
 
@@ -147,7 +147,6 @@ fun HomeScreenGraph(
 
       if (containerWidthPx > 0 && rateHistory.size > 1) {
 
-        // --- OPTIMIZED MAX SPEED CALCULATION ---
         var maxSpeed by remember { mutableLongStateOf(1L) }
 
         // Recalculate max speed only when scrolling stops or data/zoom changes.
@@ -248,7 +247,7 @@ fun HomeScreenGraph(
                 )
             ) {
               val animatedFontWeight by animateFloatAsState(
-                targetValue = if (yAxisVisible) 700f else 400f, // Bold to normal
+                targetValue = if (yAxisVisible) 700f else 400f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
               )
               Canvas(modifier = Modifier.fillMaxSize()) {

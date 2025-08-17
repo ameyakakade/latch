@@ -277,7 +277,7 @@ fun HomeTopSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Not Connected",
+                    text = stringResource(R.string.status_not_connected),
 
                     color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,

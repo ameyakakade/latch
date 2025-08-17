@@ -155,7 +155,7 @@ object SessionRepository {
   fun clearHistory() {
     repoScope.launch {
       statsDao.clearAllSessions()
-      UiNotifier.showToast(applicationContext!!, "Stats history cleared")
+      UiNotifier.showToast(applicationContext!!, "Stats Cleared!")
     }
   }
 

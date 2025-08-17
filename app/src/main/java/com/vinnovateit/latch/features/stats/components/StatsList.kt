@@ -6,7 +6,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,10 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.stats.DownloadReportButton
@@ -114,7 +115,7 @@ fun StatsList(
         Column(modifier = Modifier
           .padding(vertical = 8.dp)) {
           Text(
-            "Sessions",
+            stringResource(R.string.stats_sessions),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
@@ -158,15 +159,13 @@ fun StatsList(
           StatsItemCard(session = session, shape = shape)
         }
       }
-
-      // "View More" button
       if (historyToShow.size > 5 && !showAllSessions) {
         item {
           TextButton(
             onClick = onToggleShowAll,
             modifier = Modifier.fillMaxWidth().padding(16.dp)
           ) {
-            Text("View More")
+            Text(stringResource(R.string.stats_view_more))
           }
         }
       }
