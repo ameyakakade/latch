@@ -81,7 +81,7 @@ val AppTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = SatoshiFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
@@ -95,9 +95,9 @@ val AppTypography = Typography(
     bodySmall = TextStyle(
         fontFamily = SatoshiFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        letterSpacing = 0.3.sp
     ),
     labelLarge = TextStyle(
         fontFamily = SatoshiFontFamily,

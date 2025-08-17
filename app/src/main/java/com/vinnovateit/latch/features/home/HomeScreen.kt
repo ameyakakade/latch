@@ -1,5 +1,6 @@
 package com.vinnovateit.latch.features.home
 
+import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
@@ -40,6 +41,7 @@ import com.vinnovateit.latch.features.home.components.SpectrumCard
 import com.vinnovateit.latch.features.settings.SettingsActivity
 import com.vinnovateit.latch.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 
@@ -52,7 +54,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
             .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
         drawRect(
-            color = colorScheme.secondaryContainer,
+            color = colorScheme.primaryContainer,
             size = size
         )
         if (isPortrait) {
@@ -135,8 +137,7 @@ fun PortraitHomeScreen(
     val buttonDiameterPx = screenWidthPx * 0.5f
     val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = if(isDark) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+        LeafOverlay(
             contentDescription = "Background Pattern",
             modifier = Modifier.fillMaxSize(),
             alignment = Alignment.TopCenter
@@ -277,14 +278,15 @@ fun HomeTopSection(
             ) {
                 Text(
                     text = "Not Connected",
-                    color = MaterialTheme.colorScheme.tertiary,
+
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     fontFamily = SatoshiFontFamily,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = networkSpeed,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = SatoshiFontFamily
@@ -375,7 +377,7 @@ fun TopBarSection(
         title = {
             Text(
                 modifier = Modifier.padding(top = 5.dp),
-                text = "LATCH",
+                text = stringResource(R.string.app_name_uppercase),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 23.sp,
                 fontFamily = ModernizFontFamily,
@@ -399,7 +401,7 @@ fun TopBarSection(
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.tertiary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }

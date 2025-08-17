@@ -1,33 +1,31 @@
 package com.vinnovateit.latch.features.settings
 
-import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.SessionRepository
@@ -40,8 +38,6 @@ import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 class SettingsActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
-    WindowCompat.setDecorFitsSystemWindows(window, false)
     SettingsManager.initialize(applicationContext)
     setContent {
       LatchTheme {
@@ -51,7 +47,6 @@ class SettingsActivity : ComponentActivity() {
   }
 }
 
-@SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBackClick: () -> Unit) {
@@ -65,15 +60,19 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   var showThemeSheet by remember { mutableStateOf(false) }
   var showClearStatsSheet by remember { mutableStateOf(false) }
 
-  val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+  // 1. Remember the scroll state to check if scrolling is possible
+  val scrollState = rememberScrollState()
 
-  val configuration = LocalConfiguration.current
-  val sidePadding = if (configuration.screenWidthDp > 600) 80.dp else 0.dp
+  // 2. Create scroll behavior that only activates if content can scroll
+  val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+    rememberTopAppBarState(),
+    canScroll = { scrollState.maxValue > 0 } // This is the key change
+  )
+
 
   Scaffold(
     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     containerColor = MaterialTheme.colorScheme.surface,
-    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
     topBar = {
       LargeTopAppBar(
         title = {
@@ -107,58 +106,74 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       )
     }
   ) { innerPadding ->
-    LazyColumn(
+    // 3. Apply the scroll state to the scrollable container
+    Column(
       modifier = Modifier
-        .fillMaxSize()
         .padding(innerPadding)
-        .padding(horizontal = sidePadding),
+        .verticalScroll(scrollState)
     ) {
-      // Account Category
-      item {
+        // Account Category
         PreferenceCategory(title = "Account")
-      }
-      items(
-        listOf(
-          PreferenceData("Auto-login on Connect", "Automatically log in to VIT Wi-Fi", Icons.Rounded.Autorenew, trailing = {
-            Switch(checked = autoLogin, onCheckedChange = { SettingsManager.setAutoLogin(it) })
-          }),
-          PreferenceData("Update Credentials", "Change your registration number and password", Icons.Rounded.Key, onClick = {
-            context.startActivity(Intent(context, SecondPageActivity::class.java).apply {
-              putExtra("editMode", true)
-            })
-          })
+        PreferenceItem(
+          PreferenceData(
+            "Auto-login on Connect",
+            "Automatically log in to VIT Wi-Fi",
+            Icons.Rounded.Autorenew,
+            onClick = { SettingsManager.setAutoLogin(!autoLogin) },
+            trailing = {
+              Switch(checked = autoLogin, onCheckedChange = { SettingsManager.setAutoLogin(it) })
+            }
+          )
         )
-      ) { item ->
-        PreferenceItem(item)
-      }
+        PreferenceItem(
+          PreferenceData(
+            "Update Credentials",
+            "Change your registration number and password",
+            Icons.Rounded.Key,
+            onClick = {
+              context.startActivity(Intent(context, SecondPageActivity::class.java).apply {
+                putExtra("editMode", true)
+              })
+            }
+          )
+        )
 
-      // Display Category
-      item {
+        // Display Category
         PreferenceCategory(title = "Display")
-      }
-      items(
-        listOf(
-          PreferenceData("Speed Units", speedUnits, Icons.Rounded.Speed, onClick = { showSpeedUnitsSheet = true }),
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          val useDynamicColors by SettingsManager.useDynamicColors.collectAsStateWithLifecycle()
+          PreferenceItem(
+            PreferenceData(
+              "Dynamic Colors",
+              "Use colors from your wallpaper",
+              Icons.Rounded.ColorLens,
+              onClick = { SettingsManager.setUseDynamicColors(!useDynamicColors) },
+              trailing = {
+                Switch(checked = useDynamicColors, onCheckedChange = { SettingsManager.setUseDynamicColors(it) })
+              }
+            )
+          )
+        }
+        PreferenceItem(
+          PreferenceData("Speed Units", speedUnits, Icons.Rounded.Speed, onClick = { showSpeedUnitsSheet = true })
+        )
+        PreferenceItem(
           PreferenceData("Theme", theme, Icons.Rounded.DarkMode, onClick = { showThemeSheet = true })
         )
-      ) { item ->
-        PreferenceItem(item)
-      }
 
-      // Data Management Category
-      item {
+        // Data Management Category
         PreferenceCategory(title = "Data Management")
+        PreferenceItem(
+          PreferenceData("Clear Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true })
+        )
       }
-      item {
-        PreferenceItem(PreferenceData("Clear Stats", "Reset usage history", Icons.Rounded.SettingsBackupRestore, onClick = { showClearStatsSheet = true }))
-      }
-    }
   }
 
   // Bottom Sheets
   if (showSpeedUnitsSheet) {
     SettingsSelectionBottomSheet(
       title = "Speed Units",
+      description = "Choose how network speed is displayed",
       options = listOf(
         SelectionOption("bps", Icons.Rounded.Speed),
         SelectionOption("B/s", Icons.Rounded.Speed)
@@ -173,13 +188,16 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   }
 
   if (showThemeSheet) {
+    val themeOptions = mutableListOf(
+      SelectionOption("System Default", Icons.Rounded.SettingsSystemDaydream),
+      SelectionOption("Light", Icons.Rounded.LightMode),
+      SelectionOption("Dark", Icons.Rounded.DarkMode)
+    )
+
     SettingsSelectionBottomSheet(
       title = "Theme",
-      options = listOf(
-        SelectionOption("System Default", Icons.Rounded.SettingsSystemDaydream),
-        SelectionOption("Light", Icons.Rounded.LightMode),
-        SelectionOption("Dark", Icons.Rounded.DarkMode)
-      ),
+      description = "Control the look of the app",
+      options = themeOptions,
       selected = theme,
       onSelect = {
         SettingsManager.setTheme(it.label)
@@ -224,7 +242,7 @@ fun PreferenceCategory(title: String) {
   Text(
     title,
     style = MaterialTheme.typography.labelLarge.copy(
-      fontWeight = FontWeight.ExtraBold,
+      fontWeight = FontWeight.Bold,
       color = MaterialTheme.colorScheme.primary
     ),
     modifier = Modifier.padding(top = 24.dp, bottom = 8.dp, start = 16.dp)
@@ -249,13 +267,15 @@ fun PreferenceItem(data: PreferenceData) {
       Text(
         data.title,
         style = MaterialTheme.typography.bodyLarge.copy(
-          fontWeight = FontWeight.Bold,
+          fontWeight = FontWeight.W500,
           color = MaterialTheme.colorScheme.onSurface
         )
       )
       Text(
         data.subtitle,
-        style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+        style = MaterialTheme.typography.bodySmall.copy(
+          fontWeight = FontWeight.W400,
+          color = MaterialTheme.colorScheme.onSurfaceVariant)
       )
     }
     Spacer(Modifier.width(16.dp))
@@ -267,6 +287,7 @@ fun PreferenceItem(data: PreferenceData) {
 @Composable
 fun SettingsSelectionBottomSheet(
   title: String,
+  description: String, // Add this parameter
   options: List<SelectionOption>,
   selected: String,
   onSelect: (SelectionOption) -> Unit,
@@ -279,14 +300,23 @@ fun SettingsSelectionBottomSheet(
     sheetState = sheetState,
     containerColor = MaterialTheme.colorScheme.surface,
     content = {
-      Column(modifier = Modifier.padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
+      Column(
+        modifier = Modifier
+          .padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+      ) {
         Text(
           title,
-          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+          style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold), // Larger title
           modifier = Modifier.padding(horizontal = 16.dp)
         )
-        Spacer(Modifier.height(8.dp))
+        Text(
+          description, // Add description text
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+        Spacer(Modifier.height(16.dp))
         options.forEach { option ->
           val isSelected = option.label == selected
           val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -298,14 +328,15 @@ fun SettingsSelectionBottomSheet(
                 indication = ripple(),
                 onClick = { onSelect(option) }
               )
-              .padding(vertical = 12.dp, horizontal = 16.dp),
+              .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = contentColor)
+            Icon(option.icon, contentDescription = null, modifier = Modifier.padding(start = 16.dp, end = 16.dp), tint = contentColor)
             Text(
               option.label,
               color = contentColor,
-              fontWeight = FontWeight.Bold
+              fontWeight = FontWeight.W500,
+              modifier = Modifier.padding(end = 16.dp)
             )
           }
         }

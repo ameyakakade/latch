@@ -105,9 +105,8 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
                 modifier = Modifier
                     .size(120.dp)
             )
-            // Latch logo text
             Text(
-                text = stringResource(R.string.name_uppercase),
+                text = stringResource(R.string.app_name_uppercase),
                 fontSize = 30.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = ModernizFontFamily
