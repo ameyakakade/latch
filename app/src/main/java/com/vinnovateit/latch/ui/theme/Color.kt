@@ -1,6 +1,11 @@
 package com.vinnovateit.latch.ui.theme
 
 import androidx.compose.ui.graphics.Color
+
+// --- Default Colors ---
+val AppTitleColor = Color(0xFFC01221)
+val AppTitleColorDark = Color(0xFFFF6B6B)
+
 // --- Status & Tags ---
 val ColorStatusConnected = Color(0xFF167D00)
 val ColorStatusDisconnected = Color(0xFFFF3434)

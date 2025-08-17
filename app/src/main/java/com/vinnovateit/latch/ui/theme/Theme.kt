@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.ui.theme
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -9,6 +10,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
@@ -20,7 +22,7 @@ val LightColorScheme = lightColorScheme(
     onPrimary = Color(0xFFFFDFB1),
     primaryContainer = Color(0xFFD2222C),
     onPrimaryContainer = Color(0xFF410002),
-    secondary = Color(0xFFEED2D2),
+    secondary = Color(0xFF670002),
     onSecondary = Color(0xFFFF8686),
     secondaryContainer = Color(0xFFC01221),
     onSecondaryContainer = Color(0xFF410002),
@@ -54,7 +56,7 @@ val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF090F29),
     primaryContainer = Color(0xFFFF6B6B),
     onPrimaryContainer = Color(0xFFFFDAD6),
-    secondary = Color(0xFFFF6C59),
+    secondary = Color(0xFF073691),
     onSecondary = Color(0xFF690005),
     secondaryContainer = Color(0xFFFF5F5F),
     onSecondaryContainer = Color(0xFFFFDAD6),
@@ -72,7 +74,7 @@ val DarkColorScheme = darkColorScheme(
     onSurface = Color(0xFFe0e0e0),
     surfaceContainer = Color(0xFF000C38),
     surfaceContainerHighest = Color(0xFF000A3D),
-    surfaceVariant = Color(0xFF000A65),
+    surfaceVariant = Color(0xFF17277D),
     onSurfaceVariant = Color(0xFFD7C1BE),
     outline = Color(0xFFA08C8A),
     inverseOnSurface = Color(0xFF000A3D),
@@ -90,9 +92,13 @@ val LocalIsDarkTheme = compositionLocalOf { false }
 fun LatchTheme(
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     val themeSetting by SettingsManager.theme.collectAsStateWithLifecycle()
+    val useDynamicColors by SettingsManager.useDynamicColors.collectAsStateWithLifecycle() // Read the new setting
     val systemIsDark = isSystemInDarkTheme()
+    val supportsDynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
+    // Determine if the final theme should be dark
     val darkTheme = when (themeSetting) {
         "Light" -> false
         "Dark" -> true
@@ -100,6 +106,11 @@ fun LatchTheme(
     }
 
     val colorScheme = when {
+        // Highest priority: Dynamic colors if toggled on and supported
+        useDynamicColors && supportsDynamic -> {
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        // Fallback to standard themes
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }

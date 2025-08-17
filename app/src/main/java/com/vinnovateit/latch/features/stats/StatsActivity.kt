@@ -353,7 +353,7 @@ private fun StatsTopAppBar(
       navigationIcon = {
         TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
           IconButton(onClick = onBackClick) {
-            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
           }
         }
       },
