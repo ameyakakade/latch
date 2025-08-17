@@ -2,8 +2,8 @@ package com.vinnovateit.latch.features.wifi.widget
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -44,6 +44,7 @@ import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import com.vinnovateit.latch.ui.theme.DarkColorScheme
 import com.vinnovateit.latch.ui.theme.LightColorScheme
+import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -99,10 +100,10 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
     ) {
       Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = GlanceModifier.defaultWeight()) {
-          Text(text = stringResource(R.string.widget_status), style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp, fontFamily = FontFamily.Monospace))
+          Text(text = "Status:", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp, fontFamily = FontFamily.Monospace))
           Text(text = state.status, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = STATUS_FONT_SIZE, fontWeight = FontWeight.Bold))
         }
-        Image(ImageProvider(R.drawable.ic_latch), contentDescription = stringResource(R.string.widget_app_logo), modifier = GlanceModifier.size(40.dp))
+        Image(ImageProvider(R.drawable.ic_latch), contentDescription = "App Logo", modifier = GlanceModifier.size(40.dp))
       }
 
       Spacer(modifier = GlanceModifier.height(16.dp))
@@ -124,7 +125,7 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
           .clickable(actionRunCallback<ConnectAction>()),
         contentAlignment = Alignment.Center
       ) {
-        val buttonText = if (state.isConnected) stringResource(R.string.widget_disconnect) else stringResource(R.string.widget_connect)
+        val buttonText = if (state.isConnected) "Disconnect" else "Connect"
         Text(
           text = buttonText,
           style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = BUTTON_FONT_SIZE, fontWeight = FontWeight.Bold)
@@ -145,7 +146,7 @@ class ConnectAction : ActionCallback {
     val stateJson = prefs[LatchWidgetUpdater.WIDGET_STATE_PREF_KEY] ?: "{}"
     val state = try {
       Json.decodeFromString<LatchWidgetState>(stateJson)
-    } catch (_: Exception) {
+    } catch (e: Exception) {
       LatchWidgetState()
     }
 
