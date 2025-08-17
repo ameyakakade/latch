@@ -23,7 +23,7 @@ fun LeafOverlay(
 
   val themedVector = remember(primaryColor) {
     Builder(
-      name = "ThemedBackgroundOverlay",
+      name = "LeafOverlay",
       defaultWidth = 402.dp,
       defaultHeight = 456.dp,
       viewportWidth = 402f,
