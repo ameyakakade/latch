@@ -26,7 +26,9 @@ data class SessionSummary(
   val startTimestamp: Long,
   val endTimestamp: Long,
   val totalData: DataUsage,
-  val history: List<LiveDataPoint>
+  val history: List<LiveDataPoint>,
+  val maxRxBps: Long,
+  val maxTxBps: Long
 )
 
 object WifiStatsManager {
@@ -110,40 +112,6 @@ object WifiStatsManager {
         }
       }
     }
-  }
-
-  fun stopLogging(context: Context) {
-    if (loggingJob == null && _liveStatus.value == null) return
-    loggingJob?.cancel()
-    loggingJob = null
-    val session = _liveStatus.value ?: return
-
-    _liveStatus.value = null
-    UiNotifier.showToast(context, "Stopping stats")
-
-    val duration = System.currentTimeMillis() - session.startTimeMillis
-    val totalRx = (TrafficStats.getTotalRxBytes() - startRxBytes).coerceAtLeast(0)
-    val totalTx = (TrafficStats.getTotalTxBytes() - startTxBytes).coerceAtLeast(0)
-
-    if (duration < 5000 && totalRx < 1024 && totalTx < 1024) {
-      clearLiveSessionState()
-      triggerWidgetUpdate(context)
-      return
-    }
-
-    val summary = SessionSummary(
-      startTimestamp = session.startTimeMillis,
-      endTimestamp = System.currentTimeMillis(),
-      totalData = DataUsage(totalRx, totalTx),
-      history = session.liveData
-    )
-
-    val updatedHistory = (_sessionSummaries.value + summary).sortedByDescending { it.startTimestamp }
-    _sessionSummaries.value = updatedHistory
-    _lastSession.value = summary
-    saveSessions()
-    clearLiveSessionState()
-    triggerWidgetUpdate(context)
   }
 
   private fun triggerWidgetUpdate(context: Context) {

@@ -42,7 +42,6 @@ import java.util.Locale
 fun StatsItemCard(
   session: SessionSummary,
   shape: Shape = RoundedCornerShape(16.dp),
-  speedUnit: String
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
@@ -59,7 +58,7 @@ fun StatsItemCard(
     ) {
       Column(modifier = Modifier.weight(1f)) {
         Text(
-          text = SimpleDateFormat("E, dd MMM yyyy", Locale.getDefault()).format(Date(session.startTimestamp)),
+          text = SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(session.startTimestamp)),
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
@@ -72,7 +71,7 @@ fun StatsItemCard(
         )
       }
       Column(horizontalAlignment = Alignment.End) {
-        val total = remember(session.totalData, speedUnit) { formatBytes(session.totalData.rxBytes + session.totalData.txBytes, speedUnit) } // Use it here
+        val total = remember(session.totalData) { formatBytes(session.totalData.rxBytes + session.totalData.txBytes) }
         Text(
           text = "${total.first} ${total.second}",
           style = MaterialTheme.typography.titleMedium,
@@ -80,7 +79,7 @@ fun StatsItemCard(
           color = MaterialTheme.colorScheme.onSurface
         )
         Row {
-          val dl = remember(session.totalData, speedUnit) { formatBytes(session.totalData.rxBytes, speedUnit) } // And here
+          val dl = remember(session.totalData) { formatBytes(session.totalData.rxBytes) }
           Icon(Icons.Default.ArrowDownward, contentDescription = "Download data", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
           Text(
             text = "${dl.first} ${dl.second}",
@@ -88,7 +87,7 @@ fun StatsItemCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant
           )
           Spacer(modifier = Modifier.width(12.dp))
-          val ul = remember(session.totalData, speedUnit) { formatBytes(session.totalData.txBytes, speedUnit) } // And here
+          val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
           Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
             text = "${ul.first} ${ul.second}",
