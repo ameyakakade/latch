@@ -63,7 +63,7 @@ const val POINTS_IN_30_SECONDS = 20
  * Calculates a "nice" rounded number for the top of the Y-axis.
  */
 fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
-  if (maxSpeed <= 0f) return 1f // CRASH FIX: Handle zero or negative maxSpeed
+  if (maxSpeed <= 0f) return 1f
   val exponent = floor(log10(maxSpeed))
   val fraction = maxSpeed / 10f.pow(exponent)
 
@@ -80,7 +80,8 @@ fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
 @Composable
 fun HomeScreenGraph(
   modifier: Modifier = Modifier,
-  rateHistory: List<LiveDataPoint>
+  rateHistory: List<LiveDataPoint>,
+  speedUnit: String
 ) {
   val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
     rateHistory.size.toFloat() / POINTS_IN_30_SECONDS.toFloat()
@@ -146,7 +147,6 @@ fun HomeScreenGraph(
 
       if (containerWidthPx > 0 && rateHistory.size > 1) {
 
-        // --- OPTIMIZED MAX SPEED CALCULATION ---
         var maxSpeed by remember { mutableLongStateOf(1L) }
 
         // Recalculate max speed only when scrolling stops or data/zoom changes.
@@ -247,7 +247,7 @@ fun HomeScreenGraph(
                 )
             ) {
               val animatedFontWeight by animateFloatAsState(
-                targetValue = if (yAxisVisible) 700f else 400f, // Bold to normal
+                targetValue = if (yAxisVisible) 700f else 400f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
               )
               Canvas(modifier = Modifier.fillMaxSize()) {
@@ -264,7 +264,7 @@ fun HomeScreenGraph(
                   val fraction = i.toFloat() / numLines
                   val yValue = rulerTopValue * fraction
                   val yPos = size.height - ((yValue / rulerTopValue) * (size.height * GRAPH_HEIGHT_SCALE))
-                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), includeUnit = i == numLines)
+                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), speedUnit)
                   val markingEnd = (4 + i * 2).dp.toPx()
 
                   if (i > 0) {

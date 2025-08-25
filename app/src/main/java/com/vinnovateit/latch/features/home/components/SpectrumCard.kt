@@ -34,7 +34,8 @@ import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 fun SpectrumCard(
   session: SessionSummary?,
   historyForHomeScreen: List<LiveDataPoint>,
-  connectionStatus: ConnectionStatus
+  connectionStatus: ConnectionStatus,
+  speedUnit: String
 ) {
   val context = LocalContext.current
 
@@ -89,7 +90,8 @@ fun SpectrumCard(
           if (isGraphVisible) {
             HomeScreenGraph(
               modifier = Modifier.fillMaxSize(),
-              rateHistory = historyForHomeScreen
+              rateHistory = historyForHomeScreen,
+              speedUnit = speedUnit
             )
           } else {
             // Otherwise, show the status indicator.
@@ -129,13 +131,13 @@ private fun StatusIndicator(connectionStatus: ConnectionStatus) {
             )
             is ConnectionStatus.Success -> Icon(
               imageVector = Icons.Rounded.Check,
-              contentDescription = "Success",
+              contentDescription = stringResource(R.string.status_connected),
               tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(64.dp)
             )
             is ConnectionStatus.Failed -> Icon(
               imageVector = Icons.Rounded.Close,
-              contentDescription = "Failed",
+              contentDescription = stringResource(R.string.status_login_failed),
               tint = MaterialTheme.colorScheme.error,
               modifier = Modifier.size(64.dp)
             )
@@ -148,7 +150,7 @@ private fun StatusIndicator(connectionStatus: ConnectionStatus) {
         text = when (status) {
           is ConnectionStatus.Idle -> stringResource(R.string.home_no_data_for_graph)
           is ConnectionStatus.Connecting -> status.message
-          is ConnectionStatus.Success -> "Connected"
+          is ConnectionStatus.Success -> stringResource(R.string.status_connected)
           is ConnectionStatus.Failed -> status.message
         },
         color = MaterialTheme.colorScheme.onSurfaceVariant,

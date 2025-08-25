@@ -113,13 +113,12 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
 
             Image(
                 painter = painterResource(id = logoRes),
-                contentDescription = "Latch Logo",
+                contentDescription = stringResource(R.string.landing_latch_logo_content_description),
                 modifier = Modifier
                     .size(120.dp)
             )
-            // Latch logo text
             Text(
-                text = stringResource(R.string.name_uppercase),
+                text = stringResource(R.string.app_name_uppercase),
                 fontSize = 30.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontFamily = ModernizFontFamily
@@ -135,7 +134,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
             ) {
                 Text(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                    text = "Get Started",
+                    text = stringResource(R.string.get_started),
                     fontSize = 23.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = SatoshiFontFamily
@@ -146,7 +145,7 @@ fun LandingPageScreen(onGetStarted: () -> Unit) {
         // Bottom center VinnovateIT logo
         Image(
             painter = painterResource(id = R.drawable.vinnovate),
-            contentDescription = "VinnovateIT Logo",
+            contentDescription = stringResource(R.string.landing_vinnovateit_logo_content_description),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 20.dp)

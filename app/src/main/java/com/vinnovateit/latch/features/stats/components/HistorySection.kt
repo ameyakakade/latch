@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -94,7 +97,7 @@ fun HistoryBarChart(history: List<HistoryChartItem>) {
             textAlign = TextAlign.Left,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp, start = 8.dp)
+                .padding(16.dp)
         )
         if (history.isNotEmpty()) {
             HistoryBarChartContent(chartItems = history)
@@ -269,10 +272,14 @@ private fun Bar(
     onTap: () -> Unit
 ) {
     val total = usage.rxBytes + usage.txBytes
+    // Calculate the raw fraction of the bar's height compared to the max usage.
     val rawFrac = if (maxUsage > 0) total.toFloat() / maxUsage else 0f
 
+    // Enforce a minimum height of 10% for visual consistency, even for zero-usage days.
+    val targetFrac = rawFrac.coerceAtLeast(0.15f)
+
     val heightFrac by animateFloatAsState(
-        targetValue = rawFrac.coerceAtLeast(0.1f),
+        targetValue = targetFrac,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
@@ -327,6 +334,9 @@ private fun Bar(
                             size = Size(w, ulH)
                         )
                     }
+                } else {
+                    // Draw a faint gray bar for zero-usage days
+                    drawRect(color = Color.Gray)
                 }
             }
         }
@@ -379,7 +389,7 @@ private fun StatDetailRow(data: Pair<DataUsage, String>) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             AnimatedContent(dlFmt, label = "DLStat", transitionSpec = { fadeIn() togetherWith fadeOut() }) { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowDownward, null, tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.ArrowDownward, null, tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
@@ -389,7 +399,7 @@ private fun StatDetailRow(data: Pair<DataUsage, String>) {
             }
             AnimatedContent(ulFmt, label = "ULStat", transitionSpec = { fadeIn() togetherWith fadeOut() }) { (value, unit) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ArrowUpward, null, tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.ArrowUpward, null, tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("$value $unit",
                         style = MaterialTheme.typography.bodyMedium,
