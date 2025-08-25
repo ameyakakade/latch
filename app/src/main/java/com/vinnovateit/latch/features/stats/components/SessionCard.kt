@@ -17,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.common.util.DisplayMode
 import com.vinnovateit.latch.common.util.Tag
 import com.vinnovateit.latch.common.util.createGraphPaths
+import com.vinnovateit.latch.common.util.formatBitsPerSecond
 import com.vinnovateit.latch.common.util.formatBytes
 import com.vinnovateit.latch.common.util.formatDurationDynamic
 import com.vinnovateit.latch.domain.model.DataUsage
@@ -54,7 +56,7 @@ import kotlin.math.atan2
 import kotlin.math.max
 
 @Composable
-fun SessionCard(session: SessionSummary) {
+fun SessionCard(session: SessionSummary, speedUnit: String) {
     var lastInteraction by remember { mutableStateOf(0L) }
     var showOverlay by remember { mutableStateOf(true) }
     var visibleMaxSpeed by remember { mutableLongStateOf(0L) }
@@ -71,10 +73,10 @@ fun SessionCard(session: SessionSummary) {
     val overlayAlpha by animateFloatAsState(targetValue = if (showOverlay) 1f else 0f, animationSpec = tween(durationMillis = 300))
 
     Card(
-        modifier = Modifier.fillMaxWidth().height(240.dp),
+        modifier = Modifier.fillMaxWidth().height(240.dp).padding(start = 16.dp, end = 16.dp),
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             SessionRateGraph(
@@ -99,7 +101,8 @@ fun SessionCard(session: SessionSummary) {
             MaxSpeedTag(
                 modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp),
                 maxSpeed = visibleMaxSpeed,
-                isDownload = visibleMaxSpeedIsDownload
+                isDownload = visibleMaxSpeedIsDownload,
+                speedUnit = speedUnit
             )
         }
     }
@@ -353,10 +356,10 @@ private fun SessionRateGraph(
 }
 
 @Composable
-private fun MaxSpeedTag(modifier: Modifier = Modifier, maxSpeed: Long, isDownload: Boolean) {
+private fun MaxSpeedTag(modifier: Modifier = Modifier, maxSpeed: Long, isDownload: Boolean, speedUnit: String) {
     if (maxSpeed > 0) {
-        val (v, u) = formatBytes(maxSpeed)
-        Tag(text = "MAX ${v}${u}/s", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
+        val (v, u) = formatBitsPerSecond(maxSpeed, speedUnit)
+        Tag(text = "MAX ${v}${u}", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
     }
 }
 

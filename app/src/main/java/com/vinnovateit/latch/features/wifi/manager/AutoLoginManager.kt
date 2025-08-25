@@ -82,18 +82,27 @@ object AutoLoginManager {
         return try {
             val url = URL(LOGOUT_URL)
             val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
+            connection.requestMethod = "GET"               // CHANGED from POST -> GET
+            connection.instanceFollowRedirects = false     // Don't auto-follow; we just care that it responded
             connection.connectTimeout = 5000
             connection.readTimeout = 5000
             connection.connect()
 
-            val responseCode = connection.responseCode
-            Log.d("AutoLoginManager", "Logout response code: $responseCode")
-            connection.inputStream.close()
-            responseCode in 200..299
+            val code = connection.responseCode
+            Log.d("AutoLoginManager", "Logout response code: $code")
+
+            // Drain response to avoid leaked connections
+            try {
+                (if (code >= 400) connection.errorStream else connection.inputStream)
+                    ?.buffered()?.use { it.readBytes() }
+            } catch (_: Exception) { /* ignore */ }
+
+            connection.disconnect()
+            code in 200..399
         } catch (e: Exception) {
             Log.e("AutoLoginManager", "Logout failed: ${e.message}")
             false
         }
     }
+
 }

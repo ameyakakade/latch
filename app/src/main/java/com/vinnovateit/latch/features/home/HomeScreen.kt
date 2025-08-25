@@ -1,5 +1,6 @@
 package com.vinnovateit.latch.features.home
 
+import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
@@ -40,6 +41,7 @@ import com.vinnovateit.latch.features.home.components.SpectrumCard
 import com.vinnovateit.latch.features.settings.SettingsActivity
 import com.vinnovateit.latch.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 
@@ -52,7 +54,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
             .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
         drawRect(
-            color = colorScheme.secondaryContainer,
+            color = colorScheme.primaryContainer,
             size = size
         )
         if (isPortrait) {
@@ -83,7 +85,8 @@ fun HomeScreen(
     networkSpeed: String,
     session: SessionSummary?,
     onConnectClick: () -> Unit,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
@@ -96,12 +99,13 @@ fun HomeScreen(
 
         if (isPortrait) {
             PortraitHomeScreen(
-              isConnected,
-              networkSpeed,
-              session,
-              onConnectClick,
-              historyForHomeScreen,
-              connectionStatus
+                isConnected,
+                networkSpeed,
+                session,
+                onConnectClick,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit
             )
         } else {
             LandscapeHomeScreen(
@@ -110,7 +114,8 @@ fun HomeScreen(
                 session,
                 onConnectClick,
                 historyForHomeScreen,
-                connectionStatus
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -124,15 +129,15 @@ fun PortraitHomeScreen(
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
     val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = if(isDark) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+        LeafOverlay(
             contentDescription = "Background Pattern",
             modifier = Modifier.fillMaxSize(),
             alignment = Alignment.TopCenter
@@ -154,7 +159,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, historyForHomeScreen, connectionStatus)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit)
             }
         }
         // Power Button Overlay
@@ -175,7 +180,8 @@ fun LandscapeHomeScreen(
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
-    connectionStatus: ConnectionStatus
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     Row(
         modifier = Modifier
@@ -221,7 +227,8 @@ fun LandscapeHomeScreen(
             SpectrumCard(
                 session,
                 historyForHomeScreen,
-                connectionStatus
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -270,15 +277,16 @@ fun HomeTopSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Not Connected",
-                    color = MaterialTheme.colorScheme.tertiary,
+                    text = stringResource(R.string.status_not_connected),
+
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     fontFamily = SatoshiFontFamily,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = networkSpeed,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = SatoshiFontFamily
@@ -369,7 +377,7 @@ fun TopBarSection(
         title = {
             Text(
                 modifier = Modifier.padding(top = 5.dp),
-                text = "LATCH",
+                text = stringResource(R.string.app_name_uppercase),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 23.sp,
                 fontFamily = ModernizFontFamily,
@@ -393,7 +401,7 @@ fun TopBarSection(
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.tertiary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -453,7 +461,8 @@ fun HomeScreenPortraitPreview() {
             networkSpeed = "6 mbps",
             session = null,
             onConnectClick = { },
-            connectionStatus = ConnectionStatus.Idle
+            connectionStatus = ConnectionStatus.Idle,
+            "B/s"
         )
     }
 }
@@ -467,7 +476,8 @@ fun HomeScreenLandscapePreview() {
             networkSpeed = "12 mbps",
             session = null,
             onConnectClick = { },
-            connectionStatus = ConnectionStatus.Idle
+            connectionStatus = ConnectionStatus.Idle,
+            speedUnit = "B/s"
         )
     }
 }

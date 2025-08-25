@@ -1,9 +1,11 @@
 package com.vinnovateit.latch.features.stats.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,14 +16,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.stats.DownloadReportButton
@@ -36,13 +46,17 @@ fun StatsList(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
+  speedUnits: String,
+  showAllSessions: Boolean,
+  onToggleShowAll: () -> Unit,
   onDownloadReport: () -> Unit,
   addSpacer: Boolean = false,
   statsViewModel: StatsViewModel
 ) {
+  val itemsToDisplay = if (showAllSessions) historyToShow else historyToShow.take(5)
+
   LazyColumn(
     modifier = modifier,
-    contentPadding = PaddingValues(16.dp),
     verticalArrangement = Arrangement.spacedBy(2.dp),
     horizontalAlignment = Alignment.CenterHorizontally
   ) {
@@ -57,6 +71,7 @@ fun StatsList(
         item {
           SessionCard(
             session = sessionToShow,
+            speedUnit = speedUnits
           )
           Spacer(modifier = Modifier.height(15.dp))
         }
@@ -68,7 +83,7 @@ fun StatsList(
           isLive = true,
           downloadBps = liveDownloadBps,
           uploadBps = liveUploadBps,
-          onDownloadReport = {}
+          speedUnit = speedUnits,
         )
       }
       item {
@@ -79,13 +94,13 @@ fun StatsList(
     } else {
       // WHEN NOT CONNECTED:
       item {
-        val allTimeMaxDownloadBps = historyToShow.maxOfOrNull { it.history.maxOfOrNull { p -> p.usage.rxBytes } ?: 0L } ?: 0L
-        val allTimeMaxUploadBps = historyToShow.maxOfOrNull { it.history.maxOfOrNull { p -> p.usage.txBytes } ?: 0L } ?: 0L
+        val allTimeMaxDownloadBps = historyToShow.maxOfOrNull { it.maxRxBps } ?: 0L
+        val allTimeMaxUploadBps = historyToShow.maxOfOrNull { it.maxTxBps } ?: 0L
         LiveSpeedSection(
           isLive = false,
           downloadBps = allTimeMaxDownloadBps,
           uploadBps = allTimeMaxUploadBps,
-          onDownloadReport = {}
+          speedUnit = speedUnits,
         )
       }
       item {
@@ -95,53 +110,63 @@ fun StatsList(
       }
     }
 
-    if (historyToShow.isNotEmpty()) {
+    if (itemsToDisplay.isNotEmpty()) {
       item {
         Column(modifier = Modifier
           .padding(vertical = 8.dp)) {
           Text(
-            "Sessions",
+            stringResource(R.string.stats_sessions),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Left,
             modifier = Modifier
               .fillMaxWidth()
-              .padding(bottom = 8.dp, start = 8.dp)
+              .padding(16.dp)
           )
         }
       }
-      itemsIndexed(historyToShow) { index, session ->
+      itemsIndexed(itemsToDisplay) { index, session ->
         val cornerRadius = 24.dp
-
+        val listSize = itemsToDisplay.size
         val shape = when {
-          // Case 1: There is only ONE item in the list.
-          // All four corners should be rounded.
-          historyToShow.size == 1 -> RoundedCornerShape(cornerRadius)
-
-          // Case 2: This is the FIRST item in a multi-item list.
-          // Only the top-left and top-right corners are rounded.
-          index == 0 -> RoundedCornerShape(
-            topStart = cornerRadius,
-            topEnd = cornerRadius,
-            bottomStart = 5.dp,
-            bottomEnd = 5.dp
-          )
-
-          // Case 3: This is the LAST item in a multi-item list.
-          // Only the bottom-left and bottom-right corners are rounded.
-          index == historyToShow.size - 1 -> RoundedCornerShape(
-            topStart = 5.dp,
-            topEnd = 5.dp,
-            bottomStart = cornerRadius,
-            bottomEnd = cornerRadius
-          )
-
-          // Case 4: This is any item in the MIDDLE.
-          // No corners are rounded.
+          listSize == 1 -> RoundedCornerShape(cornerRadius)
+          index == 0 -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius, bottomStart = 5.dp, bottomEnd = 5.dp)
+          index == listSize - 1 -> RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp, bottomStart = cornerRadius, bottomEnd = cornerRadius)
           else -> RoundedCornerShape(5.dp)
         }
-        if(!isLive || index > 0) {
+
+        // --- New Animation Logic ---
+        var itemVisible by remember { mutableStateOf(index < 5) }
+        LaunchedEffect(showAllSessions) {
+          if (showAllSessions) {
+            // This will trigger the animation for items beyond the initial 5
+            itemVisible = true
+          }
+        }
+
+        val alpha by animateFloatAsState(
+          targetValue = if (itemVisible) 1f else 0f,
+          animationSpec = tween(
+            durationMillis = 300,
+            // Stagger the animation start time for each item
+            delayMillis = if (index >= 5) (index - 4) * 70 else 0
+          ),
+          label = "alphaAnim"
+        )
+
+        Box(modifier = Modifier.graphicsLayer { this.alpha = alpha }.padding(start = 16.dp, end = 16.dp)) {
           StatsItemCard(session = session, shape = shape)
+        }
+      }
+      if (historyToShow.size > 5 && !showAllSessions) {
+        item {
+          TextButton(
+            onClick = onToggleShowAll,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+          ) {
+            Text(stringResource(R.string.stats_view_more))
+          }
         }
       }
     }

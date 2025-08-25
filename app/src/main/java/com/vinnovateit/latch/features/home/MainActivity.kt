@@ -41,9 +41,10 @@ class MainActivity : ComponentActivity() {
                 val isConnected by wifiStatusViewModel.isConnected.collectAsStateWithLifecycle()
                 val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
                 val connectionStatus by wifiStatusViewModel.connectionStatus.collectAsStateWithLifecycle()
+                val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
 
                 val currentSpeedBytesPerSecond = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-                val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond)
+                val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond, speedUnits)
 
                 val networkSpeedString = if (isConnected && liveStatus != null) {
                     "${formattedSpeed.first} ${formattedSpeed.second}"
@@ -63,9 +64,10 @@ class MainActivity : ComponentActivity() {
                         networkSpeed = networkSpeedString,
                         session = sessionForHomeScreen,
                         onConnectClick = {
-                            wifiStatusViewModel.authenticatePortal()
+                            wifiStatusViewModel.toggleConnection()
                         },
-                        connectionStatus = connectionStatus
+                        connectionStatus = connectionStatus,
+                        speedUnits
                     )
                 }
             }
