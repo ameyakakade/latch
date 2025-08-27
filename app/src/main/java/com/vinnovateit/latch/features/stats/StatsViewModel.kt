@@ -38,7 +38,9 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
           totalData = DataUsage(
             it.liveData.sumOf { p -> p.usage.rxBytes },
             it.liveData.sumOf { p -> p.usage.txBytes }),
-          history = it.liveData
+          history = it.liveData,
+          maxRxBps = it.liveData.maxOfOrNull { p -> p.usage.rxBytes } ?: 0L,
+          maxTxBps = it.liveData.maxOfOrNull { p -> p.usage.txBytes } ?: 0L
         )
       } ?: last // If not live, show the last completed session
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -55,7 +57,9 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
           totalData = DataUsage(
             it.liveData.sumOf { p -> p.usage.rxBytes },
             it.liveData.sumOf { p -> p.usage.txBytes }),
-          history = it.liveData
+          history = it.liveData,
+          maxRxBps = it.liveData.maxOfOrNull { p -> p.usage.rxBytes } ?: 0L,
+          maxTxBps = it.liveData.maxOfOrNull { p -> p.usage.txBytes } ?: 0L
         )
         val historyWithoutLive = history.filter { it.startTimestamp != liveSummary.startTimestamp }
         listOf(liveSummary) + historyWithoutLive
@@ -115,11 +119,4 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
   override fun onCleared() {
     super.onCleared()
   }
-}
-
-internal fun SessionSummary.isToday(): Boolean {
-  val today = Calendar.getInstance()
-  val sessionDay = Calendar.getInstance().apply { timeInMillis = startTimestamp }
-  return today.get(Calendar.YEAR) == sessionDay.get(Calendar.YEAR) &&
-    today.get(Calendar.DAY_OF_YEAR) == sessionDay.get(Calendar.DAY_OF_YEAR)
 }

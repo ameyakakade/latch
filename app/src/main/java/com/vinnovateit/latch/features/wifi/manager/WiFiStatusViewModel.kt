@@ -54,13 +54,11 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
 
     fun authenticatePortal() {
         if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
-            UiNotifier.showToast(ctx, "Wi-Fi is turned off.")
             ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is turned off"))
             return
         }
 
         if (!WiFiConnectionDetector.isConnectedToWiFi(ctx)) {
-            UiNotifier.showToast(ctx, "Not connected to a Wi-Fi network.")
             ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not connected to Wi-Fi"))
             return
         }
@@ -85,13 +83,11 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
 
     fun toggleConnection() {
         if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
-            UiNotifier.showToast(ctx, "Wi-Fi is turned off.")
             ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is turned off"))
             return
         }
 
         if (!WiFiConnectionDetector.isConnectedToWiFi(ctx)) {
-            UiNotifier.showToast(ctx, "Not connected to a Wi-Fi network.")
             ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Not connected to Wi-Fi"))
             return
         }
@@ -100,11 +96,9 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
 
         val sessionActive = SessionRepository.liveStatus.value != null
         if (sessionActive) {
-            UiNotifier.showToast(ctx, "Disconnecting...")
             serviceIntent.action = ForegroundService.ACTION_TRIGGER_LOGOUT
         } else {
             // Reuse your current connect flow
-            UiNotifier.showToast(ctx, "Checking network...")
             serviceIntent.action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
         }
 
