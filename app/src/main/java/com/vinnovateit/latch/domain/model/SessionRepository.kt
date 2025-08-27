@@ -2,7 +2,6 @@ package com.vinnovateit.latch.domain.model
 
 import android.app.Application
 import android.content.Context
-import android.content.Intent
 import com.vinnovateit.latch.data.StatsDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +55,9 @@ object SessionRepository {
               rxBytes = it.rxBytes,
               txBytes = it.txBytes
             ),
-            history = emptyList() // History is not persisted
+            history = emptyList(),
+            maxRxBps = it.maxRxBps,
+            maxTxBps = it.maxTxBps
           )
         }
       }.collect { summaries ->
@@ -73,7 +74,6 @@ object SessionRepository {
 
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
     connectivityManager.bindProcessToNetwork(network)
-    UiNotifier.showToast(context, "Connected!")
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
@@ -126,6 +126,8 @@ object SessionRepository {
     val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
     val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
     val totalDataUsed = totalRxBytes + totalTxBytes
+    val maxRxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.rxBytes } ?: 0L
+    val maxTxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.txBytes } ?: 0L
 
     if (totalDataUsed < 1024) {
       triggerWidgetUpdate()
@@ -137,7 +139,9 @@ object SessionRepository {
         startTime = Date(sessionToFinalize.startTimeMillis),
         endTime = Date(System.currentTimeMillis()),
         rxBytes = totalRxBytes,
-        txBytes = totalTxBytes
+        txBytes = totalTxBytes,
+        maxRxBps = maxRxBps,
+        maxTxBps = maxTxBps
       )
       addSessionToDb(session)
     }
@@ -151,7 +155,7 @@ object SessionRepository {
   fun clearHistory() {
     repoScope.launch {
       statsDao.clearAllSessions()
-      UiNotifier.showToast(applicationContext!!, "Stats history cleared")
+      UiNotifier.showToast(applicationContext!!, "Stats Cleared!")
     }
   }
 

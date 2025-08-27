@@ -25,4 +25,5 @@
     <color name="latch_primary">#C01221</color>  <!-- Light background/fill -->
     <color name="latch_secondary">#670002</color>  <!-- Light accents -->
     <color name="splash_background_light">#FDF0D5</color>
+    <color name="splash_background_dark">#00092E</color>
 </resources>

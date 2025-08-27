@@ -25,6 +25,8 @@ data class Session(
   val endTime: Date,
   val rxBytes: Long,
   val txBytes: Long,
+  val maxRxBps: Long,
+  val maxTxBps: Long
 )
 
 @Entity(tableName = "daily_usage")

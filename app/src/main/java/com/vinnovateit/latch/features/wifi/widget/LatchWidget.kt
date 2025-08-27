@@ -87,11 +87,6 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
   )
 
   GlanceTheme(colors = colors) {
-    val logo = if (state.isLightTheme) {
-      ImageProvider(R.drawable.ic_latch_light)
-    } else {
-      ImageProvider(R.drawable.ic_latch_dark)
-    }
 
     Column(
       modifier = GlanceModifier

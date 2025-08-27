@@ -64,12 +64,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.generateCsvReport
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.stats.components.SessionCard
 import com.vinnovateit.latch.features.stats.components.StatsList
 import com.vinnovateit.latch.ui.theme.LatchTheme
@@ -125,6 +125,8 @@ fun StatsScreen(
   val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
   val isLive = remember(liveStatus) { liveStatus != null }
+  val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
+  var showAllSessions by remember { mutableStateOf(false) }
 
   StatsScreenContent(
     modifier = modifier,
@@ -132,6 +134,9 @@ fun StatsScreen(
     sessionToShow = sessionToShow,
     historyToShow = historyToShow,
     liveStatus = liveStatus,
+    speedUnits = speedUnits,
+    showAllSessions = showAllSessions,
+    onToggleShowAll = { showAllSessions = !showAllSessions },
     onDownloadReport = onDownloadReport,
     onBackClick = { context.finish() },
     statsViewModel = statsViewModel
@@ -150,6 +155,9 @@ private fun StatsScreenContent(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
+  speedUnits: String,
+  showAllSessions: Boolean,
+  onToggleShowAll: () -> Unit,
   onDownloadReport: () -> Unit,
   onBackClick: () -> Unit,
   statsViewModel: StatsViewModel
@@ -172,10 +180,10 @@ private fun StatsScreenContent(
           val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
           Scaffold(
             modifier = Modifier
-              .weight(0.5f) // 50% width
+              .weight(0.5f)
               .fillMaxHeight()
               .nestedScroll(scrollBehavior.nestedScrollConnection),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant, // Darker background
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick, isLarge = false) } // Normal TopAppBar
           ) { innerPadding ->
             Box(
@@ -185,7 +193,7 @@ private fun StatsScreenContent(
                 .padding(16.dp),
               contentAlignment = Alignment.Center
             ) {
-              SessionCard(session = sessionToShow)
+              SessionCard(session = sessionToShow, speedUnit = speedUnits)
             }
           }
 
@@ -193,12 +201,15 @@ private fun StatsScreenContent(
             modifier = Modifier
               .weight(0.5f) // 50% width
               .fillMaxHeight()
-              .background(MaterialTheme.colorScheme.surfaceVariant), // Matching background
+              .background(MaterialTheme.colorScheme.background), // Matching background
             isLive = true,
             showSessionCard = false,
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
+            speedUnits = speedUnits,
+            showAllSessions = showAllSessions,
+            onToggleShowAll = onToggleShowAll,
             onDownloadReport = onDownloadReport,
             addSpacer = true,
             statsViewModel = statsViewModel
@@ -215,10 +226,13 @@ private fun StatsScreenContent(
             modifier = (if (isPortrait) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=32.dp))
               .padding(innerPadding),
             isLive = isLive,
-            showSessionCard = true, // Show card within the list
+            showSessionCard = true,
             sessionToShow = sessionToShow,
             historyToShow = historyToShow,
             liveStatus = liveStatus,
+            speedUnits = speedUnits,
+            showAllSessions = showAllSessions,
+            onToggleShowAll = onToggleShowAll,
             onDownloadReport = onDownloadReport,
             statsViewModel = statsViewModel
           )
@@ -257,6 +271,7 @@ fun DownloadReportButton(onDownloadReport: () -> Unit) {
     modifier = Modifier
       .fillMaxWidth()
       .height(50.dp)
+      .padding(start = 16.dp, end = 16.dp)
       // pointerInput on the button to set pressedManual while finger is down.
       .pointerInput(Unit) {
         detectTapGestures(
@@ -338,12 +353,12 @@ private fun StatsTopAppBar(
       navigationIcon = {
         TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
           IconButton(onClick = onBackClick) {
-            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
           }
         }
       },
       colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        containerColor = MaterialTheme.colorScheme.surface,
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         navigationIconContentColor = Color.Unspecified,
         titleContentColor = Color.Unspecified,
