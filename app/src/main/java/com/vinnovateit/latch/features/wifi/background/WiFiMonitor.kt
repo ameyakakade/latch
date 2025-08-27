@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.*
 import android.util.Log
 import kotlinx.coroutines.*
-import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
 import com.vinnovateit.latch.common.util.LoginTestRunner
 
 object WiFiMonitor {
@@ -34,15 +33,10 @@ object WiFiMonitor {
                     try {
                         repeat(3) { attempt ->
                             delay(2000)
-                            if (VITWiFiIdentifier.isConnectedToVITWiFi(context, network)) {
-                                Log.d("WiFiMonitor", "✅ VIT Wi-Fi detected. Running login.")
-                                LoginTestRunner.run(context)
-                                return@launch
-                            } else {
-                                Log.d("WiFiMonitor", "⏳ Attempt ${attempt + 1}: SSID not VIT.")
-                            }
+                            Log.d("WiFiMonitor", "🌐 Attempt ${attempt + 1}: Running login without SSID filter.")
+                            LoginTestRunner.run(context)
+                            return@launch
                         }
-                        Log.d("WiFiMonitor", "❌ Failed to detect VIT Wi-Fi after retries.")
                     } finally {
                         // Unbind AFTER login attempt
                         cm.bindProcessToNetwork(null)

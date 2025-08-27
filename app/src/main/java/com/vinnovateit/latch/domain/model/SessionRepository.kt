@@ -1,26 +1,23 @@
 package com.vinnovateit.latch.domain.model
 
 import android.app.Application
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.vinnovateit.latch.data.DailyUsage
-import com.vinnovateit.latch.data.LatchDatabase
-import com.vinnovateit.latch.data.Session
+import android.content.Context
 import com.vinnovateit.latch.data.StatsDao
-import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
-import com.vinnovateit.latch.features.wifi.manager.TrafficStatsLogger
-import com.vinnovateit.latch.features.wifi.manager.UiNotifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
+import com.vinnovateit.latch.data.LatchDatabase
+import com.vinnovateit.latch.data.Session
+import com.vinnovateit.latch.features.wifi.manager.TrafficStatsLogger
+import com.vinnovateit.latch.features.wifi.manager.UiNotifier
+import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.Calendar
 import java.util.Date
-import java.util.concurrent.atomic.AtomicBoolean
 
 object SessionRepository {
   private var applicationContext: Application? = null
@@ -28,6 +25,7 @@ object SessionRepository {
   private val repoScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var sessionUpdateJob: Job? = null
   private val isInitialized = AtomicBoolean(false)
+  private var notificationSent = false
 
   private val _liveStatus = MutableStateFlow<LiveConnectionStatus?>(null)
   val liveStatus = _liveStatus.asStateFlow()
@@ -41,7 +39,7 @@ object SessionRepository {
   fun initialize(context: Application) {
     if (isInitialized.getAndSet(true)) return
     applicationContext = context
-    val database = LatchDatabase.Companion.getDatabase(context)
+    val database = LatchDatabase.getDatabase(context)
     statsDao = database.statsDao()
     loadSessionsFromDb()
   }
@@ -49,17 +47,17 @@ object SessionRepository {
   private fun loadSessionsFromDb() {
     repoScope.launch {
       statsDao.getAllSessions().map { dbSessions ->
-        // Map Room Session entities to UI SessionSummary objects
         dbSessions.map {
           SessionSummary(
-            ssid = "VIT-WiFi", // SSID is not stored in DB, using a placeholder
             startTimestamp = it.startTime.time,
             endTimestamp = it.endTime.time,
             totalData = DataUsage(
-              it.dataUsed,
-              0
-            ), // DB only stores total data
-            history = emptyList() // History is not persisted
+              rxBytes = it.rxBytes,
+              txBytes = it.txBytes
+            ),
+            history = emptyList(),
+            maxRxBps = it.maxRxBps,
+            maxTxBps = it.maxTxBps
           )
         }
       }.collect { summaries ->
@@ -69,17 +67,18 @@ object SessionRepository {
     }
   }
 
-  fun startSession(ssid: String) {
+  fun startSession(network: android.net.Network) {
     if (sessionUpdateJob?.isActive == true || _liveStatus.value != null) return
     val context = applicationContext ?: return
+    notificationSent = false
 
-    UiNotifier.showToast(context, "Starting stats for: $ssid")
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(network)
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
-      _root_ide_package_.com.vinnovateit.latch.domain.model.LiveConnectionStatus(
+      LiveConnectionStatus(
         startTimeMillis = startTime,
-        ssid = ssid,
         liveData = listOf(
           LiveDataPoint(
             startTime,
@@ -99,9 +98,10 @@ object SessionRepository {
               System.currentTimeMillis(),
               dataUsage
             )
-          _liveStatus.value = currentStatus.copy(
+          val updatedStatus = currentStatus.copy(
             liveData = currentStatus.liveData + newPoint
           )
+          _liveStatus.value = updatedStatus
         }
       }
     }
@@ -109,19 +109,27 @@ object SessionRepository {
   }
 
   fun stopSession() {
+    val context = applicationContext ?: return
     if (sessionUpdateJob == null && _liveStatus.value == null) return
     val sessionToFinalize = _liveStatus.value ?: return
 
     sessionUpdateJob?.cancel()
     sessionUpdateJob = null
     TrafficStatsLogger.stop()
+
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+    connectivityManager.bindProcessToNetwork(null)
     _liveStatus.value = null
 
-    UiNotifier.showToast(applicationContext!!, "Stopping stats for: ${sessionToFinalize.ssid}")
+    UiNotifier.showToast(applicationContext!!, "Disconnected")
 
-    val totalDataUsed = sessionToFinalize.liveData.sumOf { it.usage.rxBytes + it.usage.txBytes }
+    val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
+    val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
+    val totalDataUsed = totalRxBytes + totalTxBytes
+    val maxRxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.rxBytes } ?: 0L
+    val maxTxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.txBytes } ?: 0L
 
-    if (totalDataUsed < 1024) { // Don't save empty sessions
+    if (totalDataUsed < 1024) {
       triggerWidgetUpdate()
       return
     }
@@ -130,7 +138,10 @@ object SessionRepository {
       val session = Session(
         startTime = Date(sessionToFinalize.startTimeMillis),
         endTime = Date(System.currentTimeMillis()),
-        dataUsed = totalDataUsed
+        rxBytes = totalRxBytes,
+        txBytes = totalTxBytes,
+        maxRxBps = maxRxBps,
+        maxTxBps = maxTxBps
       )
       addSessionToDb(session)
     }
@@ -139,39 +150,18 @@ object SessionRepository {
 
   private suspend fun addSessionToDb(session: Session) {
     statsDao.insertSession(session)
-    val sessionDate = getStartOfDay(session.startTime)
-    val dataUsed = session.dataUsed
-    val existingDailyUsage = statsDao.getUsageForDay(sessionDate)
-
-    if (existingDailyUsage == null) {
-      statsDao.insertDailyUsage(DailyUsage(date = sessionDate, totalDataUsed = dataUsed))
-    } else {
-      val updatedUsage = existingDailyUsage.totalDataUsed + dataUsed
-      statsDao.updateDailyUsage(existingDailyUsage.copy(totalDataUsed = updatedUsage))
-    }
   }
 
   fun clearHistory() {
     repoScope.launch {
       statsDao.clearAllSessions()
-      statsDao.clearAllDailyUsage()
-      UiNotifier.showToast(applicationContext!!, "Stats history cleared")
+      UiNotifier.showToast(applicationContext!!, "Stats Cleared!")
     }
   }
 
   private fun triggerWidgetUpdate() {
     val context = applicationContext ?: return
-    val workRequest = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
-    WorkManager.Companion.getInstance(context).enqueue(workRequest)
-  }
-
-  private fun getStartOfDay(date: Date): Date {
-    return Calendar.getInstance().apply {
-      time = date
-      set(Calendar.HOUR_OF_DAY, 0)
-      set(Calendar.MINUTE, 0)
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }.time
+    val workRequest = androidx.work.OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
+    androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
   }
 }

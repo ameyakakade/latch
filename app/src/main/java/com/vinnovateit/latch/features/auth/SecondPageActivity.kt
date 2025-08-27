@@ -1,5 +1,6 @@
 package com.vinnovateit.latch.features.auth
 
+import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -21,28 +22,23 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vinnovateit.latch.data.CredentialDatabase
-import com.vinnovateit.latch.data.CredentialEntity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
-import androidx.compose.ui.draw.paint
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.VisualTransformation
 import com.vinnovateit.latch.R
+import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
-import com.vinnovateit.latch.utils.EncryptionUtils
 
 class SecondPageActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,45 +65,33 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
-    var loaded by remember { mutableStateOf(false) }
     var regNoFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-    val isDark = LocalIsDarkTheme.current
 
-    // Load from DB
-    LaunchedEffect(Unit) {
-        val db = CredentialDatabase.getInstance(context)
-        val existing = db.credentialDao().getCredential()
-        if (existing != null && !editMode) {
-            onCredentialsSaved()
-        } else if (existing != null && !loaded) {
-            try {
-                regNo = EncryptionUtils.decrypt(existing.registrationNumber)
-                password = EncryptionUtils.decrypt(existing.password)
-            } catch (e: Exception) {
-                // If decryption fails, use the data as-is (for backward compatibility)
-                regNo = existing.registrationNumber
-                password = existing.password
-            }
-            loaded = true
+    LaunchedEffect(editMode) {
+        if (editMode) {
+            regNo = StoredCredentials.getUserId(context) ?: ""
+            password = StoredCredentials.getPassword(context) ?: ""
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-          .background(MaterialTheme.colorScheme.background)
-            .paint(
-                painter = if (isDark) painterResource(R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
-                contentScale = ContentScale.Crop
-            )
-            .padding(24.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
+        LeafOverlay(
+            contentDescription = stringResource(R.string.home_background_pattern_content_description),
+            modifier = Modifier.fillMaxHeight(),
+            contentScale = ContentScale.Crop,
+            alignment = Alignment.Center
+        )
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(y = (-40).dp),
+                .offset(y = (-40).dp)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -133,12 +117,12 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = regNo,
                 onValueChange = { regNo = it.uppercase() },
-                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.tertiary,) } } else null,
+                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.onSurface,) } } else null,
                 singleLine = true,
                 trailingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Username Icon",
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = stringResource(R.string.username_icon_content_description),
                     )
                 },
                 modifier = Modifier
@@ -147,7 +131,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         regNoFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 18.sp,
                     fontFamily = SatoshiFontFamily
                 ),
@@ -173,12 +157,12 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             TextField(
                 value = password,
                 onValueChange = { password = it },
-                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = MaterialTheme.colorScheme.tertiary,) } } else null,
+                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = MaterialTheme.colorScheme.onBackground,) } } else null,
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
                     Icon(
-                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
                         contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
                         modifier = Modifier.clickable(
                             indication = null,
@@ -192,7 +176,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         passwordFocused = focusState.isFocused
                     },
                 textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                     fontFamily = SatoshiFontFamily
                 ),
@@ -219,24 +203,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 onClick = {
                     if (regNo.isNotBlank() && password.isNotBlank()) {
                         scope.launch {
-                            try {
-                                val db = CredentialDatabase.getInstance(context)
-                                val encryptedRegNo = EncryptionUtils.encrypt(regNo)
-                                val encryptedPassword = EncryptionUtils.encrypt(password)
-                                
-                                db.credentialDao().insertCredential(
-                                    CredentialEntity(
-                                        id = "singleton", 
-                                        registrationNumber = encryptedRegNo, 
-                                        password = encryptedPassword
-                                    )
-                                )
-
-                                Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
-                                onCredentialsSaved()
-                            } catch (e: Exception) {
-                                message = "Failed to save credentials: ${e.message}"
-                            }
+                            StoredCredentials.saveCredentials(context, regNo, password)
+                            Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
+                            onCredentialsSaved()
                         }
                     } else {
                         message = context.getString(R.string.credentials_error_message)

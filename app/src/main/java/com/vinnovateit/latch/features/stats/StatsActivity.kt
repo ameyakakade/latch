@@ -9,23 +9,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,16 +42,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,17 +64,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.generateCsvReport
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
-import com.vinnovateit.latch.features.stats.components.HistoryBarChart
-import com.vinnovateit.latch.features.stats.components.HistoryItemCard
-import com.vinnovateit.latch.features.stats.components.HistorySessionList
-import com.vinnovateit.latch.features.stats.components.LiveSpeedSection
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.stats.components.SessionCard
+import com.vinnovateit.latch.features.stats.components.StatsList
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
 
@@ -73,7 +82,7 @@ class StatsActivity : ComponentActivity() {
         try {
           val viewModel: StatsViewModel by viewModels()
           contentResolver.openOutputStream(it)?.use { outputStream ->
-            generateCsvReport(viewModel.sessionHistory.value, outputStream)
+            generateCsvReport(viewModel.historyToShow.value, outputStream)
           }
           Toast.makeText(this, "Report saved successfully", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -108,42 +117,37 @@ class StatsActivity : ComponentActivity() {
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
-  statsViewModel: StatsViewModel = viewModel(),
   onDownloadReport: () -> Unit
 ) {
   val context = LocalContext.current as Activity
+  val statsViewModel: StatsViewModel by (context as ComponentActivity).viewModels()
   val sessionToShow by statsViewModel.sessionToShow.collectAsStateWithLifecycle()
-  val historyToShow by statsViewModel.sessionHistory.collectAsStateWithLifecycle()
+  val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
   val isLive = remember(liveStatus) { liveStatus != null }
+  val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
+  var showAllSessions by remember { mutableStateOf(false) }
 
-  val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
-  Scaffold(
-    modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-    containerColor = MaterialTheme.colorScheme.background,
-    contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
-    topBar = {
-      StatsTopAppBar(
-        scrollBehavior = scrollBehavior,
-        onBackClick = { context.finish() }
-      )
-    }
-  ) { innerPadding ->
-    StatsScreenContent(
-      modifier = Modifier.padding(innerPadding),
-      isLive = isLive,
-      sessionToShow = sessionToShow,
-      historyToShow = historyToShow,
-      liveStatus = liveStatus,
-      onDownloadReport = onDownloadReport
-    )
-  }
+  StatsScreenContent(
+    modifier = modifier,
+    isLive = isLive,
+    sessionToShow = sessionToShow,
+    historyToShow = historyToShow,
+    liveStatus = liveStatus,
+    speedUnits = speedUnits,
+    showAllSessions = showAllSessions,
+    onToggleShowAll = { showAllSessions = !showAllSessions },
+    onDownloadReport = onDownloadReport,
+    onBackClick = { context.finish() },
+    statsViewModel = statsViewModel
+  )
 }
+
 
 /**
  * Handles the content of the screen, deciding whether to show the stats list or an empty state message.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StatsScreenContent(
   modifier: Modifier = Modifier,
@@ -151,100 +155,150 @@ private fun StatsScreenContent(
   sessionToShow: SessionSummary?,
   historyToShow: List<SessionSummary>,
   liveStatus: LiveConnectionStatus?,
-  onDownloadReport: () -> Unit
+  speedUnits: String,
+  showAllSessions: Boolean,
+  onToggleShowAll: () -> Unit,
+  onDownloadReport: () -> Unit,
+  onBackClick: () -> Unit,
+  statsViewModel: StatsViewModel
 ) {
   if (!isLive && historyToShow.isEmpty()) {
-    EmptyStatsView(modifier = modifier.fillMaxSize())
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+      modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+      topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+    ) { innerPadding ->
+      EmptyStatsView(modifier = Modifier.padding(innerPadding).fillMaxSize())
+    }
   } else {
-    StatsList(
-      modifier = modifier.fillMaxSize(),
-      isLive = isLive,
-      sessionToShow = sessionToShow,
-      historyToShow = historyToShow,
-      liveStatus = liveStatus,
-      onDownloadReport = onDownloadReport
-    )
+    BoxWithConstraints(modifier = modifier) {
+      val isPortrait = maxHeight > maxWidth
+
+      if (!isPortrait && isLive && sessionToShow != null) {
+        // Landscape, Live Session: Split layout
+        Row(modifier = Modifier.fillMaxSize()) {
+          val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+          Scaffold(
+            modifier = Modifier
+              .weight(0.5f)
+              .fillMaxHeight()
+              .nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick, isLarge = false) } // Normal TopAppBar
+          ) { innerPadding ->
+            Box(
+              modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              SessionCard(session = sessionToShow, speedUnit = speedUnits)
+            }
+          }
+
+          StatsList(
+            modifier = Modifier
+              .weight(0.5f) // 50% width
+              .fillMaxHeight()
+              .background(MaterialTheme.colorScheme.background), // Matching background
+            isLive = true,
+            showSessionCard = false,
+            sessionToShow = sessionToShow,
+            historyToShow = historyToShow,
+            liveStatus = liveStatus,
+            speedUnits = speedUnits,
+            showAllSessions = showAllSessions,
+            onToggleShowAll = onToggleShowAll,
+            onDownloadReport = onDownloadReport,
+            addSpacer = true,
+            statsViewModel = statsViewModel
+          )
+        }
+      } else {
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+        Scaffold(
+          modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+          topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+        ) { innerPadding ->
+          StatsList(
+            modifier = (if (isPortrait) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=32.dp))
+              .padding(innerPadding),
+            isLive = isLive,
+            showSessionCard = true,
+            sessionToShow = sessionToShow,
+            historyToShow = historyToShow,
+            liveStatus = liveStatus,
+            speedUnits = speedUnits,
+            showAllSessions = showAllSessions,
+            onToggleShowAll = onToggleShowAll,
+            onDownloadReport = onDownloadReport,
+            statsViewModel = statsViewModel
+          )
+        }
+      }
+    }
   }
 }
 
 @Composable
-private fun StatsList(
-  modifier: Modifier = Modifier,
-  isLive: Boolean,
-  sessionToShow: SessionSummary?,
-  historyToShow: List<SessionSummary>,
-  liveStatus: LiveConnectionStatus?,
-  onDownloadReport: () -> Unit
-) {
-  LazyColumn(
-    modifier = modifier,
-    contentPadding = PaddingValues(16.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp),
-    horizontalAlignment = Alignment.CenterHorizontally
-  ) {
-    if (isLive && sessionToShow != null) {
-      // WHEN CONNECTED:
-      item {
-        SessionCard(
-          session = sessionToShow,
-        )
-      }
-      item {
-        val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-        val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBytes ?: 0L
-        LiveSpeedSection(
-          isLive = true,
-          downloadBps = liveDownloadBps,
-          uploadBps = liveUploadBps,
-          onDownloadReport = {}
-        )
-      }
-      item { HistoryBarChart(history = historyToShow) }
-      item {
-        HistorySessionList(
-          history = historyToShow
-        )
-      }
-    } else {
-      // WHEN NOT CONNECTED:
-      item {
-        val allTimeMaxDownloadBps = historyToShow.maxOfOrNull { it.history.maxOfOrNull { p -> p.usage.rxBytes } ?: 0L } ?: 0L
-        val allTimeMaxUploadBps = historyToShow.maxOfOrNull { it.history.maxOfOrNull { p -> p.usage.txBytes } ?: 0L } ?: 0L
-        LiveSpeedSection(
-          isLive = false,
-          downloadBps = allTimeMaxDownloadBps,
-          uploadBps = allTimeMaxUploadBps,
-          onDownloadReport = {} // Removed button from here
-        )
-      }
-      item { HistoryBarChart(history = historyToShow) }
-      item {
-        HistorySessionList(history = historyToShow)
-      }
-    }
-    // Added download button at the end
-    if (historyToShow.isNotEmpty()) {
-      item {
-        TooltipHint(tooltipText = "Download a CSV report of all sessions") {
-          OutlinedButton(
-            onClick = onDownloadReport,
-            modifier = Modifier
-              .fillMaxWidth()
-              .height(50.dp)
-          ) {
-            Icon(
-              imageVector = Icons.Default.Download,
-              contentDescription = "Download Report"
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Download Usage Report", fontWeight = FontWeight.Bold)
+fun DownloadReportButton(onDownloadReport: () -> Unit) {
+  // Observe interactions produced by the button itself
+  val interactionSource = remember { MutableInteractionSource() }
+  val pressedFromInteraction by interactionSource.collectIsPressedAsState()
+
+  // Fallback manual press detector to catch very short taps reliably
+  var pressedManual by remember { mutableStateOf(false) }
+
+  // Combine both signals so either one can drive the animation
+  val isPressed = pressedFromInteraction || pressedManual
+
+  // Animate radius — smaller when pressed. Use a snappy spring so it completes quickly.
+  val cornerRadius by animateDpAsState(
+    targetValue = if (isPressed) 8.dp else 24.dp,
+    animationSpec = spring(
+      dampingRatio = Spring.DampingRatioMediumBouncy,
+      stiffness = Spring.StiffnessMedium // snappy but not instant
+    ),
+    label = "cornerRadiusAnim"
+  )
+
+  // The button keeps its Material look; we just change its `shape`.
+  OutlinedButton(
+    onClick = onDownloadReport,
+    interactionSource = interactionSource,
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(50.dp)
+      .padding(start = 16.dp, end = 16.dp)
+      // pointerInput on the button to set pressedManual while finger is down.
+      .pointerInput(Unit) {
+        detectTapGestures(
+          onPress = {
+            pressedManual = true
+            try {
+              awaitRelease() // suspends until release/cancel
+            } finally {
+              pressedManual = false
+            }
           }
-        }
-      }
-    }
-    item { Spacer(modifier = Modifier.height(100.dp)) }
+        )
+      },
+    shape = RoundedCornerShape(cornerRadius)
+  ) {
+    Icon(
+      imageVector = Icons.Rounded.Download,
+      contentDescription = "Download Usage Report"
+    )
+    Spacer(modifier = Modifier.width(8.dp))
+    Text(
+      "Usage Report",
+      fontWeight = FontWeight.Bold
+    )
   }
 }
+
 
 /**
  * A composable for the top app bar of the stats screen.
@@ -254,33 +308,65 @@ private fun StatsList(
 private fun StatsTopAppBar(
   scrollBehavior: TopAppBarScrollBehavior,
   onBackClick: () -> Unit,
+  isLarge: Boolean = true
 ) {
-  LargeTopAppBar(
-    title = {
-      Text(
-        "Stats",
-        fontSize = 23.sp,
-        maxLines = 1,
-        fontFamily = ModernizFontFamily,
-        overflow = TextOverflow.Ellipsis
-      )
-    },
-    navigationIcon = {
-      TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
-        IconButton(onClick = onBackClick) {
-          Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+  if(isLarge) {
+    LargeTopAppBar(
+      title = {
+        Text(
+          "Stats",
+          fontSize = 23.sp,
+          maxLines = 1,
+          color = MaterialTheme.colorScheme.primary,
+          fontFamily = ModernizFontFamily,
+          overflow = TextOverflow.Ellipsis
+        )
+      },
+      navigationIcon = {
+        TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
+          IconButton(onClick = onBackClick) {
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back",  tint = MaterialTheme.colorScheme.primary)
+          }
         }
-      }
-    },
-    colors = TopAppBarDefaults.topAppBarColors(
-      containerColor = MaterialTheme.colorScheme.surface,
-      scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-      navigationIconContentColor = Color.Unspecified,
-      titleContentColor = Color.Unspecified,
-      actionIconContentColor = Color.Unspecified
-    ),
-    scrollBehavior = scrollBehavior
-  )
+      },
+      colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        navigationIconContentColor = Color.Unspecified,
+        titleContentColor = Color.Unspecified,
+        actionIconContentColor = Color.Unspecified
+      ),
+      scrollBehavior = scrollBehavior
+    )
+  } else {
+    TopAppBar(
+      title = {
+        Text(
+          "Stats",
+          fontSize = 23.sp,
+          maxLines = 1,
+          color = MaterialTheme.colorScheme.primary,
+          fontFamily = ModernizFontFamily,
+          overflow = TextOverflow.Ellipsis
+        )
+      },
+      navigationIcon = {
+        TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
+          IconButton(onClick = onBackClick) {
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.primary)
+          }
+        }
+      },
+      colors = TopAppBarDefaults.topAppBarColors(
+        containerColor = MaterialTheme.colorScheme.surface,
+        scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+        navigationIconContentColor = Color.Unspecified,
+        titleContentColor = Color.Unspecified,
+        actionIconContentColor = Color.Unspecified
+      ),
+      scrollBehavior = scrollBehavior
+    )
+  }
 }
 
 /**

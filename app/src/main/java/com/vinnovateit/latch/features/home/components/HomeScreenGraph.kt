@@ -5,6 +5,7 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -62,7 +63,7 @@ const val POINTS_IN_30_SECONDS = 20
  * Calculates a "nice" rounded number for the top of the Y-axis.
  */
 fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
-  if (maxSpeed <= 0f) return 1f // CRASH FIX: Handle zero or negative maxSpeed
+  if (maxSpeed <= 0f) return 1f
   val exponent = floor(log10(maxSpeed))
   val fraction = maxSpeed / 10f.pow(exponent)
 
@@ -79,7 +80,8 @@ fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
 @Composable
 fun HomeScreenGraph(
   modifier: Modifier = Modifier,
-  rateHistory: List<LiveDataPoint>
+  rateHistory: List<LiveDataPoint>,
+  speedUnit: String
 ) {
   val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
     rateHistory.size.toFloat() / POINTS_IN_30_SECONDS.toFloat()
@@ -88,45 +90,37 @@ fun HomeScreenGraph(
   }
   var scale by remember { mutableStateOf(initialScale) }
   val scrollState = rememberScrollState()
-  var lastInteraction by remember { mutableLongStateOf(System.currentTimeMillis()) }
+  var lastInteraction by remember { mutableLongStateOf(0L) }
   var yAxisVisible by remember { mutableStateOf(true) }
   var isAutoScrolling by remember { mutableStateOf(false) }
 
-  // Update interaction time on user-initiated scroll
-  LaunchedEffect(scrollState.isScrollInProgress) {
-    if (scrollState.isScrollInProgress && !isAutoScrolling) {
-      lastInteraction = System.currentTimeMillis()
+  // Auto-scroll logic when new data arrives and user is idle
+  LaunchedEffect(rateHistory.size) {
+    val idleDuration = System.currentTimeMillis() - lastInteraction
+    if (lastInteraction == 0L || idleDuration > 5000L) { // Autoscroll on first load or after being idle
+      isAutoScrolling = true
+      scrollState.animateScrollTo(
+        scrollState.maxValue,
+        animationSpec = tween(durationMillis = 500)
+      )
+      isAutoScrolling = false
     }
   }
 
-  // Timer for Y-axis visibility and auto-scrolling
-  LaunchedEffect(lastInteraction, rateHistory.size) {
-    while (true) {
-      val timeSinceInteraction = System.currentTimeMillis() - lastInteraction
+  // Timer for Y-axis visibility and scale reset
+  LaunchedEffect(lastInteraction) {
+    if (lastInteraction == 0L) return@LaunchedEffect // Don't run on initial composition
 
-      // Visibility logic: Visible if user is interacting or within 5s of last interaction
-      val isUserInteracting = scrollState.isScrollInProgress && !isAutoScrolling
-      val shouldBeVisible = isUserInteracting || timeSinceInteraction < 5000L
-      if (yAxisVisible != shouldBeVisible) {
-        yAxisVisible = shouldBeVisible
-      }
-
-      // Auto-scroll logic: If idle for more than 5 seconds, scroll to the end
-      if (!scrollState.isScrollInProgress && timeSinceInteraction > 5000) {
-        if (scrollState.value != scrollState.maxValue) {
-          isAutoScrolling = true
-          scrollState.animateScrollTo(
-            scrollState.maxValue,
-            animationSpec = tween(durationMillis = 500)
-          )
-          isAutoScrolling = false
+    yAxisVisible = true
+    delay(5000L)
+    // Check again after delay in case of new interaction
+    if (System.currentTimeMillis() - lastInteraction >= 5000L) {
+      yAxisVisible = false
+      if (scale != initialScale) {
+        animate(initialValue = scale, targetValue = initialScale) { value, _ ->
+          scale = value
         }
       }
-      if (timeSinceInteraction > 5000 && scale != initialScale) {
-        scale = initialScale
-      }
-
-      delay(200)
     }
   }
 
@@ -144,9 +138,15 @@ fun HomeScreenGraph(
       val containerWidthPx = constraints.maxWidth
       val containerHeightPx = constraints.maxHeight
 
+      // Detect user interaction on scroll
+      LaunchedEffect(scrollState.isScrollInProgress) {
+        if (scrollState.isScrollInProgress && !isAutoScrolling) {
+          lastInteraction = System.currentTimeMillis()
+        }
+      }
+
       if (containerWidthPx > 0 && rateHistory.size > 1) {
 
-        // --- OPTIMIZED MAX SPEED CALCULATION ---
         var maxSpeed by remember { mutableLongStateOf(1L) }
 
         // Recalculate max speed only when scrolling stops or data/zoom changes.
@@ -247,7 +247,7 @@ fun HomeScreenGraph(
                 )
             ) {
               val animatedFontWeight by animateFloatAsState(
-                targetValue = if (yAxisVisible) 700f else 400f, // Bold to normal
+                targetValue = if (yAxisVisible) 700f else 400f,
                 animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
               )
               Canvas(modifier = Modifier.fillMaxSize()) {
@@ -264,7 +264,7 @@ fun HomeScreenGraph(
                   val fraction = i.toFloat() / numLines
                   val yValue = rulerTopValue * fraction
                   val yPos = size.height - ((yValue / rulerTopValue) * (size.height * GRAPH_HEIGHT_SCALE))
-                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), includeUnit = i == numLines)
+                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), speedUnit)
                   val markingEnd = (4 + i * 2).dp.toPx()
 
                   if (i > 0) {
