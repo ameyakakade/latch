@@ -1,25 +1,20 @@
 package com.vinnovateit.latch.features.home
 
-import android.Manifest
-import android.content.pm.PackageManager
+import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.formatBitsPerSecond
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.stats.StatsViewModel
-import com.vinnovateit.latch.features.wifi.background.WiFiMonitor
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import com.vinnovateit.latch.features.wifi.manager.WiFiStatusViewModel
 import com.vinnovateit.latch.ui.theme.LatchTheme
 
@@ -31,19 +26,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         SettingsManager.initialize(this)
-        requestLocationPermissionIfNeeded()
-        WiFiMonitor.startMonitoring(applicationContext)
+
+        // Trigger auto-login check on launch if the setting is enabled
+        if (SettingsManager.autoLogin.value) {
+            val serviceIntent = Intent(this, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+            }
+            startService(serviceIntent)
+        }
 
         setContent {
             LatchTheme {
                 val statsViewModel: StatsViewModel = viewModel()
-
                 val isConnected by wifiStatusViewModel.isConnected.collectAsStateWithLifecycle()
-                val ssid by wifiStatusViewModel.ssid.collectAsStateWithLifecycle()
                 val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
+                val connectionStatus by wifiStatusViewModel.connectionStatus.collectAsStateWithLifecycle()
+                val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
 
                 val currentSpeedBytesPerSecond = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-                val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond)
+                val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond, speedUnits)
 
                 val networkSpeedString = if (isConnected && liveStatus != null) {
                     "${formattedSpeed.first} ${formattedSpeed.second}"
@@ -59,13 +60,14 @@ class MainActivity : ComponentActivity() {
 
                 Surface(modifier = Modifier.fillMaxSize()) {
                     HomeScreen(
-                      isConnected = isConnected,
-                      networkSpeed = networkSpeedString,
-                      session = sessionForHomeScreen,
-                      ssid = ssid,
-                      onConnectClick = {
-                        wifiStatusViewModel.authenticatePortal()
-                      },
+                        isConnected = isConnected,
+                        networkSpeed = networkSpeedString,
+                        session = sessionForHomeScreen,
+                        onConnectClick = {
+                            wifiStatusViewModel.toggleConnection()
+                        },
+                        connectionStatus = connectionStatus,
+                        speedUnits
                     )
                 }
             }
@@ -75,20 +77,5 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         wifiStatusViewModel.refreshStatus()
-    }
-
-    private fun requestLocationPermissionIfNeeded() {
-        val permissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                Toast.makeText(this, getString(R.string.permission_location_required), Toast.LENGTH_LONG).show()
-            }
-        }
-
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-            != PackageManager.PERMISSION_GRANTED) {
-            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
     }
 }

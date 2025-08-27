@@ -3,13 +3,11 @@ package com.vinnovateit.latch.domain.model
 import android.app.Application
 import android.content.Context
 import android.net.TrafficStats
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import androidx.core.content.edit
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.gson.Gson
+import com.vinnovateit.latch.features.wifi.manager.UiNotifier
 import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,17 +21,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 data class DataUsage(val rxBytes: Long, val txBytes: Long)
 data class LiveDataPoint(val timestamp: Long, val usage: DataUsage)
-data class LiveConnectionStatus(val startTimeMillis: Long, val ssid: String, val liveData: List<LiveDataPoint>)
+data class LiveConnectionStatus(val startTimeMillis: Long, val liveData: List<LiveDataPoint>)
 data class SessionSummary(
-  val ssid: String,
   val startTimestamp: Long,
   val endTimestamp: Long,
   val totalData: DataUsage,
-  val history: List<LiveDataPoint>
+  val history: List<LiveDataPoint>,
+  val maxRxBps: Long,
+  val maxTxBps: Long
 )
 
 object WifiStatsManager {
-  private const val TAG = "WifiStatsManager"
   private const val PREFS_NAME = "wifi_stats_prefs"
   private const val KEY_SESSIONS = "session_summaries"
   private const val KEY_LIVE_SESSION = "live_session_status"
@@ -43,7 +41,6 @@ object WifiStatsManager {
   private var applicationContext: Application? = null
   private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var loggingJob: Job? = null
-  private val mainHandler = Handler(Looper.getMainLooper())
   private val isInitialized = AtomicBoolean(false)
 
   private var startRxBytes: Long = 0
@@ -68,10 +65,10 @@ object WifiStatsManager {
     resumeLiveSession()
   }
 
-  fun startLogging(context: Context, ssid: String) {
+  fun startLogging(context: Context) {
     if (loggingJob?.isActive == true) return
 
-    showToast("Starting stats for: $ssid")
+    UiNotifier.showToast(context,"Starting stats")
     startRxBytes = TrafficStats.getTotalRxBytes()
     startTxBytes = TrafficStats.getTotalTxBytes()
 
@@ -83,7 +80,6 @@ object WifiStatsManager {
     val startTime = System.currentTimeMillis()
     val initialStatus = LiveConnectionStatus(
       startTimeMillis = startTime,
-      ssid = ssid,
       liveData = listOf(LiveDataPoint(startTime, DataUsage(0, 0)))
     )
     _liveStatus.value = initialStatus
@@ -118,41 +114,6 @@ object WifiStatsManager {
     }
   }
 
-  fun stopLogging(context: Context) {
-    if (loggingJob == null && _liveStatus.value == null) return
-    loggingJob?.cancel()
-    loggingJob = null
-    val session = _liveStatus.value ?: return
-
-    _liveStatus.value = null
-    showToast("Stopping stats for: ${session.ssid}")
-
-    val duration = System.currentTimeMillis() - session.startTimeMillis
-    val totalRx = (TrafficStats.getTotalRxBytes() - startRxBytes).coerceAtLeast(0)
-    val totalTx = (TrafficStats.getTotalTxBytes() - startTxBytes).coerceAtLeast(0)
-
-    if (duration < 5000 && totalRx < 1024 && totalTx < 1024) {
-      clearLiveSessionState()
-      triggerWidgetUpdate(context)
-      return
-    }
-
-    val summary = SessionSummary(
-      ssid = session.ssid,
-      startTimestamp = session.startTimeMillis,
-      endTimestamp = System.currentTimeMillis(),
-      totalData = DataUsage(totalRx, totalTx),
-      history = session.liveData
-    )
-
-    val updatedHistory = (_sessionSummaries.value + summary).sortedByDescending { it.startTimestamp }
-    _sessionSummaries.value = updatedHistory
-    _lastSession.value = summary
-    saveSessions()
-    clearLiveSessionState()
-    triggerWidgetUpdate(context)
-  }
-
   private fun triggerWidgetUpdate(context: Context) {
     val workRequest = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
     WorkManager.getInstance(context).enqueue(workRequest)
@@ -164,19 +125,8 @@ object WifiStatsManager {
       val json = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_LIVE_SESSION, null)
       if (json != null) {
         val type = object : com.google.gson.reflect.TypeToken<LiveConnectionStatus>() {}.type
-        val resumedSession: LiveConnectionStatus = gson.fromJson(json, type)
-        startLogging(context, resumedSession.ssid)
+        startLogging(context)
       }
-    }
-  }
-
-  fun clearHistory() {
-    val context = applicationContext ?: return
-    managerScope.launch {
-      context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
-      _sessionSummaries.value = emptyList()
-      _lastSession.value = null
-      showToast("Stats history cleared")
     }
   }
 
@@ -220,12 +170,6 @@ object WifiStatsManager {
       context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
         remove(KEY_LIVE_SESSION)
       }
-    }
-  }
-
-  private fun showToast(message: String) {
-    mainHandler.post {
-      Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
     }
   }
 }

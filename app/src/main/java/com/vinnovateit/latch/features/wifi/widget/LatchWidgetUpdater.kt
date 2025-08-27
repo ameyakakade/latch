@@ -12,10 +12,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
-import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
 import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.domain.model.SessionRepository
+import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
+import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -52,48 +52,51 @@ class LatchWidgetUpdater(
     val glanceIds = manager.getGlanceIds(LatchWidget::class.java)
     if (glanceIds.isEmpty()) return Result.success()
 
-    // Detect current theme mode
     val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
     val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
 
-    // Read current state
-    val isConnectedToWifi = WiFiConnectionDetector.isConnectedToWiFi(applicationContext)
-    val hasInternet = isConnectedToWifi && !CaptivePortalDetector.isCaptivePortalActive(applicationContext)
-    val widgetState = if (hasInternet) {
-      val liveSession = try {
-        SessionRepository.liveStatus.firstOrNull()
-      } catch (e: Exception) {
-        null // Handle repository errors gracefully
-      }
+    val liveSession = SessionRepository.liveStatus.firstOrNull()
+    val detailedStatus = ConnectionStatusManager.status.firstOrNull()
 
-      val durationString = liveSession?.let {
-        val connectedAt = it.startTimeMillis
-        val now = System.currentTimeMillis() + TimeZone.getTimeZone("Asia/Kolkata").rawOffset // IST adjustment
-        val durationMillis = now - connectedAt
-        when {
-          durationMillis < 30_000 -> applicationContext.getString(R.string.widget_duration_just_now)
-          durationMillis < 60_000 -> "30 sec"
-          durationMillis < 120_000 -> "1 min"
-          durationMillis < 5 * 60_000 -> "${durationMillis / 60_000} min"
-          durationMillis < 60 * 60_000 -> "${durationMillis / 60_000}m"
-          else -> "${TimeUnit.MILLISECONDS.toHours(durationMillis)}h"
-        }
-      } ?: applicationContext.getString(R.string.widget_duration_fallback)
-      LatchWidgetState(
-        status = applicationContext.getString(R.string.widget_status_connected),
-        ssid = VITWiFiIdentifier.getCurrentSSID(applicationContext) ?: applicationContext.getString(R.string.widget_ssid_vit_wifi),
-        connectedDuration = durationString,
-        isConnected = true,
-        isLightTheme = !isDarkMode
-      )
-    } else {
-      LatchWidgetState(
-        status = applicationContext.getString(R.string.widget_status_disconnected),
-        ssid = if (isConnectedToWifi) applicationContext.getString(R.string.widget_login_required) else applicationContext.getString(R.string.widget_ssid_na),
-        connectedDuration = applicationContext.getString(R.string.widget_duration_fallback),
+    val widgetState = when (detailedStatus) {
+      is ConnectionStatus.Connecting -> LatchWidgetState(
+        status = detailedStatus.message,
+        connectedDuration = "...",
         isConnected = false,
         isLightTheme = !isDarkMode
       )
+      is ConnectionStatus.Failed -> LatchWidgetState(
+        status = detailedStatus.message,
+        connectedDuration = "-",
+        isConnected = false,
+        isLightTheme = !isDarkMode
+      )
+      // For Success, Idle, or null, we rely on the session state.
+      else -> {
+        if (liveSession != null) {
+          val connectedAt = liveSession.startTimeMillis
+          val now = System.currentTimeMillis()
+          val durationMillis = now - connectedAt
+          val durationString = when {
+            durationMillis < 60_000 -> "Just now"
+            durationMillis < 3_600_000 -> "${TimeUnit.MILLISECONDS.toMinutes(durationMillis)}m"
+            else -> "${TimeUnit.MILLISECONDS.toHours(durationMillis)}h"
+          }
+          LatchWidgetState(
+            status = applicationContext.getString(R.string.widget_status_connected),
+            connectedDuration = durationString,
+            isConnected = true,
+            isLightTheme = !isDarkMode
+          )
+        } else {
+          LatchWidgetState(
+            status = applicationContext.getString(R.string.widget_status_disconnected),
+            connectedDuration = "-",
+            isConnected = false,
+            isLightTheme = !isDarkMode
+          )
+        }
+      }
     }
 
     glanceIds.forEach { glanceId ->

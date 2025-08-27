@@ -1,64 +1,58 @@
 package com.vinnovateit.latch.common.util
 
-import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
-import com.vinnovateit.latch.features.wifi.detector.VITWiFiIdentifier
-import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
-import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.latch.data.StoredCredentials
+import com.vinnovateit.latch.features.wifi.manager.LoginResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object LoginTestRunner {
 
-    suspend fun run(context: Context) = withContext(Dispatchers.IO) {
-      Log.d("LoginTest", "Running full auto-login chain...")
+  @SuppressLint("ServiceCast")
+  suspend fun run(context: Context) = withContext(Dispatchers.IO) {
+    Log.d("LoginTest", "Running manual login test...")
 
-      if (!WiFiStateDetector.isWiFiEnabled(context)) {
-        Log.d("LoginTest", "Wi-Fi is disabled.")
-        return@withContext
-      }
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val activeNetwork = cm.activeNetwork
 
-      if (!WiFiConnectionDetector.isConnectedToWiFi(context)) {
-        Log.d("LoginTest", "Not connected to any Wi-Fi.")
-        return@withContext
-      }
-
-      if (ActivityCompat.checkSelfPermission(
-          context,
-          Manifest.permission.ACCESS_FINE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED
-      ) {
-        Log.d("LoginTest", "Location permission not granted.")
-        return@withContext
-      }
-
-      if (!VITWiFiIdentifier.isConnectedToVITWiFi(context)) {
-        Log.d("LoginTest", "Connected Wi-Fi is not a VIT Wi-Fi.")
-        return@withContext
-      }
-
-      if (!CaptivePortalDetector.isCaptivePortalActive(context)) {
-        Log.d("LoginTest", "No captive portal detected. Internet may already be working.")
-        return@withContext
-      }
-
-      Log.d("LoginTest", "Captive portal detected. Proceeding to login...")
-
-      val userId = StoredCredentials.getUserId(context)
-      val password = StoredCredentials.getPassword(context)
-
-      val success = AutoLoginManager.attemptLogin(userId ?: "", password ?: "")
-
-      if (success) {
-        Log.d("LoginTest", "✅ Auto-login successful!")
-      } else {
-        Log.d("LoginTest", "❌ Auto-login failed.")
-      }
+    if (activeNetwork == null) {
+      Log.d("LoginTest", "No active network.")
+      return@withContext
     }
+
+    val caps = cm.getNetworkCapabilities(activeNetwork)
+    if (caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_CAPTIVE_PORTAL) != true) {
+      Log.d("LoginTest", "Active network does not appear to be a captive portal.")
+      return@withContext
+    }
+
+    Log.d("LoginTest", "Captive portal detected on active network. Proceeding to login...")
+
+    val userId = StoredCredentials.getUserId(context)
+    val password = StoredCredentials.getPassword(context)
+
+    if (userId.isNullOrBlank() || password.isNullOrBlank()) {
+      Log.d("LoginTest", "❌ Credentials are not set.")
+      return@withContext
+    }
+
+    // Bind the process to ensure the login request goes over the correct network
+    cm.bindProcessToNetwork(activeNetwork)
+    val success = try {
+      AutoLoginManager.attemptLogin(userId, password, activeNetwork)
+    } finally {
+      cm.bindProcessToNetwork(null) // Always unbind
+    }
+
+    if (success == LoginResult.Success) {
+      Log.d("LoginTest", "✅ Manual login successful!")
+    } else {
+      Log.d("LoginTest", "❌ Manual login failed.")
+    }
+  }
 }

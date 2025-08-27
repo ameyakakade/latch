@@ -23,20 +23,27 @@ data class Session(
   val id: Long = 0,
   val startTime: Date,
   val endTime: Date,
-  val dataUsed: Long,
+  val rxBytes: Long,
+  val txBytes: Long,
+  val maxRxBps: Long,
+  val maxTxBps: Long
 )
 
 @Entity(tableName = "daily_usage")
 data class DailyUsage(
   @PrimaryKey
   val date: Date,
-  val totalDataUsed: Long,
+  val totalRxBytes: Long,
+  val totalTxBytes: Long,
 )
 
 @Dao
 interface StatsDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
-  suspend fun insertSession(session: Session)
+  suspend fun insertSession(session: Session): Long
+
+  @Update
+  suspend fun updateSession(session: Session)
 
   @Query("SELECT * FROM sessions ORDER BY startTime DESC")
   fun getAllSessions(): Flow<List<Session>>
@@ -72,7 +79,7 @@ class Converters {
   }
 }
 
-@Database(entities = [Session::class, DailyUsage::class], version = 1, exportSchema = false)
+@Database(entities = [Session::class, DailyUsage::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class LatchDatabase : RoomDatabase() {
 
@@ -88,7 +95,9 @@ abstract class LatchDatabase : RoomDatabase() {
           context.applicationContext,
           LatchDatabase::class.java,
           "latch_database"
-        ).build()
+        )
+          .fallbackToDestructiveMigration() // Handles schema change by rebuilding DB
+          .build()
         INSTANCE = instance
         instance
       }
