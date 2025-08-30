@@ -109,28 +109,47 @@ class ForegroundService : Service() {
 
     private fun checkNetworkAndAct(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            // checking for internet access first
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_checking_internet)))
+            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
+                getApplication(applicationContext).getString(R.string.status_checking_internet)
+            ))
+
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
+
             if (internetStatus == 204) {
-                connectivityManager.reportNetworkConnectivity(network, true)
-                ConnectionStatusManager.postStatus(ConnectionStatus.Success)
-                SessionRepository.startSession(network)
-                startHealthCheck(network)
+                // vit wifi check
+                if (AutoLoginManager.isTargetCaptivePortal(network)) {
+                    Log.d("ForegroundService", "Valid VIT WiFi with internet. Starting session.")
+                    connectivityManager.reportNetworkConnectivity(network, true)
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Success)
+                    SessionRepository.startSession(network)
+                    startHealthCheck(network)
+                } else {
+                    Log.d("ForegroundService", "Non-VIT WiFi with internet. Ignoring.")
+                    ConnectionStatusManager.postStatus(
+                        ConnectionStatus.Failed(getApplication(applicationContext).getString(
+                            R.string.status_unsupported_network
+                        ))
+                    )
+                }
                 return@launch
             }
 
-
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_verifying_network)))
+            // Fallback: captive portal flow
+            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
+                getApplication(applicationContext).getString(R.string.status_verifying_network)
+            ))
             if (AutoLoginManager.isTargetCaptivePortal(network)) {
-                Log.d("ForegroundService", "Target captive portal confirmed.")
+                Log.d("ForegroundService", "Target captive portal confirmed (VIT).")
                 handleCaptivePortal(network)
             } else {
-                Log.d("ForegroundService", "Network is not the target captive portal.")
-                ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_unsupported_network)))
+                Log.d("ForegroundService", "Non-VIT captive portal. Ignoring.")
+                ConnectionStatusManager.postStatus(ConnectionStatus.Failed(
+                    getApplication(applicationContext).getString(R.string.status_unsupported_network)
+                ))
             }
         }
     }
+
 
     private fun handleCaptivePortal(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
