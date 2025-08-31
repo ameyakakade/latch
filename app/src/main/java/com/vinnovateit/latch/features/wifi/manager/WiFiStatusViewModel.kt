@@ -1,7 +1,10 @@
 package com.vinnovateit.latch.features.wifi.manager
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
+import android.provider.Settings
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -82,6 +85,13 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun toggleConnection() {
+        val wifiManager = getApplication<Application>().getSystemService(Context.WIFI_SERVICE) as WifiManager
+        if (!wifiManager.isWifiEnabled) {
+            val intent = Intent(Settings.Panel.ACTION_WIFI)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            getApplication<Application>().startActivity(intent)
+            return
+        }
         if (!WiFiStateDetector.isWiFiEnabled(ctx)) {
             ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Wi-Fi is turned off"))
             return

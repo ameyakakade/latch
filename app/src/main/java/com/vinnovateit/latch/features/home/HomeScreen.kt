@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
+import com.vinnovateit.latch.features.about.MeetTheTeamPage
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -88,35 +89,43 @@ fun HomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String
 ) {
-    val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
+    var showAbout by remember { mutableStateOf(false) }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        val isPortrait = maxHeight > maxWidth
+    if (showAbout) {
+        MeetTheTeamPage(onBackClick = { showAbout = false })
+    } else {
+        val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
-        if (isPortrait) {
-            PortraitHomeScreen(
-                isConnected,
-                networkSpeed,
-                session,
-                onConnectClick,
-                historyForHomeScreen,
-                connectionStatus,
-                speedUnit
-            )
-        } else {
-            LandscapeHomeScreen(
-                isConnected,
-                networkSpeed,
-                session,
-                onConnectClick,
-                historyForHomeScreen,
-                connectionStatus,
-                speedUnit
-            )
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            val isPortrait = maxHeight > maxWidth
+
+            if (isPortrait) {
+                PortraitHomeScreen(
+                    isConnected,
+                    networkSpeed,
+                    session,
+                    onConnectClick,
+                    historyForHomeScreen,
+                    connectionStatus,
+                    speedUnit,
+                    onShowAbout = { showAbout = true }
+                )
+            } else {
+                LandscapeHomeScreen(
+                    isConnected,
+                    networkSpeed,
+                    session,
+                    onConnectClick,
+                    historyForHomeScreen,
+                    connectionStatus,
+                    speedUnit,
+                    onShowAbout = { showAbout = true }
+                )
+            }
         }
     }
 }
@@ -130,7 +139,8 @@ fun PortraitHomeScreen(
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
-    speedUnit: String
+    speedUnit: String,
+    onShowAbout: () -> Unit
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
@@ -149,7 +159,7 @@ fun PortraitHomeScreen(
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                HomeTopSection(isConnected, networkSpeed)
+                HomeTopSection(isConnected, networkSpeed, onShowAbout = onShowAbout)
             }
             // Bottom Section with Canvas Cutout
             Box(
@@ -181,7 +191,8 @@ fun LandscapeHomeScreen(
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
-    speedUnit: String
+    speedUnit: String,
+    onShowAbout: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -207,7 +218,7 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                HomeTopSection(isConnected, networkSpeed, isLandscape = true)
+                HomeTopSection(isConnected, networkSpeed, isLandscape = true, onShowAbout = onShowAbout)
                 Spacer(modifier = Modifier.height(32.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
@@ -238,14 +249,16 @@ fun LandscapeHomeScreen(
 fun HomeTopSection(
     isConnected: Boolean,
     networkSpeed: String,
-    isLandscape: Boolean = false
+    isLandscape: Boolean = false,
+    onShowAbout: () -> Unit
 ) {
     val context = LocalContext.current
     Column {
         TopBarSection(
             onPreferencesClick = {
                 context.startActivity(Intent(context, SettingsActivity::class.java))
-            }
+            },
+            onShowAbout = onShowAbout
         )
         Spacer(Modifier.size(25.dp))
         Column(
@@ -254,36 +267,27 @@ fun HomeTopSection(
                 .padding(horizontal = 32.dp)
                 .padding(bottom = if (isLandscape) 16.dp else 90.dp) // Increased bottom padding
         ) {
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
-                        RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                    color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = SatoshiFontFamily
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.status_not_connected),
-
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    fontFamily = SatoshiFontFamily,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                        color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SatoshiFontFamily
+                    )
+                }
                 Text(
                     text = networkSpeed,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -368,7 +372,8 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBarSection(
-    onPreferencesClick: () -> Unit
+    onPreferencesClick: () -> Unit,
+    onShowAbout: () -> Unit
 ) {
     val isDark = LocalIsDarkTheme.current
     var menuExpanded by remember { mutableStateOf(false) }
@@ -387,7 +392,7 @@ fun TopBarSection(
         },
         navigationIcon = {
             Icon(
-                painter = if(isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(R.drawable.ic_latch_light),
+                painter = if(isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(id = R.drawable.ic_latch_light),
                 contentDescription = "LATCH Logo",
                 tint = Color.Unspecified,
                 modifier = Modifier
@@ -432,7 +437,10 @@ fun TopBarSection(
                     text = {
                         Text("About", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
-                    onClick = { menuExpanded = false },
+                    onClick = {
+                        menuExpanded = false
+                        onShowAbout()
+                    },
                     leadingIcon = {
                         Icon(
                             Icons.Rounded.Info,
