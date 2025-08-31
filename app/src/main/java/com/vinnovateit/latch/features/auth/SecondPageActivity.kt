@@ -212,7 +212,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     }
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .width(350.dp)
                     .padding(horizontal = 40.dp),
                 shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.buttonColors(
