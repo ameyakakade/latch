@@ -3,6 +3,8 @@ package com.vinnovateit.latch.data
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.IOException
+import java.security.GeneralSecurityException
 
 object StoredCredentials {
 
@@ -10,36 +12,50 @@ object StoredCredentials {
     private const val KEY_USER_ID = "user_id"
     private const val KEY_PASSWORD = "password"
 
-    private fun getEncryptedPrefs(context: Context): EncryptedSharedPreferences {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    private fun getEncryptedPrefs(context: Context): EncryptedSharedPreferences? {
+        return try {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
 
-        return EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        ) as EncryptedSharedPreferences
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            ) as EncryptedSharedPreferences
+        } catch (e: GeneralSecurityException) {
+
+            clearCorruptedPreferences(context)
+            null
+        } catch (e: IOException) {
+
+            clearCorruptedPreferences(context)
+            null
+        }
+    }
+
+    private fun clearCorruptedPreferences(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().apply()
     }
 
     fun saveCredentials(context: Context, userId: String, password: String) {
         val prefs = getEncryptedPrefs(context)
-        prefs.edit()
-            .putString(KEY_USER_ID, userId)
-            .putString(KEY_PASSWORD, password)
-            .apply()
+        prefs?.edit()
+            ?.putString(KEY_USER_ID, userId)
+            ?.putString(KEY_PASSWORD, password)
+            ?.apply()
     }
 
     fun getUserId(context: Context): String? {
         val prefs = getEncryptedPrefs(context)
-        return prefs.getString(KEY_USER_ID, null)
+        return prefs?.getString(KEY_USER_ID, null)
     }
 
     fun getPassword(context: Context): String? {
         val prefs = getEncryptedPrefs(context)
-        return prefs.getString(KEY_PASSWORD, null)
+        return prefs?.getString(KEY_PASSWORD, null)
     }
 
     fun credentialsExist(context: Context): Boolean {
@@ -48,6 +64,6 @@ object StoredCredentials {
 
     fun clearCredentials(context: Context) {
         val prefs = getEncryptedPrefs(context)
-        prefs.edit().clear().apply()
+        prefs?.edit()?.clear()?.apply()
     }
 }

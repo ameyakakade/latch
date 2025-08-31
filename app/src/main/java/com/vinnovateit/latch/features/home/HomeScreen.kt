@@ -267,36 +267,27 @@ fun HomeTopSection(
                 .padding(horizontal = 32.dp)
                 .padding(bottom = if (isLandscape) 16.dp else 90.dp) // Increased bottom padding
         ) {
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
-                        RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                    color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = SatoshiFontFamily
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.status_not_connected),
-
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    fontFamily = SatoshiFontFamily,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                        color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SatoshiFontFamily
+                    )
+                }
                 Text(
                     text = networkSpeed,
                     color = MaterialTheme.colorScheme.onBackground,
