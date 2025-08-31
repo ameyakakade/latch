@@ -1,12 +1,10 @@
 package com.vinnovateit.latch.ui.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.R
@@ -22,7 +20,6 @@ val ModernizFontFamily = FontFamily(
     Font(R.font.moderniz, FontWeight.Normal)
 )
 
-// Define Material 3 Typography using Satoshi for all styles
 val AppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = SatoshiFontFamily,
@@ -84,7 +81,7 @@ val AppTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = SatoshiFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
@@ -98,9 +95,9 @@ val AppTypography = Typography(
     bodySmall = TextStyle(
         fontFamily = SatoshiFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontSize = 13.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.4.sp
+        letterSpacing = 0.3.sp
     ),
     labelLarge = TextStyle(
         fontFamily = SatoshiFontFamily,

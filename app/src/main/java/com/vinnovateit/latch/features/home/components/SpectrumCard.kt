@@ -2,26 +2,24 @@ package com.vinnovateit.latch.features.home.components
 
 import android.app.Activity
 import android.content.Intent
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowOutward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,16 +27,18 @@ import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.stats.StatsActivity
+import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
-import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 @Composable
 fun SpectrumCard(
   session: SessionSummary?,
-  ssid: String,
-  historyForHomeScreen: List<LiveDataPoint>
+  historyForHomeScreen: List<LiveDataPoint>,
+  connectionStatus: ConnectionStatus,
+  speedUnit: String
 ) {
   val context = LocalContext.current
+
   Card(
     modifier = Modifier
       .padding(top = 105.dp)
@@ -48,9 +48,7 @@ fun SpectrumCard(
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
   ) {
-    Column(
-      modifier = Modifier.fillMaxSize()
-    ) {
+    Column(modifier = Modifier.fillMaxSize()) {
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -71,36 +69,96 @@ fun SpectrumCard(
           imageVector = Icons.Rounded.ArrowOutward,
           contentDescription = null,
           tint = MaterialTheme.colorScheme.onSurfaceVariant,
-          modifier = Modifier
-            .padding(end = 4.dp, top = 0.dp)
+          modifier = Modifier.padding(end = 4.dp, top = 0.dp)
         )
       }
 
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .weight(1f)
+          .weight(1f),
+        contentAlignment = Alignment.Center
       ) {
-        if (session != null && session.history.isNotEmpty()) {
-          HomeScreenGraph(
-            modifier = Modifier.fillMaxSize(),
-            rateHistory = historyForHomeScreen
-          )
-        } else {
-          Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = stringResource(id = R.string.home_no_data_for_graph),
-              color = MaterialTheme.colorScheme.onSurfaceVariant,
-              fontSize = 14.sp,
-              fontFamily = SatoshiFontFamily,
-              textAlign = TextAlign.Center
+        // The status is Idle AND there's a valid session with history -> show the graph.
+        val showGraph = connectionStatus is ConnectionStatus.Idle && session?.history?.isNotEmpty() == true
+
+        AnimatedContent(
+          targetState = showGraph,
+          transitionSpec = { fadeIn(animationSpec = tween(500)) togetherWith fadeOut(animationSpec = tween(500)) },
+          label = "GraphVsStatus"
+        ) { isGraphVisible ->
+          if (isGraphVisible) {
+            HomeScreenGraph(
+              modifier = Modifier.fillMaxSize(),
+              rateHistory = historyForHomeScreen,
+              speedUnit = speedUnit
             )
+          } else {
+            // Otherwise, show the status indicator.
+            StatusIndicator(connectionStatus = connectionStatus)
           }
         }
       }
+    }
+  }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalAnimationApi::class)
+@Composable
+private fun StatusIndicator(connectionStatus: ConnectionStatus) {
+  AnimatedContent(
+    targetState = connectionStatus,
+    transitionSpec = {
+      (slideInVertically { height -> height } + fadeIn()) togetherWith (slideOutVertically { height -> -height } + fadeOut())
+    },
+    label = "StatusIndicatorAnimation"
+  ) { status ->
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center,
+      modifier = Modifier.padding(16.dp)
+    ) {
+      val iconVisible = status !is ConnectionStatus.Idle
+      val textOffsetY by animateDpAsState(targetValue = if (iconVisible) 12.dp else 0.dp, label = "textOffset")
+
+      AnimatedVisibility(visible = iconVisible, enter = fadeIn(), exit = fadeOut()) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(92.dp)) {
+          when (status) {
+            is ConnectionStatus.Connecting -> LoadingIndicator(
+              modifier = Modifier
+                .size(92.dp)
+                .graphicsLayer { alpha = 0.35f }
+            )
+            is ConnectionStatus.Success -> Icon(
+              imageVector = Icons.Rounded.Check,
+              contentDescription = stringResource(R.string.status_connected),
+              tint = MaterialTheme.colorScheme.primary,
+              modifier = Modifier.size(64.dp)
+            )
+            is ConnectionStatus.Failed -> Icon(
+              imageVector = Icons.Rounded.Close,
+              contentDescription = stringResource(R.string.status_login_failed),
+              tint = MaterialTheme.colorScheme.error,
+              modifier = Modifier.size(64.dp)
+            )
+            else -> {}
+          }
+        }
+      }
+
+      Text(
+        text = when (status) {
+          is ConnectionStatus.Idle -> stringResource(R.string.home_no_data_for_graph)
+          is ConnectionStatus.Connecting -> status.message
+          is ConnectionStatus.Success -> stringResource(R.string.status_connected)
+          is ConnectionStatus.Failed -> status.message
+        },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.offset(y = textOffsetY)
+      )
     }
   }
 }
