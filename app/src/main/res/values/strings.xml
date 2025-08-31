@@ -1,14 +1,11 @@
 <resources>
     <string name="app_name">Latch</string>
-    <string name="status">Status</string>
-    <string name="app_logo_content_description">App Logo</string>
-    <string name="get_started">Get Started</string>
+    <string name="app_name_uppercase">LATCH</string>
     <string name="menu">Menu</string>
 
+    <string name="get_started">Get Started</string>
     <string name="landing_latch_logo_content_description">Latch Logo</string>
-    <string name="landing_latch_logo_text_content_description">Latch Logo Text</string>
     <string name="landing_vinnovateit_logo_content_description">VinnovateIT Logo</string>
-
     <string name="credentials_title">Let\'s Get Started</string>
     <string name="credentials_subtitle">Enter credentials</string>
     <string name="registration_number">Registration Number</string>
@@ -27,7 +24,7 @@
     <string name="home_status_disconnected">DISCONNECTED</string>
     <string name="home_network_statistics">STATS</string>
     <string name="home_go_to_statistics">Go to Statistics</string>
-    <string name="home_no_data_for_graph">No data available for graph</string>
+    <string name="home_no_data_for_graph">Connect for curves!</string>
 
     <string name="stats_title">Stats</string>
     <string name="stats_go_back">Back</string>
@@ -51,22 +48,39 @@
     <string name="stats_live_upload">Upload</string>
     <string name="stats_max_download">Max Download</string>
     <string name="stats_max_upload">Max Upload</string>
+    <string name="stats_view_more">View More</string>
 
+    <string name="widget_status">Status:</string>
+    <string name="widget_app_logo">App Logo</string>
     <string name="widget_status_disconnected">Disconnected</string>
-    <string name="latch_widget_description">Quick status and control for Latch.</string>
-    <string name="widget_ssid_na">N/A</string>
+    <string name="widget_description">Quick status and control for Latch.</string>
     <string name="widget_duration_fallback">-</string>
     <string name="widget_connect">Connect</string>
     <string name="widget_disconnect">Disconnect</string>
     <string name="widget_login_required">Login Required</string>
     <string name="widget_loading">Loading…</string>
-
-    <string name="permission_location_required">Location permission is required to detect WiFi network.</string>
-    <string name="not_connected">Not Connected</string>
-    <string name="unknown_wifi">Unknown Wi‑Fi</string>
-    <string name="other_network">Other Network</string>
-    <string name="name_uppercase">LATCH</string>
     <string name="widget_status_connected">Connected</string>
     <string name="widget_duration_just_now">Just Now</string>
-    <string name="widget_ssid_vit_wifi">X-VIT</string>
+
+    <string name="status_not_connected">Not Connected</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_wifi_off">Wi-Fi is turned off.</string>
+    <string name="status_not_on_wifi">Not connected to a Wi-Fi network.</string>
+    <string name="status_revalidating">Re-validating connection…</string>
+    <string name="status_checking_network">Checking network…</string>
+    <string name="status_unsupported_network">Unsupported Network</string>
+    <string name="status_login_failed">Login Failed</string>
+    <string name="status_credentials_not_set">Credentials not set</string>
+    <string name="status_disconnected_message">Disconnected</string>
+    <string name="status_logging_out">Logging out…</string>
+    <string name="status_logout_failed">Logout failed</string>
+    <string name="status_initializing">Initializing…</string>
+    <string name="status_checking_internet">Checking internet…</string>
+    <string name="status_verifying_network">Verifying network…</string>
+    <string name="status_authenticating">Authenticating…</string>
+    <string name="status_not_on_wifi_long">Active network is not Wi-Fi. Aborting check.</string>
+
+    <string name="notification_channel_name">Latch Service</string>
+    <string name="notification_title">Latch Running</string>
+    <string name="notification_text">Monitoring Wi-Fi connection…</string>
 </resources>

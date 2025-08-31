@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -39,9 +41,9 @@ import java.util.Locale
  * with a customizable shape for grouping.
  */
 @Composable
-fun HistoryItemCard(
+fun StatsItemCard(
   session: SessionSummary,
-  shape: Shape = RoundedCornerShape(16.dp)
+  shape: Shape = RoundedCornerShape(16.dp),
 ) {
   Card(
     modifier = Modifier.fillMaxWidth(),
@@ -58,7 +60,7 @@ fun HistoryItemCard(
     ) {
       Column(modifier = Modifier.weight(1f)) {
         Text(
-          text = SimpleDateFormat("E, dd MMM yyyy", Locale.getDefault()).format(Date(session.startTimestamp)),
+          text = SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(session.startTimestamp)),
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface
@@ -80,7 +82,7 @@ fun HistoryItemCard(
         )
         Row {
           val dl = remember(session.totalData) { formatBytes(session.totalData.rxBytes) }
-          Icon(Icons.Default.ArrowDownward, contentDescription = "Download data", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
+          Icon(Icons.Rounded.ArrowDownward, contentDescription = "Download data", tint = ColorGraphDownload, modifier = Modifier.size(16.dp))
           Text(
             text = "${dl.first} ${dl.second}",
             style = MaterialTheme.typography.bodySmall,
@@ -88,7 +90,7 @@ fun HistoryItemCard(
           )
           Spacer(modifier = Modifier.width(12.dp))
           val ul = remember(session.totalData) { formatBytes(session.totalData.txBytes) }
-          Icon(Icons.Default.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
+          Icon(Icons.Rounded.ArrowUpward, contentDescription = "Upload data", tint = ColorGraphUpload, modifier = Modifier.size(16.dp))
           Text(
             text = "${ul.first} ${ul.second}",
             style = MaterialTheme.typography.bodySmall,

@@ -1,5 +1,5 @@
 [versions]
-agp = "8.7.1"
+agp = "8.6.1"
 androidxComposeBom = "2025.07.00"
 appcompatVersion = "1.7.1"
 composeBomVersion = "2024.05.00"
@@ -29,6 +29,7 @@ protoliteWellKnownTypes = "18.0.1"
 roomKtx = "2.7.2"
 roomRuntime = "2.7.2"
 runtime = "1.8.3"
+securityCrypto = "1.1.0-alpha06"
 ui = "1.8.3"
 uiGraphics = "1.6.7"
 uiTooling = "1.6.7"
@@ -90,6 +91,7 @@ androidx-preference-ktx = { module = "androidx.preference:preference-ktx", versi
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomKtx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
 androidx-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "runtime" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "composeBom" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "composeBom" }
 androidx-ui-graphics-v167 = { module = "androidx.compose.ui:ui-graphics", version.ref = "uiGraphics" }

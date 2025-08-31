@@ -1,5 +1,6 @@
 package com.vinnovateit.latch.features.home
 
+import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
@@ -40,6 +41,9 @@ import com.vinnovateit.latch.features.home.components.SpectrumCard
 import com.vinnovateit.latch.features.settings.SettingsActivity
 import com.vinnovateit.latch.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import com.vinnovateit.latch.domain.model.LiveDataPoint
+import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -50,7 +54,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
             .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
         drawRect(
-            color = colorScheme.secondaryContainer,
+            color = colorScheme.primaryContainer,
             size = size
         )
         if (isPortrait) {
@@ -74,15 +78,15 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
@@ -98,18 +102,20 @@ fun HomeScreen(
                 isConnected,
                 networkSpeed,
                 session,
-                ssid,
                 onConnectClick,
-                historyForHomeScreen
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit
             )
         } else {
             LandscapeHomeScreen(
                 isConnected,
                 networkSpeed,
                 session,
-                ssid,
                 onConnectClick,
-                historyForHomeScreen
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -121,17 +127,17 @@ fun PortraitHomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
-    historyForHomeScreen: List<com.vinnovateit.latch.domain.model.LiveDataPoint>
+    historyForHomeScreen: List<LiveDataPoint>,
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
     val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = if(isDark) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+        LeafOverlay(
             contentDescription = "Background Pattern",
             modifier = Modifier.fillMaxSize(),
             alignment = Alignment.TopCenter
@@ -143,7 +149,7 @@ fun PortraitHomeScreen(
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                HomeTopSection(isConnected, ssid, networkSpeed)
+                HomeTopSection(isConnected, networkSpeed)
             }
             // Bottom Section with Canvas Cutout
             Box(
@@ -153,7 +159,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, ssid, historyForHomeScreen)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit)
             }
         }
         // Power Button Overlay
@@ -172,9 +178,10 @@ fun LandscapeHomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    ssid: String,
     onConnectClick: () -> Unit,
-    historyForHomeScreen: List<com.vinnovateit.latch.domain.model.LiveDataPoint>
+    historyForHomeScreen: List<LiveDataPoint>,
+    connectionStatus: ConnectionStatus,
+    speedUnit: String
 ) {
     Row(
         modifier = Modifier
@@ -200,7 +207,7 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                HomeTopSection(isConnected, ssid, networkSpeed, isLandscape = true)
+                HomeTopSection(isConnected, networkSpeed, isLandscape = true)
                 Spacer(modifier = Modifier.height(32.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
@@ -214,13 +221,14 @@ fun LandscapeHomeScreen(
             modifier = Modifier
                 .weight(0.55f)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant), // Darker background
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
             SpectrumCard(
                 session,
-                ssid,
                 historyForHomeScreen,
+                connectionStatus,
+                speedUnit
             )
         }
     }
@@ -229,7 +237,6 @@ fun LandscapeHomeScreen(
 @Composable
 fun HomeTopSection(
     isConnected: Boolean,
-    ssid: String,
     networkSpeed: String,
     isLandscape: Boolean = false
 ) {
@@ -247,38 +254,30 @@ fun HomeTopSection(
                 .padding(horizontal = 32.dp)
                 .padding(bottom = if (isLandscape) 16.dp else 90.dp) // Increased bottom padding
         ) {
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
-                        RoundedCornerShape(10.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                    color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = SatoshiFontFamily
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = ssid,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    fontSize = 16.sp,
-                    fontFamily = SatoshiFontFamily,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isConnected) ColorBoxConnected else ColorBoxDisconnected,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isConnected) "CONNECTED" else "DISCONNECTED",
+                        color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SatoshiFontFamily
+                    )
+                }
                 Text(
                     text = networkSpeed,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = SatoshiFontFamily
@@ -369,7 +368,7 @@ fun TopBarSection(
         title = {
             Text(
                 modifier = Modifier.padding(top = 5.dp),
-                text = "LATCH",
+                text = stringResource(R.string.app_name_uppercase),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 23.sp,
                 fontFamily = ModernizFontFamily,
@@ -393,7 +392,7 @@ fun TopBarSection(
                     Icon(
                         imageVector = Icons.Rounded.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.tertiary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -452,8 +451,9 @@ fun HomeScreenPortraitPreview() {
             isConnected = false,
             networkSpeed = "6 mbps",
             session = null,
-            ssid = "Not Connected",
             onConnectClick = { },
+            connectionStatus = ConnectionStatus.Idle,
+            "B/s"
         )
     }
 }
@@ -466,8 +466,9 @@ fun HomeScreenLandscapePreview() {
             isConnected = true,
             networkSpeed = "12 mbps",
             session = null,
-            ssid = "VIT-WiFi",
             onConnectClick = { },
+            connectionStatus = ConnectionStatus.Idle,
+            speedUnit = "B/s"
         )
     }
 }
