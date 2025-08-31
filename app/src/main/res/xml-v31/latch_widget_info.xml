@@ -5,7 +5,7 @@
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:previewImage="@drawable/ic_latch_dark"
-    android:resizeMode="horizontal|vertical"
+    android:resizeMode="none"
     android:targetCellWidth="3"
     android:targetCellHeight="2"
     android:updatePeriodMillis="86400000"
