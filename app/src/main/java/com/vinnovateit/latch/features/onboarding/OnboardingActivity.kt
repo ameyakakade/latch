@@ -114,7 +114,7 @@ fun OnboardingScreen(
             SlideContent(
                 title = "No Sign-in Hassle",
                 description = buildAnnotatedString {
-                    append("Latch logs you in automatically — no typing.")
+                    append("Forget typing! Latch auto-logs you in the moment you’re on VIT Wi-Fi ")
                 },
                 icon = {
                     Icon(
@@ -130,10 +130,10 @@ fun OnboardingScreen(
             SlideContent(
                 title = "How it Works",
                 description = buildAnnotatedString {
-                    append("Enter your VIT credentials once.\n\n")
-                    append("Latch auto-submits on hostel Wi-Fi.\n\n")
+                    append("Sign in with your VIT ID once \n\n")
+                    append("Next time? Latch does the boring stuff for you ⚡\n\n")
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append("Credentials stored securely.")
+                        append("Credentials never leave your phone; stored only in cache ")
                     }
                 },
                 icon = {
@@ -150,7 +150,7 @@ fun OnboardingScreen(
             SlideContent(
                 title = "Allow Permissions",
                 description = buildAnnotatedString {
-                    append("Latch needs notification access.")
+                    append("Latch needs notification access\n [so it can sneak in silently]")
                 },
                 icon = {
                     Icon(
@@ -166,7 +166,7 @@ fun OnboardingScreen(
             SlideContent(
                 title = "Set Up Account",
                 description = buildAnnotatedString {
-                    append("Enter VIT ID & password to start auto-login.")
+                    append("Drop in your VIT ID & password once. \nWe’ll handle the auto-magic from there")
                 },
                 icon = {
                     Icon(
@@ -182,7 +182,10 @@ fun OnboardingScreen(
             SlideContent(
                 title = "Enter Your Credentials",
                 description = buildAnnotatedString {
-                    append("Provide your VIT login details for automatic connection.")
+                    append("Pop in your VIT login details for instant Wi-Fi connect\n\n")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append("We don’t collect them.\nThey live only in your device’s cache ")
+                    }
                 },
                 icon = {
                     Icon(
@@ -198,7 +201,7 @@ fun OnboardingScreen(
             SlideContent(
                 title = "Widgets & Tile",
                 description = buildAnnotatedString {
-                    append("Add Latch widget or Quick Settings tile for one-tap access.")
+                    append("Too lazy to open the app? \nAdd a widget or Quick Settings tile for 1-tap magic ")
                 },
                 icon = {
                     Icon(
@@ -214,7 +217,8 @@ fun OnboardingScreen(
             SlideContent(
                 title = "You're Ready!",
                 description = buildAnnotatedString {
-                    append("Latch will auto-login whenever in range.")
+                    append("Sit back, relax \n\n")
+                    append("Latch will log you in automatically whenever you’re in range")
                 },
                 icon = {
                     Icon(
@@ -227,6 +231,7 @@ fun OnboardingScreen(
             )
         )
     }
+
 
     val pagerState = rememberPagerState(pageCount = { slides.size })
 
@@ -247,16 +252,20 @@ fun OnboardingScreen(
                 pagerState = pagerState,
                 animated = (pagerState.currentPage != 0),
                 isFinishButtonEnabled = when (pagerState.currentPage) {
+                    3 -> permissionGranted
                     5 -> credentialsHandled
                     else -> true
                 },
                 onNextClicked = {
                     scope.launch {
-                        if (pagerState.currentPage == 5 && !credentialsHandled) {
-                            showCredentialsAlert = true
-                        } else {
-                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        when (pagerState.currentPage) {
+                            3 -> if (!permissionGranted) return@launch
+                            5 -> if (!credentialsHandled) {
+                                showCredentialsAlert = true
+                                return@launch
+                            }
                         }
+                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 },
                 onFinishClicked = {
@@ -274,6 +283,11 @@ fun OnboardingScreen(
     ) { paddingValues ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = when (pagerState.currentPage) {
+                3 -> permissionGranted
+                5 -> credentialsHandled
+                else -> true
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -638,17 +652,19 @@ fun LatchSetupBottomBar(
 
                 // Next / Finish Button
                 val isLastPage = pagerState.currentPage == pagerState.pageCount - 1
-                val containerColor = if (isLastPage && !isFinishButtonEnabled) {
+
+                val containerColor = if (!isFinishButtonEnabled) {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 } else {
                     MaterialTheme.colorScheme.primaryContainer
                 }
 
-                val contentColor = if (isLastPage && !isFinishButtonEnabled) {
+                val contentColor = if (!isFinishButtonEnabled) {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = ContentAlpha.disabled)
                 } else {
                     MaterialTheme.colorScheme.onPrimaryContainer
                 }
+
 
                 MediumFloatingActionButton(
                     onClick = {
