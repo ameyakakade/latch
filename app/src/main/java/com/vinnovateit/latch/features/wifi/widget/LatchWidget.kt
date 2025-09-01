@@ -108,7 +108,7 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
   val size = LocalSize.current
   val isNarrow = size.width < 180.dp
   val padding = if (isNarrow) 12.dp else 16.dp
-  val statusFontSize = if (isNarrow) 20.sp else 24.sp
+  val statusFontSize = if (isNarrow) 18.sp else 22.sp
   val buttonFontSize = if (isNarrow) 16.sp else 18.sp
   val durationFontSize = if (isNarrow) 12.sp else 14.sp
 
