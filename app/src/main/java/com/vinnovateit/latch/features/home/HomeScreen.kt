@@ -309,7 +309,7 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
         if (isPortrait) {
             (LocalResources.current.displayMetrics.widthPixels * 0.5f).toDp()
         } else {
-            (LocalResources.current.displayMetrics.heightPixels * 0.4f).toDp()
+            (LocalResources.current.displayMetrics.heightPixels * 0.6f).toDp()
         }
     }
 
