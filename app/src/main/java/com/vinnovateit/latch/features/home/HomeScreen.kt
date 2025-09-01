@@ -12,9 +12,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -169,7 +171,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit, false)
             }
         }
         // Power Button Overlay
@@ -204,11 +206,10 @@ fun LandscapeHomeScreen(
                 .weight(0.45f)
                 .fillMaxHeight()
         ) {
-            Image(
-                painter = if(LocalIsDarkTheme.current) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+            LeafOverlay(
                 contentDescription = "Background Pattern",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                alignment = Alignment.TopCenter
             )
             Column(
                 modifier = Modifier
@@ -219,7 +220,7 @@ fun LandscapeHomeScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 HomeTopSection(isConnected, networkSpeed, isLandscape = true, onShowAbout = onShowAbout)
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
                     isPortrait = false
@@ -231,15 +232,15 @@ fun LandscapeHomeScreen(
         Box(
             modifier = Modifier
                 .weight(0.55f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
+                .fillMaxHeight(),
+            contentAlignment = Alignment.TopCenter,
         ) {
             SpectrumCard(
                 session,
                 historyForHomeScreen,
                 connectionStatus,
-                speedUnit
+                speedUnit,
+                true,
             )
         }
     }
@@ -308,7 +309,7 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
         if (isPortrait) {
             (LocalResources.current.displayMetrics.widthPixels * 0.5f).toDp()
         } else {
-            (LocalResources.current.displayMetrics.heightPixels * 0.6f).toDp()
+            (LocalResources.current.displayMetrics.heightPixels * 0.4f).toDp()
         }
     }
 
@@ -435,7 +436,7 @@ fun TopBarSection(
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("About", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                        Text("How it Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
                     onClick = {
                         menuExpanded = false
@@ -443,8 +444,23 @@ fun TopBarSection(
                     },
                     leadingIcon = {
                         Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = "About"
+                            Icons.Rounded.QuestionMark,
+                            contentDescription = "How it Works"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Meet The Team", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onShowAbout()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Groups,
+                            contentDescription = "Meet The Team"
                         )
                     }
                 )
