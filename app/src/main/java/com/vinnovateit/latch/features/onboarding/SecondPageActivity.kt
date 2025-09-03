@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.features.auth
+package com.vinnovateit.latch.features.onboarding
 
 import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -23,8 +22,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Person
@@ -37,7 +34,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.features.home.MainActivity
-import com.vinnovateit.latch.features.onboarding.OnboardingActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
@@ -73,8 +69,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     var regNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
-    var regNoFocused by remember { mutableStateOf(false) }
-    var passwordFocused by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(editMode) {
@@ -104,7 +98,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
         ) {
             Text(
                 text = stringResource(id = R.string.credentials_title),
-                fontSize = 35.sp,
+                fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = SatoshiFontFamily,
                 color = MaterialTheme.colorScheme.onSurface
@@ -122,10 +116,10 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            TextField(
+            OutlinedTextField(
                 value = regNo,
                 onValueChange = { regNo = it.uppercase() },
-                label = if (regNo.isEmpty() && !regNoFocused) { { Text(stringResource(id = R.string.registration_number), color = MaterialTheme.colorScheme.onSurface,) } } else null,
+                label = { Text(stringResource(id = R.string.registration_number)) },
                 singleLine = true,
                 trailingIcon = {
                     Icon(
@@ -133,79 +127,45 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         contentDescription = stringResource(R.string.username_icon_content_description),
                     )
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        regNoFocused = focusState.isFocused
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontFamily = SatoshiFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
-              colors = TextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedContainerColor = MaterialTheme.colorScheme.background,
-                unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                cursorColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-              ),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(
+            OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = if (password.isEmpty() && !passwordFocused) { { Text(stringResource(id = R.string.password), color = MaterialTheme.colorScheme.onBackground,) } } else null,
+                label = { Text(stringResource(id = R.string.password)) },
                 singleLine = true,
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
-                        contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                        modifier = Modifier.clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ) { passwordVisible = !passwordVisible }
-                    )
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(
+                            imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                            contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                        )
+                    }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onFocusChanged { focusState ->
-                        passwordFocused = focusState.isFocused
-                    },
+                modifier = Modifier.fillMaxWidth(),
                 textStyle = TextStyle(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontFamily = SatoshiFontFamily
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
-              colors = TextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
-                focusedContainerColor = MaterialTheme.colorScheme.background,
-                unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                cursorColor = MaterialTheme.colorScheme.onBackground,
-                focusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                unfocusedLabelColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                focusedIndicatorColor = MaterialTheme.colorScheme.onBackground,
-                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline,
-              ),
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = {
@@ -220,9 +180,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     }
                 },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 40.dp),
-                shape = RoundedCornerShape(7.dp),
+                    .height(50.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
@@ -233,13 +192,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     fontSize = 18.sp,
                     fontFamily = SatoshiFontFamily,
                     fontWeight = FontWeight.Bold,
-
+                    modifier = Modifier.padding(horizontal = 8.dp)
                 )
             }
 
             if (message.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = message, color = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(text = message, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
             }
         }
     }

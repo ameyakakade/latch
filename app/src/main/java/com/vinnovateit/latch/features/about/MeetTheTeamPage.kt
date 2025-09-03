@@ -1,8 +1,6 @@
 package com.vinnovateit.latch.features.about
 
 import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,27 +17,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.shape.CircleShape
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.TooltipHint
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.core.net.toUri
 
-// Data class for team members
 data class TeamMember(
     val name: String,
     val role: String,
@@ -48,7 +42,6 @@ data class TeamMember(
     val linkedinUrl: String
 )
 
-// List of 12 team members
 val teamMembers = listOf(
     TeamMember("SOUMOJIT GANGULY", "Project Manager", R.drawable.syro, "https://github.com/soumojit2004", "https://linkedin.com/in/soumojit-ganguly"),
     TeamMember("AYUSH KUMAR", "Tech Head", R.drawable.ayush1, "https://github.com/AyushK0808", "https://linkedin.com/in/ayush-kumar-061a58251"),
@@ -67,27 +60,42 @@ val teamMembers = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetTheTeamPage(onBackClick: () -> Unit) {
-    BackHandler {
-        onBackClick() // Navigate back to the previous screen
-    }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        // Main content
+    Scaffold(
+        topBar = {
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(10.dp)) // just a small gap below back button
+            val context = LocalContext.current
 
-            // Vinnovate Logo
-            val context = LocalContext.current // Retrieve context once
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TooltipHint(tooltipText = "Back") {
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 5.dp)
+
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
             Image(
-                painter = painterResource(id = R.drawable.vinnovate),
+                painter = painterResource(id = R.drawable.ic_vinnovateit),
                 contentDescription = "Vinnovate Logo",
                 modifier = Modifier
                     .size(180.dp) // Adjust size as needed
@@ -96,7 +104,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                         indication = null, // Removes the grey highlight effect
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://vinnovateit.com"))
+                        val intent = Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
                         context.startActivity(intent)
                     },
                 colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Dynamic color for Vinnovate logo
@@ -109,7 +117,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                 modifier = Modifier.padding(bottom = 20.dp)
             ) {
                 // LinkedIn Logo
-                val context = LocalContext.current // Retrieve context once
                 Image(
                     painter = painterResource(id = R.drawable.linkedin),
                     contentDescription = "LinkedIn",
@@ -120,7 +127,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                             indication = null, // Removes ripple effect
                             interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.linkedin.com/company/v-innovate-it/"))
+                            val intent = Intent(Intent.ACTION_VIEW, "https://www.linkedin.com/company/v-innovate-it/".toUri())
                             context.startActivity(intent)
                         },
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
@@ -137,7 +144,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                             indication = null, // Removes ripple effect
                             interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
                         ){
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vinnovateit"))
+                            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/vinnovateit".toUri())
                             context.startActivity(intent)
                         },
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
@@ -154,7 +161,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                             indication = null, // Removes ripple effect
                             interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.instagram.com/vinnovateit/"))
+                            val intent = Intent(Intent.ACTION_VIEW, "https://www.instagram.com/vinnovateit/".toUri())
                             context.startActivity(intent)
                         },
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
@@ -209,27 +216,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.height(50.dp)) // Added empty space at the bottom after the last team member
-        }
-
-        // Floating circular back button (overlayed)
-        TooltipHint(tooltipText = "Back") {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier
-                    .padding(top = 40.dp, start = 6.dp) // Increased top padding to move the button further down
-                    .size(50.dp) // Increased size of the button
-                    .background(
-                        color = MaterialTheme.colorScheme.surface, // same as background
-                        shape = CircleShape
-                    )
-                    .align(Alignment.TopStart)
-            ) {
-                Icon(
-                    Icons.Rounded.ArrowBack, // Updated to use Rounded variant
-                    contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.primary // Match the tint color from SettingsActivity
-                )
-            }
         }
     }
 }
@@ -323,7 +309,7 @@ fun TeamMemberCard(
                             interactionSource = remember { MutableInteractionSource() }, // Disable ripple effect
                             indication = null
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(teamMember.githubUrl))
+                            val intent = Intent(Intent.ACTION_VIEW, teamMember.githubUrl.toUri())
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
                         }
@@ -343,7 +329,7 @@ fun TeamMemberCard(
                             interactionSource = remember { MutableInteractionSource() }, // Disable ripple effect
                             indication = null
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(teamMember.linkedinUrl))
+                            val intent = Intent(Intent.ACTION_VIEW, teamMember.linkedinUrl.toUri())
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
                         }
