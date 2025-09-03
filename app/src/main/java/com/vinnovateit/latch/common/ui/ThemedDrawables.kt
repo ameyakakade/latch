@@ -1,16 +1,31 @@
 package com.vinnovateit.latch.common.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import com.vinnovateit.latch.R
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun LeafOverlay(
@@ -47,4 +62,63 @@ fun LeafOverlay(
     modifier = modifier,
     alignment = alignment,
     contentScale = contentScale)
+}
+
+@Composable
+fun HandsConnectAnimation(
+  modifier: Modifier = Modifier,
+  leftRes: Int = R.drawable.ic_hand_left,
+  rightRes: Int = R.drawable.ic_hand_right,
+  sizeDp: Dp = 140.dp,
+  durationMs: Int = 500 // total animation time 500ms
+) {
+
+  // initial positions (off corners)
+  val leftOffsetX = remember { Animatable(-200f) } // top-left X
+  val leftOffsetY = remember { Animatable(-200f) } // top-left Y
+  val rightOffsetX = remember { Animatable(200f) } // bottom-right X
+  val rightOffsetY = remember { Animatable(200f) } // bottom-right Y
+
+  LaunchedEffect(Unit) {
+    val spec = tween<Float>(durationMillis = durationMs, easing = FastOutSlowInEasing)
+
+    launch { leftOffsetX.animateTo(0f, spec) }
+    launch { leftOffsetY.animateTo(0f, spec) }
+    launch { rightOffsetX.animateTo(0f, spec) }
+    launch { rightOffsetY.animateTo(0f, spec) }
+  }
+
+  Box(
+    modifier = modifier.fillMaxSize(),
+    contentAlignment = Alignment.Center
+  ) {
+    // right hand on top
+    Image(
+      painter = painterResource(id = rightRes),
+      contentDescription = null,
+      modifier = Modifier
+        .size(sizeDp)
+        .offset {
+          IntOffset(
+            rightOffsetX.value.roundToInt(),
+            rightOffsetY.value.roundToInt()
+          )
+        },
+      contentScale = ContentScale.Fit
+    )
+
+    Image(
+      painter = painterResource(id = leftRes),
+      contentDescription = null,
+      modifier = Modifier
+        .size(sizeDp)
+        .offset {
+          IntOffset(
+            leftOffsetX.value.roundToInt(),
+            leftOffsetY.value.roundToInt()
+          )
+        },
+      contentScale = ContentScale.Fit
+    )
+  }
 }

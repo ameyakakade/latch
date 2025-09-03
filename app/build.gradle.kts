@@ -81,6 +81,7 @@ dependencies {
     // Compose Core UI modules
     implementation("androidx.compose.foundation:foundation")
     implementation(libs.foundation)
+    implementation(libs.androidx.animation)
 
     // Tooling and Preview
     debugImplementation("androidx.compose.ui:ui-tooling")
