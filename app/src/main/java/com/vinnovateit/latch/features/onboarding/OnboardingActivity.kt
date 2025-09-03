@@ -1,14 +1,16 @@
 package com.vinnovateit.latch.features.onboarding
 
 import android.Manifest
-import android.content.Context
+import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -20,6 +22,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -36,14 +41,18 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.core.content.edit
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.features.auth.SecondPageActivity
+import com.vinnovateit.latch.common.ui.HandsConnectAnimation
+import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
@@ -51,12 +60,7 @@ import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material.ContentAlpha
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.tooling.preview.Preview
+import kotlin.math.roundToInt
 
 class OnboardingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,8 +70,8 @@ class OnboardingActivity : ComponentActivity() {
             LatchTheme {
                 OnboardingScreen(
                     onComplete = {
-                        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                        prefs.edit().putBoolean("hasSeenOnboarding", true).apply()
+                        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+                        prefs.edit { putBoolean("hasSeenOnboarding", true) }
 
                         startActivity(Intent(this@OnboardingActivity, MainActivity::class.java))
                         finish()
@@ -85,9 +89,7 @@ data class SlideContent(
     val icons: ImmutableList<Int> = persistentListOf()
 )
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class,
-    ExperimentalAnimationApi::class
-)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit
@@ -97,6 +99,16 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
     var showCredentialsAlert by remember { mutableStateOf(false) }
     var permissionGranted by remember { mutableStateOf(false) }
+    val hapticFeedback = LocalHapticFeedback.current
+    val offsetX = remember { Animatable(0f) }
+    val intent = (context as? Activity)?.intent
+    val startFromStepOne = intent?.getBooleanExtra("start_from_step_one", false) ?: false
+
+    LaunchedEffect(Unit) {
+        if (StoredCredentials.credentialsExist(context)) {
+            credentialsHandled = true
+        }
+    }
 
     val slides = remember {
         listOf(
@@ -104,41 +116,19 @@ fun OnboardingScreen(
             SlideContent(
                 title = "Welcome to Latch",
                 description = buildAnnotatedString {
-                    append("Let's get everything set up for you.")
+                    append("Let's get everything setup for you.")
                 },
                 icon = {},
                 icons = persistentListOf()
             ),
-
-            // No Sign-in Hassle
-            SlideContent(
-                title = "No Sign-in Hassle",
-                description = buildAnnotatedString {
-                    append("Latch logs you in automatically — no typing.")
-                },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.WifiLock,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(80.dp)
-                    )
-                }
-            ),
-
-            // How it Works
             SlideContent(
                 title = "How it Works",
                 description = buildAnnotatedString {
-                    append("Enter your VIT credentials once.\n\n")
-                    append("Latch auto-submits on hostel Wi-Fi.\n\n")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append("Credentials stored securely.")
-                    }
+                    append("Latch will handle the \"Sign-in to Network\" page for you every time you connect to the network with your credentials.")
                 },
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.Key,
+                        painter = painterResource(id = R.drawable.captive_portal_24px),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(80.dp)
@@ -148,13 +138,13 @@ fun OnboardingScreen(
 
             // Allow Permissions
             SlideContent(
-                title = "Allow Permissions",
+                title = "Enable Notifications",
                 description = buildAnnotatedString {
-                    append("Latch needs notification access.")
+                    append("To monitor your connection and provide status updates, Latch runs a service that requires a persistent notification. You can minimize or hide it from your phone's settings at any time.")
                 },
                 icon = {
                     Icon(
-                        imageVector = Icons.Rounded.LocationOn,
+                        imageVector = Icons.Rounded.Notifications,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(80.dp)
@@ -164,9 +154,9 @@ fun OnboardingScreen(
 
             // Set Up Account
             SlideContent(
-                title = "Set Up Account",
+                title = "Your Account",
                 description = buildAnnotatedString {
-                    append("Enter VIT ID & password to start auto-login.")
+                    append("Please provide your credentials. And we will handle the magic for you.")
                 },
                 icon = {
                     Icon(
@@ -177,28 +167,10 @@ fun OnboardingScreen(
                     )
                 }
             ),
-
-            // Enter Credentials
             SlideContent(
-                title = "Enter Your Credentials",
+                title = "Convenient Access",
                 description = buildAnnotatedString {
-                    append("Provide your VIT login details for automatic connection.")
-                },
-                icon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Login,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(80.dp)
-                    )
-                }
-            ),
-
-            // Widgets & Tile
-            SlideContent(
-                title = "Widgets & Tile",
-                description = buildAnnotatedString {
-                    append("Add Latch widget or Quick Settings tile for one-tap access.")
+                    append("For quick access, add the Latch widget to your home screen or the tile to your Quick Settings panel.")
                 },
                 icon = {
                     Icon(
@@ -214,7 +186,7 @@ fun OnboardingScreen(
             SlideContent(
                 title = "You're Ready!",
                 description = buildAnnotatedString {
-                    append("Latch will auto-login whenever in range.")
+                    append("Your setup is complete. Latch will now handle your Wi-Fi sign-in.")
                 },
                 icon = {
                     Icon(
@@ -228,7 +200,33 @@ fun OnboardingScreen(
         )
     }
 
-    val pagerState = rememberPagerState(pageCount = { slides.size })
+    val pagerState = rememberPagerState(
+        initialPage = if (startFromStepOne) 1 else 0,
+        pageCount = { slides.size }
+    )
+
+    // This effect prevents scrolling back to the welcome page if started from step one
+    LaunchedEffect(pagerState.targetPage) {
+        if (startFromStepOne && pagerState.targetPage == 0) {
+            pagerState.scrollToPage(1)
+        }
+    }
+
+    // This effect handles blocking forward swipe from the credentials page
+    LaunchedEffect(pagerState.isScrollInProgress, credentialsHandled, permissionGranted) {
+        if (pagerState.isScrollInProgress) {
+            if (pagerState.currentPage == 2 && pagerState.targetPage > 2 && !permissionGranted) {
+                scope.launch {
+                    pagerState.scrollToPage(2)
+                }
+            }
+            if (pagerState.currentPage == 3 && pagerState.targetPage > 3 && !credentialsHandled) {
+                scope.launch {
+                    pagerState.scrollToPage(3)
+                }
+            }
+        }
+    }
 
     val credentialsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -245,16 +243,24 @@ fun OnboardingScreen(
         bottomBar = {
             LatchSetupBottomBar(
                 pagerState = pagerState,
-                animated = (pagerState.currentPage != 0),
                 isFinishButtonEnabled = when (pagerState.currentPage) {
-                    5 -> credentialsHandled
+                    2 -> permissionGranted
+                    3 -> credentialsHandled
                     else -> true
                 },
                 onNextClicked = {
                     scope.launch {
-                        if (pagerState.currentPage == 5 && !credentialsHandled) {
-                            showCredentialsAlert = true
-                        } else {
+                        if (pagerState.currentPage == 3 && !credentialsHandled) {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            offsetX.animateTo(20f, tween(50))
+                            offsetX.animateTo(-20f, tween(50))
+                            offsetX.animateTo(10f, tween(50))
+                            offsetX.animateTo(-10f, tween(50))
+                            offsetX.animateTo(0f, tween(50))
+                            return@launch
+                        }
+
+                        if (pagerState.currentPage < slides.size - 1) {
                             pagerState.animateScrollToPage(pagerState.currentPage + 1)
                         }
                     }
@@ -268,34 +274,39 @@ fun OnboardingScreen(
                             }
                         }
                     }
-                }
+                },
+                modifier = Modifier.offset { IntOffset(offsetX.value.roundToInt(), 0) }
             )
         }
     ) { paddingValues ->
         HorizontalPager(
             state = pagerState,
+            userScrollEnabled = when (pagerState.currentPage) {
+                2 -> permissionGranted
+                3 -> credentialsHandled
+                else -> true
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) { pageIndex ->
-            val slide = slides[pageIndex]
-
             AnimatedContent(
                 targetState = pageIndex,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        slideInHorizontally { width -> width } + fadeIn() with
-                                slideOutHorizontally { width -> -width } + fadeOut()
+                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> -width } + fadeOut())
                     } else {
-                        slideInHorizontally { width -> -width } + fadeIn() with
-                                slideOutHorizontally { width -> width } + fadeOut()
-                    }
-                }
+                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                            slideOutHorizontally { width -> width } + fadeOut())
+                    }.using(SizeTransform(clip = false))
+                },
+                label = "OnboardingPageAnimation"
             ) { targetPage ->
                 when (targetPage) {
                     0 -> WelcomeToLatchPage()
-                    3 -> NotificationPermissionPage(slides[targetPage], onPermissionGranted = { permissionGranted = true })
-                    5 -> CredentialsPage(slides[targetPage], onCredentialsClick = {
+                    2 -> NotificationPermissionPage(slides[targetPage], onPermissionGranted = { permissionGranted = true })
+                    3 -> SetUpAccountPage(slides[targetPage], onCredentialsClick = {
                         credentialsLauncher.launch(
                             Intent(context, SecondPageActivity::class.java).apply {
                                 putExtra("fromOnboarding", true)
@@ -330,8 +341,8 @@ fun WelcomeToLatchPage() {
         Text(
             text = "Welcome to Latch",
             style = MaterialTheme.typography.displayMedium.copy(
-                fontSize = 35.sp,
-                lineHeight = 1.1.em,
+                fontSize = 32.sp,
+                lineHeight = 1.6.em,
                 fontFamily = ModernizFontFamily,
                 fontWeight = FontWeight.Bold
             ),
@@ -341,20 +352,15 @@ fun WelcomeToLatchPage() {
                 .padding(top = 40.dp, start = 25.dp, end = 25.dp)
         )
 
-        Image(
-            painter = painterResource(id = if (isSystemInDarkTheme()) R.drawable.ic_latch_dark else R.drawable.ic_latch_light),
-            contentDescription = "Latch Logo",
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(120.dp)
-        )
-        
+        HandsConnectAnimation()
+
         Text(
             text = "Let's get everything set up for you.",
-            style = MaterialTheme.typography.titleMedium.copy(
-                fontSize = 20.sp,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
                 fontFamily = SatoshiFontFamily,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Medium
             ),
             textAlign = TextAlign.Start,
             modifier = Modifier
@@ -409,11 +415,11 @@ fun NotificationPermissionPage(
                 modifier = Modifier.size(180.dp)
             ) { slide.icon() }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = slide.description.text,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
                 textAlign = TextAlign.Center,
                 fontFamily = SatoshiFontFamily
             )
@@ -422,7 +428,7 @@ fun NotificationPermissionPage(
 
             Button(
                 onClick = {
-                    if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (!isGranted) {
                         notificationPermissionState.launchPermissionRequest()
                     }
                 },
@@ -434,8 +440,10 @@ fun NotificationPermissionPage(
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
-                    text = if (isGranted) "Permission Granted" else "Grant Notification Permission",
-                    fontFamily = SatoshiFontFamily
+                    text = if (isGranted) "Permission Granted" else "Grant Permission",
+                    fontFamily = SatoshiFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
                 )
             }
         }
@@ -444,11 +452,18 @@ fun NotificationPermissionPage(
 
 
 @Composable
-fun CredentialsPage(
+fun SetUpAccountPage(
     slide: SlideContent,
     onCredentialsClick: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    val context = LocalContext.current
+    var credentialsExist by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        credentialsExist = StoredCredentials.credentialsExist(context)
+    }
+
+    Box(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp)) {
         Text(
             text = slide.title,
             fontFamily = SatoshiFontFamily,
@@ -472,11 +487,11 @@ fun CredentialsPage(
                 modifier = Modifier.size(180.dp)
             ) { slide.icon() }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = slide.description.text,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
                 textAlign = TextAlign.Center,
                 fontFamily = SatoshiFontFamily
             )
@@ -485,9 +500,49 @@ fun CredentialsPage(
 
             Button(
                 onClick = onCredentialsClick,
+                enabled = !credentialsExist,
                 contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
             ) {
-                Text("Set Up Credentials", fontFamily = SatoshiFontFamily, fontSize = 17.sp)
+                if (credentialsExist) {
+                    Icon(Icons.Rounded.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(
+                    text = if (credentialsExist) "Credentials Set" else "Set Up Credentials",
+                    fontFamily = SatoshiFontFamily,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.encrypted_24px),
+                    contentDescription = "Security Notice",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = buildAnnotatedString {
+                        append("Latch does not collect your data. Your credentials are encrypted and ")
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("stored securely on your device.")
+                        }
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -522,11 +577,11 @@ fun StandardSlidePage(slide: SlideContent) {
                 slide.icon()
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = slide.description,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp, lineHeight = 28.sp),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
                 textAlign = TextAlign.Center,
                 fontFamily = SatoshiFontFamily
             )
@@ -537,13 +592,11 @@ fun StandardSlidePage(slide: SlideContent) {
 
 @OptIn(
     ExperimentalFoundationApi::class,
-    ExperimentalAnimationApi::class,
     ExperimentalMaterial3ExpressiveApi::class
 )
 @Composable
 fun LatchSetupBottomBar(
     modifier: Modifier = Modifier,
-    animated: Boolean = false,
     pagerState: PagerState,
     onNextClicked: () -> Unit,
     onFinishClicked: () -> Unit,
@@ -592,63 +645,63 @@ fun LatchSetupBottomBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (pagerState.currentPage == 0) {
-                    Box(
-                        modifier = Modifier.size(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.vinnovate),
-                            contentDescription = "Vinnovateit Logo",
-                            modifier = Modifier
-                                .graphicsLayer {
-                                    scaleX = 3.25f
-                                    scaleY = 3.25f
-                                }
-                                .offset(x = 20.dp)
-                        )
-                    }
-                } else {
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
                     AnimatedContent(
                         targetState = pagerState.currentPage,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 16.dp),
                         transitionSpec = {
-                            if (targetState > initialState) {
-                                (slideInVertically { height -> height } + fadeIn()).togetherWith(
-                                    slideOutVertically { height -> -height } + fadeOut()
-                                )
-                            } else {
-                                (slideInVertically { height -> -height } + fadeIn()).togetherWith(
-                                    slideOutVertically { height -> height } + fadeOut()
-                                )
-                            }.using(SizeTransform(clip = false))
+                            // Fade transition for image <-> text
+                            if (initialState == 0 || targetState == 0) {
+                                (fadeIn(animationSpec = tween(220, delayMillis = 90)) togetherWith
+                                        fadeOut(animationSpec = tween(90)))
+                                    .using(SizeTransform(clip = false))
+                            } else { // Vertical slide for text <-> text
+                                (slideInVertically { height -> height } + fadeIn())
+                                    .togetherWith(slideOutVertically { height -> -height } + fadeOut())
+                                    .using(SizeTransform(clip = false))
+                            }
                         },
-                        label = "StepTextAnimation"
-                    ) { targetPage ->
-                        Text(
-                            text = "Step ${targetPage} of ${pagerState.pageCount - 1}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = SatoshiFontFamily
-                        )
+                        label = "LogoVsStepText"
+                    ) { currentPage ->
+                        if (currentPage == 0) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_vinnovateit),
+                                contentDescription = "VinnovateIT Logo",
+                                modifier = Modifier
+                                    .size(110.dp)
+                                    .offset(x = 10.dp)
+                            )
+                        } else {
+                            Text(
+                                text = "Step $currentPage of ${pagerState.pageCount - 1}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontFamily = SatoshiFontFamily,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
                     }
                 }
 
+
                 // Next / Finish Button
                 val isLastPage = pagerState.currentPage == pagerState.pageCount - 1
-                val containerColor = if (isLastPage && !isFinishButtonEnabled) {
+
+                val containerColor = if (!isFinishButtonEnabled) {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                 } else {
                     MaterialTheme.colorScheme.primaryContainer
                 }
 
-                val contentColor = if (isLastPage && !isFinishButtonEnabled) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = ContentAlpha.disabled)
+                val contentColor = if (!isFinishButtonEnabled) {
+                    MaterialTheme.colorScheme.onSurface.copy()
                 } else {
                     MaterialTheme.colorScheme.onPrimaryContainer
                 }
+
 
                 MediumFloatingActionButton(
                     onClick = {
@@ -686,7 +739,7 @@ fun LatchSetupBottomBar(
                         label = "AnimatedFabIcon"
                     ) { isNextPage ->
                         if (isNextPage) {
-                            Icon(Icons.Rounded.ArrowForward, contentDescription = "Next")
+                            Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, contentDescription = "Next")
                         } else {
                             if (isFinishButtonEnabled) {
                                 Icon(Icons.Rounded.Check, contentDescription = "Finish")
