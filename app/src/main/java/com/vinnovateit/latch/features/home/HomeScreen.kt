@@ -4,7 +4,6 @@ import com.vinnovateit.latch.common.ui.LeafOverlay
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,9 +11,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Handyman
-import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +25,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -43,8 +42,9 @@ import com.vinnovateit.latch.ui.theme.*
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import com.vinnovateit.latch.domain.model.LiveDataPoint
+import com.vinnovateit.latch.features.about.MeetTheTeamActivity
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
-import com.vinnovateit.latch.features.about.MeetTheTeamPage
+import com.vinnovateit.latch.features.onboarding.OnboardingActivity
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -89,11 +89,6 @@ fun HomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String
 ) {
-    var showAbout by remember { mutableStateOf(false) }
-
-    if (showAbout) {
-        MeetTheTeamPage(onBackClick = { showAbout = false })
-    } else {
         val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
         BoxWithConstraints(
@@ -112,7 +107,6 @@ fun HomeScreen(
                     historyForHomeScreen,
                     connectionStatus,
                     speedUnit,
-                    onShowAbout = { showAbout = true }
                 )
             } else {
                 LandscapeHomeScreen(
@@ -123,12 +117,10 @@ fun HomeScreen(
                     historyForHomeScreen,
                     connectionStatus,
                     speedUnit,
-                    onShowAbout = { showAbout = true }
                 )
             }
         }
     }
-}
 
 
 @Composable
@@ -140,7 +132,6 @@ fun PortraitHomeScreen(
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
     speedUnit: String,
-    onShowAbout: () -> Unit
 ) {
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
@@ -159,7 +150,7 @@ fun PortraitHomeScreen(
                     .fillMaxWidth()
                     .weight(0.54f)
             ) {
-                HomeTopSection(isConnected, networkSpeed, onShowAbout = onShowAbout)
+                HomeTopSection(isConnected, networkSpeed)
             }
             // Bottom Section with Canvas Cutout
             Box(
@@ -169,7 +160,7 @@ fun PortraitHomeScreen(
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
-                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit)
+                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit, false)
             }
         }
         // Power Button Overlay
@@ -192,7 +183,6 @@ fun LandscapeHomeScreen(
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
     speedUnit: String,
-    onShowAbout: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -204,11 +194,10 @@ fun LandscapeHomeScreen(
                 .weight(0.45f)
                 .fillMaxHeight()
         ) {
-            Image(
-                painter = if(LocalIsDarkTheme.current) painterResource(id = R.drawable.background_overlay_dark) else painterResource(R.drawable.background_overlay_light),
+            LeafOverlay(
                 contentDescription = "Background Pattern",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                alignment = Alignment.TopCenter
             )
             Column(
                 modifier = Modifier
@@ -218,8 +207,8 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                HomeTopSection(isConnected, networkSpeed, isLandscape = true, onShowAbout = onShowAbout)
-                Spacer(modifier = Modifier.height(32.dp))
+                HomeTopSection(isConnected, networkSpeed, isLandscape = true)
+                Spacer(modifier = Modifier.height(24.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
                     isPortrait = false
@@ -231,15 +220,15 @@ fun LandscapeHomeScreen(
         Box(
             modifier = Modifier
                 .weight(0.55f)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
+                .fillMaxHeight(),
+            contentAlignment = Alignment.TopCenter,
         ) {
             SpectrumCard(
                 session,
                 historyForHomeScreen,
                 connectionStatus,
-                speedUnit
+                speedUnit,
+                true,
             )
         }
     }
@@ -250,7 +239,6 @@ fun HomeTopSection(
     isConnected: Boolean,
     networkSpeed: String,
     isLandscape: Boolean = false,
-    onShowAbout: () -> Unit
 ) {
     val context = LocalContext.current
     Column {
@@ -258,7 +246,14 @@ fun HomeTopSection(
             onPreferencesClick = {
                 context.startActivity(Intent(context, SettingsActivity::class.java))
             },
-            onShowAbout = onShowAbout
+            onHowItWorksClick = {
+                context.startActivity(Intent(context, OnboardingActivity::class.java).apply {
+                    putExtra("start_from_step_one", true)
+                })
+            },
+            onMeetTheTeamClick = {
+                context.startActivity(Intent(context, MeetTheTeamActivity::class.java))
+            },
         )
         Spacer(Modifier.size(25.dp))
         Column(
@@ -373,7 +368,8 @@ fun PowerButtonOverlay(onConnectClick: () -> Unit, isPortrait: Boolean, modifier
 @Composable
 fun TopBarSection(
     onPreferencesClick: () -> Unit,
-    onShowAbout: () -> Unit
+    onHowItWorksClick: () -> Unit,
+    onMeetTheTeamClick: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
     var menuExpanded by remember { mutableStateOf(false) }
@@ -435,16 +431,31 @@ fun TopBarSection(
                 )
                 DropdownMenuItem(
                     text = {
-                        Text("Meet the Team", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                        Text("How it Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
                     onClick = {
                         menuExpanded = false
-                        onShowAbout()
+                        onHowItWorksClick()
                     },
                     leadingIcon = {
                         Icon(
-                            Icons.Rounded.Info,
-                            contentDescription = "About"
+                            Icons.Rounded.QuestionMark,
+                            contentDescription = "How It Works"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Meet The Team", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onMeetTheTeamClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Groups,
+                            contentDescription = "Meet The Team"
                         )
                     }
                 )
