@@ -6,14 +6,14 @@
     <string name="get_started">Get Started</string>
     <string name="landing_latch_logo_content_description">Latch Logo</string>
     <string name="landing_vinnovateit_logo_content_description">VinnovateIT Logo</string>
-    <string name="credentials_title">Let\'s Get Started</string>
-    <string name="credentials_subtitle">Enter credentials</string>
+    <string name="credentials_title">Credentials</string>
+    <string name="credentials_subtitle">Enter your login credentials</string>
     <string name="registration_number">Registration Number</string>
     <string name="password">Password</string>
     <string name="save_credentials">Save Credentials</string>
     <string name="update_credentials">Update Credentials</string>
     <string name="credentials_saved_toast">Credentials saved!</string>
-    <string name="credentials_error_message">Please enter User ID and Password</string>
+    <string name="credentials_error_message">Please enter User ID and your password</string>
     <string name="username_icon_content_description">Username Icon</string>
     <string name="password_icon_content_description">Password Icon</string>
 

@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -34,7 +35,7 @@
             android:exported="true">
         </receiver>
         <activity
-            android:name=".features.auth.LandingPageActivity"
+            android:name=".features.onboarding.LandingPageActivity"
             android:exported="true"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
@@ -44,7 +45,11 @@
         </activity>
 
         <activity
-            android:name=".features.auth.SecondPageActivity"
+            android:name=".features.onboarding.OnboardingActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".features.onboarding.SecondPageActivity"
             android:exported="true"
             android:theme="@style/Theme.Latch" />
 
@@ -62,11 +67,19 @@
             android:label="Stats"
             android:theme="@style/Theme.Latch" />
 
+        <activity
+            android:name=".features.about.MeetTheTeamActivity"
+            android:exported="true"
+            android:label="Meet The Team"
+            android:theme="@style/Theme.Latch">
+        </activity>
+
         <receiver
             android:name=".features.wifi.widget.LatchWidgetReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.WALLPAPER_CHANGED" />
             </intent-filter>
 
             <meta-data
