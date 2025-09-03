@@ -31,7 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.SessionRepository
-import com.vinnovateit.latch.features.auth.SecondPageActivity
+import com.vinnovateit.latch.features.onboarding.SecondPageActivity
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
@@ -147,7 +147,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
           PreferenceItem(
             PreferenceData(
               "Dynamic Colors",
-              "Use colors from your wallpaper",
+              "Adapt with your system's Material You theming",
               Icons.Rounded.ColorLens,
               onClick = { SettingsManager.setUseDynamicColors(!useDynamicColors) },
               trailing = {

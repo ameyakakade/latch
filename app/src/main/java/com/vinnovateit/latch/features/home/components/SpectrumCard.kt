@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowOutward
@@ -35,18 +36,18 @@ fun SpectrumCard(
   session: SessionSummary?,
   historyForHomeScreen: List<LiveDataPoint>,
   connectionStatus: ConnectionStatus,
-  speedUnit: String
+  speedUnit: String,
+  isLandscape: Boolean,
 ) {
   val context = LocalContext.current
-
+  val topPadding = if (isLandscape) 50.dp else 105.dp
   Card(
     modifier = Modifier
-      .padding(top = 105.dp)
+      .padding(top = topPadding)
       .padding(horizontal = 24.dp, vertical = 24.dp)
       .fillMaxSize(),
     shape = RoundedCornerShape(28.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
       Row(
@@ -57,7 +58,8 @@ fun SpectrumCard(
             (context as? Activity)?.startActivity(intent)
           }
           .padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
       ) {
         Text(
           text = stringResource(id = R.string.home_network_statistics),

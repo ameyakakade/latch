@@ -5,6 +5,6 @@
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:previewImage="@drawable/ic_latch_dark"
-    android:resizeMode="horizontal|vertical"
+    android:resizeMode="none"
     android:updatePeriodMillis="86400000"
     android:widgetCategory="home_screen" />

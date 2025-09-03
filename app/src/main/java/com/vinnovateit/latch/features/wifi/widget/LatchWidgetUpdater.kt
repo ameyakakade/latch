@@ -12,15 +12,17 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.util.TimeZone
 import java.util.concurrent.TimeUnit
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.serialization.encodeToString
 
 class LatchWidgetUpdater(
   context: Context,
@@ -52,8 +54,11 @@ class LatchWidgetUpdater(
     val glanceIds = manager.getGlanceIds(LatchWidget::class.java)
     if (glanceIds.isEmpty()) return Result.success()
 
+    SettingsManager.initialize(applicationContext)
+
     val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
     val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
+    val useDynamic = SettingsManager.useDynamicColors.first()
 
     val liveSession = SessionRepository.liveStatus.firstOrNull()
     val detailedStatus = ConnectionStatusManager.status.firstOrNull()
@@ -63,13 +68,15 @@ class LatchWidgetUpdater(
         status = detailedStatus.message,
         connectedDuration = "...",
         isConnected = false,
-        isLightTheme = !isDarkMode
+        isLightTheme = !isDarkMode,
+        useDynamicColors = useDynamic
       )
       is ConnectionStatus.Failed -> LatchWidgetState(
         status = detailedStatus.message,
         connectedDuration = "-",
         isConnected = false,
-        isLightTheme = !isDarkMode
+        isLightTheme = !isDarkMode,
+        useDynamicColors = useDynamic
       )
       // For Success, Idle, or null, we rely on the session state.
       else -> {
@@ -86,14 +93,16 @@ class LatchWidgetUpdater(
             status = applicationContext.getString(R.string.widget_status_connected),
             connectedDuration = durationString,
             isConnected = true,
-            isLightTheme = !isDarkMode
+            isLightTheme = !isDarkMode,
+            useDynamicColors = useDynamic
           )
         } else {
           LatchWidgetState(
             status = applicationContext.getString(R.string.widget_status_disconnected),
             connectedDuration = "-",
             isConnected = false,
-            isLightTheme = !isDarkMode
+            isLightTheme = !isDarkMode,
+            useDynamicColors = useDynamic
           )
         }
       }
