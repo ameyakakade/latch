@@ -25,7 +25,7 @@ object SettingsManager {
   private const val DEFAULT_AUTO_LOGIN = true
   private const val DEFAULT_SPEED_UNITS = "bps"
   private const val DEFAULT_THEME = "System Default"
-  private const val DEFAULT_USE_DYNAMIC_COLORS = true
+  private const val DEFAULT_USE_DYNAMIC_COLORS = false
 
   // StateFlows to observe changes
   private val _autoLogin = MutableStateFlow(DEFAULT_AUTO_LOGIN)
