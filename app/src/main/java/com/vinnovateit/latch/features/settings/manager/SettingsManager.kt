@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -56,7 +57,23 @@ object SettingsManager {
   fun setAutoLogin(enabled: Boolean) {
     _autoLogin.value = enabled
     sharedPreferences.edit { putBoolean(KEY_AUTO_LOGIN, enabled) }
+
+    appContext?.let {
+      val serviceIntent = Intent(it, ForegroundService::class.java)
+      if (enabled) {
+        // Start the service if the toggle is turned ON
+        it.startService(serviceIntent)
+      } else {
+        // Stop the service if the toggle is turned OFF
+        it.stopService(serviceIntent)
+      }
+    }
   }
+
+//  fun setAutoLogin(enabled: Boolean) {
+//    _autoLogin.value = enabled
+//    sharedPreferences.edit { putBoolean(KEY_AUTO_LOGIN, enabled) }
+//  }
 
   fun setSpeedUnits(units: String) {
     _speedUnits.value = units

@@ -45,6 +45,9 @@ import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.features.about.MeetTheTeamActivity
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.onboarding.OnboardingActivity
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -85,42 +88,65 @@ fun HomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    onConnectClick: () -> Unit,
+    onConnectClick: () -> Unit, // This is now ignored, but kept for compatibility
     connectionStatus: ConnectionStatus,
     speedUnit: String
 ) {
-        val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
+    val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            val isPortrait = maxHeight > maxWidth
+    val context = LocalContext.current
+    val autoLoginEnabled by SettingsManager.autoLogin.collectAsStateWithLifecycle()
 
-            if (isPortrait) {
-                PortraitHomeScreen(
-                    isConnected,
-                    networkSpeed,
-                    session,
-                    onConnectClick,
-                    historyForHomeScreen,
-                    connectionStatus,
-                    speedUnit,
-                )
-            } else {
-                LandscapeHomeScreen(
-                    isConnected,
-                    networkSpeed,
-                    session,
-                    onConnectClick,
-                    historyForHomeScreen,
-                    connectionStatus,
-                    speedUnit,
-                )
+
+    val smartOnConnectClick = {
+        if (autoLoginEnabled) {
+            // TOGGLE IS ON: Behave as a "Disconnect" button
+            val intent = Intent(context, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_TRIGGER_LOGOUT
             }
+            context.startService(intent)
+            // Also, turn off the auto-login toggle
+            SettingsManager.setAutoLogin(false)
+        } else {
+            // TOGGLE IS OFF: Behave as a "Connect" button for a single manual login
+            val intent = Intent(context, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+            }
+            context.startService(intent)
         }
     }
+
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        val isPortrait = maxHeight > maxWidth
+
+        if (isPortrait) {
+            PortraitHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                smartOnConnectClick as () -> Unit,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit,
+            )
+        } else {
+            LandscapeHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                smartOnConnectClick as () -> Unit,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit,
+            )
+        }
+    }
+}
 
 
 @Composable
