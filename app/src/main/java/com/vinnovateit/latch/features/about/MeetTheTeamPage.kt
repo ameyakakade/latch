@@ -88,7 +88,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
             }
-
             // Centered Vinnovate Logo with cropped height
             Box(
                 modifier = Modifier
@@ -111,10 +110,9 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                 )
             }
-
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔹 Social Media Logos
+            // 🔹 Social Media Logo
             Row(
                 horizontalArrangement = Arrangement.spacedBy(60.dp),
                 verticalAlignment = Alignment.CenterVertically,
