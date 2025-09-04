@@ -94,22 +94,29 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                 }
             }
 
-            Image(
-                painter = painterResource(id = R.drawable.ic_vinnovateit),
-                contentDescription = "Vinnovate Logo",
+            Box(
                 modifier = Modifier
-                    .size(180.dp) // Adjust size as needed
-                    .offset(y = (-8).dp) // Move the logo slightly upward
-                    .clickable(
-                        indication = null, // Removes the grey highlight effect
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) {
-                        val intent = Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
-                        context.startActivity(intent)
-                    },
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Dynamic color for Vinnovate logo
-            )
+                    .height(70.dp) // your cropped height
+                    .width(220.dp)  // keep width
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_vinnovateit),
+                    contentDescription = "Vinnovate Logo",
+                    modifier = Modifier
+                        .size(220.dp)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            val intent =
+                                Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
+                            context.startActivity(intent)
+                        },
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                )
+            }
 
+            Spacer(Modifier.height(60.dp))
             // Social Media Logos
             Row(
                 horizontalArrangement = Arrangement.spacedBy(60.dp),
