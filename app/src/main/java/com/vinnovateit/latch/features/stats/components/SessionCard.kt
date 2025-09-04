@@ -73,7 +73,7 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
     val overlayAlpha by animateFloatAsState(targetValue = if (showOverlay) 1f else 0f, animationSpec = tween(durationMillis = 300))
 
     Card(
-        modifier = Modifier.fillMaxWidth().height(240.dp).padding(start = 16.dp, end = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
