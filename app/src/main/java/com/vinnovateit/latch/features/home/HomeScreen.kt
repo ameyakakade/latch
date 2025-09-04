@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QuestionMark
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -52,7 +54,6 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
         drawRect(
             color = colorScheme.primaryContainer,
@@ -136,12 +137,13 @@ fun PortraitHomeScreen(
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
-    val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
         LeafOverlay(
             contentDescription = "Background Pattern",
-            modifier = Modifier.fillMaxSize(),
-            alignment = Alignment.TopCenter
+            modifier = Modifier
+                .fillMaxWidth(),
+            alignment = Alignment.TopCenter,
+            contentScale = ContentScale.Crop
         )
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Section
@@ -184,6 +186,13 @@ fun LandscapeHomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String,
 ) {
+    LeafOverlay(
+        contentDescription = "Background Pattern",
+        modifier = Modifier
+            .fillMaxSize(),
+        alignment = Alignment.TopCenter,
+        contentScale = ContentScale.Crop
+    )
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -194,11 +203,6 @@ fun LandscapeHomeScreen(
                 .weight(0.45f)
                 .fillMaxHeight()
         ) {
-            LeafOverlay(
-                contentDescription = "Background Pattern",
-                modifier = Modifier.fillMaxSize(),
-                alignment = Alignment.TopCenter
-            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -416,21 +420,6 @@ fun TopBarSection(
             ) {
                 DropdownMenuItem(
                     text = {
-                        Text("Preferences", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
-                    },
-                    onClick = {
-                        menuExpanded = false
-                        onPreferencesClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Rounded.Handyman,
-                            contentDescription = "Preferences"
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = {
                         Text("How it Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
                     onClick = {
@@ -441,6 +430,21 @@ fun TopBarSection(
                         Icon(
                             Icons.Rounded.QuestionMark,
                             contentDescription = "How It Works"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Settings", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onPreferencesClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = "Settings"
                         )
                     }
                 )
