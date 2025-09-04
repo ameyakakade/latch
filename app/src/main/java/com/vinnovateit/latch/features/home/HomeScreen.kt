@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QuestionMark
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -45,6 +47,9 @@ import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.features.about.MeetTheTeamActivity
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.onboarding.OnboardingActivity
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
 
 @Composable
 fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
@@ -52,7 +57,6 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer(alpha = 0.99f) // For BlendMode to work
     ) {
         drawRect(
             color = colorScheme.primaryContainer,
@@ -85,42 +89,65 @@ fun HomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    onConnectClick: () -> Unit,
+    onConnectClick: () -> Unit, // This is now ignored, but kept for compatibility
     connectionStatus: ConnectionStatus,
     speedUnit: String
 ) {
-        val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
+    val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            val isPortrait = maxHeight > maxWidth
+    val context = LocalContext.current
+    val autoLoginEnabled by SettingsManager.autoLogin.collectAsStateWithLifecycle()
 
-            if (isPortrait) {
-                PortraitHomeScreen(
-                    isConnected,
-                    networkSpeed,
-                    session,
-                    onConnectClick,
-                    historyForHomeScreen,
-                    connectionStatus,
-                    speedUnit,
-                )
-            } else {
-                LandscapeHomeScreen(
-                    isConnected,
-                    networkSpeed,
-                    session,
-                    onConnectClick,
-                    historyForHomeScreen,
-                    connectionStatus,
-                    speedUnit,
-                )
+
+    val smartOnConnectClick = {
+        if (autoLoginEnabled) {
+            // TOGGLE IS ON: Behave as a "Disconnect" button
+            val intent = Intent(context, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_TRIGGER_LOGOUT
             }
+            context.startService(intent)
+            // Also, turn off the auto-login toggle
+            SettingsManager.setAutoLogin(false)
+        } else {
+            // TOGGLE IS OFF: Behave as a "Connect" button for a single manual login
+            val intent = Intent(context, ForegroundService::class.java).apply {
+                action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+            }
+            context.startService(intent)
         }
     }
+
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        val isPortrait = maxHeight > maxWidth
+
+        if (isPortrait) {
+            PortraitHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                smartOnConnectClick as () -> Unit,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit,
+            )
+        } else {
+            LandscapeHomeScreen(
+                isConnected,
+                networkSpeed,
+                session,
+                smartOnConnectClick as () -> Unit,
+                historyForHomeScreen,
+                connectionStatus,
+                speedUnit,
+            )
+        }
+    }
+}
 
 
 @Composable
@@ -136,12 +163,13 @@ fun PortraitHomeScreen(
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.5f
-    val isDark = LocalIsDarkTheme.current
     Box(modifier = Modifier.fillMaxSize()) {
         LeafOverlay(
             contentDescription = "Background Pattern",
-            modifier = Modifier.fillMaxSize(),
-            alignment = Alignment.TopCenter
+            modifier = Modifier
+                .fillMaxWidth(),
+            alignment = Alignment.TopCenter,
+            contentScale = ContentScale.Crop
         )
         Column(modifier = Modifier.fillMaxSize()) {
             // Top Section
@@ -184,6 +212,13 @@ fun LandscapeHomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String,
 ) {
+    LeafOverlay(
+        contentDescription = "Background Pattern",
+        modifier = Modifier
+            .fillMaxSize(),
+        alignment = Alignment.TopCenter,
+        contentScale = ContentScale.Crop
+    )
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -194,11 +229,6 @@ fun LandscapeHomeScreen(
                 .weight(0.45f)
                 .fillMaxHeight()
         ) {
-            LeafOverlay(
-                contentDescription = "Background Pattern",
-                modifier = Modifier.fillMaxSize(),
-                alignment = Alignment.TopCenter
-            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -416,21 +446,6 @@ fun TopBarSection(
             ) {
                 DropdownMenuItem(
                     text = {
-                        Text("Preferences", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
-                    },
-                    onClick = {
-                        menuExpanded = false
-                        onPreferencesClick()
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Rounded.Handyman,
-                            contentDescription = "Preferences"
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = {
                         Text("How it Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
                     onClick = {
@@ -441,6 +456,21 @@ fun TopBarSection(
                         Icon(
                             Icons.Rounded.QuestionMark,
                             contentDescription = "How It Works"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text("Settings", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        onPreferencesClick()
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Settings,
+                            contentDescription = "Settings"
                         )
                     }
                 )

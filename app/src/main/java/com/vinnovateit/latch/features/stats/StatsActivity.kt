@@ -188,9 +188,8 @@ private fun StatsScreenContent(
           ) { innerPadding ->
             Box(
               modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(24.dp),
               contentAlignment = Alignment.Center
             ) {
               SessionCard(session = sessionToShow, speedUnit = speedUnits)
