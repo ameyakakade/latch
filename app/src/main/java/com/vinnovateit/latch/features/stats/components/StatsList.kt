@@ -69,10 +69,12 @@ fun StatsList(
       // WHEN CONNECTED:
       if (showSessionCard) {
         item {
-          SessionCard(
-            session = sessionToShow,
-            speedUnit = speedUnits
-          )
+          Box(Modifier.height(250.dp)) {
+            SessionCard(
+              session = sessionToShow,
+              speedUnit = speedUnits
+            )
+          }
           Spacer(modifier = Modifier.height(15.dp))
         }
       }
