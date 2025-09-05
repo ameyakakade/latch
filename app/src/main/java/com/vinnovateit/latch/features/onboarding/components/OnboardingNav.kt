@@ -83,13 +83,11 @@ fun LatchSetupBottomBar(
 
     Surface(
         modifier = modifier
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(24.dp), clip = true),
+            .shadow(elevation = 8.dp, clip = true),
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = RoundedCornerShape(
             topStart = 36.dp,
-            topEnd = 36.dp,
-            bottomStart = 36.dp,
-            bottomEnd = 36.dp
+            topEnd = 36.dp
         )
     ) {
         Column(
