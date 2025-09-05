@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.Handyman
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Settings
@@ -446,7 +445,7 @@ fun TopBarSection(
             ) {
                 DropdownMenuItem(
                     text = {
-                        Text("How it Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
+                        Text("How It Works", fontSize = 16.sp, fontFamily = SatoshiFontFamily)
                     },
                     onClick = {
                         menuExpanded = false
