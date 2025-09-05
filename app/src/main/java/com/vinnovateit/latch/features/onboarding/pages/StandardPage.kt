@@ -30,6 +30,7 @@ fun StandardSlidePage(slide: SlideContent) {
                 .align(Alignment.TopStart)
         )
 
+        // The outer Column centers the inner scrollable one
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -37,21 +38,27 @@ fun StandardSlidePage(slide: SlideContent) {
                 .fillMaxSize()
                 .padding(horizontal = 40.dp)
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(180.dp)
+            // --- FIX: This inner Column is now scrollable ---
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                slide.icon()
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(180.dp)
+                ) {
+                    slide.icon()
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = slide.description,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
+                    textAlign = TextAlign.Center,
+                    fontFamily = SatoshiFontFamily
+                )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = slide.description,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
-                textAlign = TextAlign.Center,
-                fontFamily = SatoshiFontFamily
-            )
         }
     }
 }
@@ -68,7 +75,7 @@ internal fun PageScaffoldLandscape(slide: SlideContent, content: @Composable Col
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(horizontal = 48.dp, vertical = 24.dp),
+            .padding(horizontal = 24.dp, vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(

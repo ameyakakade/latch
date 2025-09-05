@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.generateCsvReport
@@ -74,6 +75,7 @@ import com.vinnovateit.latch.features.stats.components.SessionCard
 import com.vinnovateit.latch.features.stats.components.StatsList
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
+import androidx.compose.foundation.layout.statusBarsPadding // Import this
 
 class StatsActivity : ComponentActivity() {
   private val createDocumentLauncher =
@@ -93,6 +95,8 @@ class StatsActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+    // --- FIX: Add this line to enable edge-to-edge display ---
+    WindowCompat.setDecorFitsSystemWindows(window, false)
     setContent {
       LatchTheme {
         StatsScreen(
@@ -311,6 +315,7 @@ private fun StatsTopAppBar(
 ) {
   if(isLarge) {
     LargeTopAppBar(
+      modifier = Modifier.statusBarsPadding(), // --- FIX: Add padding here
       title = {
         Text(
           "Stats",
@@ -329,7 +334,7 @@ private fun StatsTopAppBar(
         }
       },
       colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color.Transparent, // --- FIX: Change to Transparent
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         navigationIconContentColor = Color.Unspecified,
         titleContentColor = Color.Unspecified,
@@ -339,6 +344,7 @@ private fun StatsTopAppBar(
     )
   } else {
     TopAppBar(
+      modifier = Modifier.statusBarsPadding(), // --- FIX: Add padding here
       title = {
         Text(
           "Stats",
@@ -357,7 +363,7 @@ private fun StatsTopAppBar(
         }
       },
       colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = Color.Transparent, // --- FIX: Change to Transparent
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         navigationIconContentColor = Color.Unspecified,
         titleContentColor = Color.Unspecified,

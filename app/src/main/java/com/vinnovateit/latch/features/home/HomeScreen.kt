@@ -175,15 +175,17 @@ fun PortraitHomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.54f)
+                    .weight(0.5f)
             ) {
-                HomeTopSection(isConnected, networkSpeed)
+                HomeTopSection(isConnected, networkSpeed, modifier = Modifier.statusBarsPadding())
             }
             // Bottom Section with Canvas Cutout
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.46f),
+                    .weight(0.5f)
+                    // --- FIX: Added navigationBarsPadding to this Box ---
+                    .navigationBarsPadding(),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 HomeRedCanvasBackground(buttonSizePx = buttonDiameterPx, isPortrait = true)
@@ -196,7 +198,6 @@ fun PortraitHomeScreen(
             isPortrait = true,
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(y = 25.dp) // Move button down slightly
         )
     }
 }
@@ -219,8 +220,10 @@ fun LandscapeHomeScreen(
         contentScale = ContentScale.Crop
     )
     Row(
+        // Apply padding to the whole landscape view
         modifier = Modifier
             .fillMaxSize()
+            .safeDrawingPadding()
     ) {
         // Left Section (Status and Button)
         Box(
@@ -268,9 +271,10 @@ fun HomeTopSection(
     isConnected: Boolean,
     networkSpeed: String,
     isLandscape: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    Column {
+    Column(modifier = modifier) {
         TopBarSection(
             onPreferencesClick = {
                 context.startActivity(Intent(context, SettingsActivity::class.java))
