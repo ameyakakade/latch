@@ -7,12 +7,12 @@ import androidx.activity.compose.setContent
 import androidx.core.content.edit
 import androidx.core.view.WindowCompat
 import com.vinnovateit.latch.features.home.MainActivity
+import com.vinnovateit.latch.features.onboarding.components.OnboardingScreen
 import com.vinnovateit.latch.ui.theme.LatchTheme
 
 class OnboardingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT // Removed to allow landscape
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {

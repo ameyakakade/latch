@@ -75,7 +75,7 @@ import com.vinnovateit.latch.features.stats.components.SessionCard
 import com.vinnovateit.latch.features.stats.components.StatsList
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
-import androidx.compose.foundation.layout.statusBarsPadding // Import this
+import androidx.compose.foundation.layout.statusBarsPadding
 
 class StatsActivity : ComponentActivity() {
   private val createDocumentLauncher =

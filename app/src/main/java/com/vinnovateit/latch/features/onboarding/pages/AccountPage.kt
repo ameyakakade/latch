@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
-import com.vinnovateit.latch.features.onboarding.SlideContent
+import com.vinnovateit.latch.features.onboarding.components.SlideContent
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 @Composable

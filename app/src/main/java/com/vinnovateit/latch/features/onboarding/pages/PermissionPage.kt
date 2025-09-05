@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.vinnovateit.latch.features.onboarding.SlideContent
+import com.vinnovateit.latch.features.onboarding.components.SlideContent
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 @OptIn(ExperimentalPermissionsApi::class)

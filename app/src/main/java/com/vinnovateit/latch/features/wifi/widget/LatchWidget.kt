@@ -104,7 +104,6 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
     )
   }
 
-  // Responsive sizing
   val size = LocalSize.current
   val isNarrow = size.width < 180.dp
   val padding = if (isNarrow) 12.dp else 16.dp
@@ -138,7 +137,6 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
 
         Spacer(modifier = GlanceModifier.height(16.dp))
 
-        // Centered duration
         if (state.isConnected) {
           Box(modifier = GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp)) {

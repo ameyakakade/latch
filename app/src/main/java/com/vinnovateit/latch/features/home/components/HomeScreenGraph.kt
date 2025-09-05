@@ -59,9 +59,6 @@ const val GRAPH_HEIGHT_SCALE = 0.77f
 val Y_AXIS_WIDTH = 70.dp
 const val POINTS_IN_30_SECONDS = 20
 
-/**
- * Calculates a "nice" rounded number for the top of the Y-axis.
- */
 fun calculateNiceMaxSpeed(maxSpeed: Float): Float {
   if (maxSpeed <= 0f) return 1f
   val exponent = floor(log10(maxSpeed))
@@ -94,10 +91,9 @@ fun HomeScreenGraph(
   var yAxisVisible by remember { mutableStateOf(true) }
   var isAutoScrolling by remember { mutableStateOf(false) }
 
-  // Auto-scroll logic when new data arrives and user is idle
   LaunchedEffect(rateHistory.size) {
     val idleDuration = System.currentTimeMillis() - lastInteraction
-    if (lastInteraction == 0L || idleDuration > 5000L) { // Autoscroll on first load or after being idle
+    if (lastInteraction == 0L || idleDuration > 5000L) {
       isAutoScrolling = true
       scrollState.animateScrollTo(
         scrollState.maxValue,
@@ -107,13 +103,11 @@ fun HomeScreenGraph(
     }
   }
 
-  // Timer for Y-axis visibility and scale reset
   LaunchedEffect(lastInteraction) {
-    if (lastInteraction == 0L) return@LaunchedEffect // Don't run on initial composition
+    if (lastInteraction == 0L) return@LaunchedEffect
 
     yAxisVisible = true
     delay(5000L)
-    // Check again after delay in case of new interaction
     if (System.currentTimeMillis() - lastInteraction >= 5000L) {
       yAxisVisible = false
       if (scale != initialScale) {
@@ -129,8 +123,8 @@ fun HomeScreenGraph(
     modifier = modifier
       .pointerInput(Unit) {
         detectTransformGestures { _, _, zoom, _ ->
-          scale = (scale * zoom).coerceIn(1f, initialScale * 3) // Allow zooming in further, but not out past 1:1
-          lastInteraction = System.currentTimeMillis() // Update interaction time on zoom
+          scale = (scale * zoom).coerceIn(1f, initialScale * 3)
+          lastInteraction = System.currentTimeMillis()
         }
       }
   ) {
@@ -138,7 +132,6 @@ fun HomeScreenGraph(
       val containerWidthPx = constraints.maxWidth
       val containerHeightPx = constraints.maxHeight
 
-      // Detect user interaction on scroll
       LaunchedEffect(scrollState.isScrollInProgress) {
         if (scrollState.isScrollInProgress && !isAutoScrolling) {
           lastInteraction = System.currentTimeMillis()
@@ -149,8 +142,6 @@ fun HomeScreenGraph(
 
         var maxSpeed by remember { mutableLongStateOf(1L) }
 
-        // Recalculate max speed only when scrolling stops or data/zoom changes.
-        // This prevents expensive recalculations during scroll animations.
         LaunchedEffect(rateHistory, scrollState.isScrollInProgress, scale) {
           if (rateHistory.size < 2 || scrollState.isScrollInProgress) return@LaunchedEffect
 
@@ -201,7 +192,6 @@ fun HomeScreenGraph(
         val backgroundColor = MaterialTheme.colorScheme.background
         val onBackgroundColor = MaterialTheme.colorScheme.onBackground
 
-        // Parent Box for layering the graph and the Y-axis
         Box(modifier = Modifier.fillMaxSize()) {
           // Layer 1: The Scrollable Graph
           Box(
