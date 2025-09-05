@@ -1,7 +1,9 @@
 package com.vinnovateit.latch.features.onboarding.pages
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
@@ -38,7 +40,15 @@ fun SetUpAccountPage(
         credentialsExist = StoredCredentials.credentialsExist(context)
     }
 
-    Box(modifier = Modifier.fillMaxSize().padding(bottom = 32.dp)) {
+    // --- FIX: The layout is now a single Column to allow proper scrolling ---
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding() // Handles status and navigation bars
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(
             text = slide.title,
             fontFamily = SatoshiFontFamily,
@@ -46,11 +56,15 @@ fun SetUpAccountPage(
             fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .padding(start = 28.dp, top = 28.dp)
-                .statusBarsPadding()
-                .align(Alignment.TopStart)
+                .fillMaxWidth()
+                .padding(top = 28.dp, start = 4.dp), // Adjusted padding
+            textAlign = TextAlign.Start
         )
 
+        // Spacer to push content down from the title
+        Spacer(modifier = Modifier.height(100.dp))
+
+        // Main content (icon, text, button)
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -92,10 +106,12 @@ fun SetUpAccountPage(
             }
         }
 
+        // --- FIX: Spacer with weight pushes the Surface to the bottom ---
+        Spacer(modifier = Modifier.weight(1f).heightIn(min = 32.dp))
+
+        // Bottom notice Surface
         Surface(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.padding(bottom = 200.dp), // Padding from the absolute bottom
             color = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(16.dp)
         ) {

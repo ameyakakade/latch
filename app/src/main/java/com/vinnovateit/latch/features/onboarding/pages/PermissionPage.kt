@@ -3,6 +3,8 @@ package com.vinnovateit.latch.features.onboarding.pages
 import android.Manifest
 import android.os.Build
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
@@ -63,41 +65,47 @@ fun NotificationPermissionPage(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(180.dp)
-            ) { slide.icon() }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = slide.description.text,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
-                textAlign = TextAlign.Center,
-                fontFamily = SatoshiFontFamily
-            )
-
-            Spacer(modifier = Modifier.height(44.dp))
-
-            Button(
-                onClick = {
-                    if (!isGranted) {
-                        notificationPermissionState.launchPermissionRequest()
-                    }
-                },
-                enabled = !isGranted,
-                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+            // --- FIX: This inner Column is now scrollable ---
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (isGranted) {
-                    Icon(Icons.Rounded.Check, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(180.dp)
+                ) { slide.icon() }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = if (isGranted) "Permission Granted" else "Grant Permission",
-                    fontFamily = SatoshiFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    text = slide.description.text,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, lineHeight = 24.sp),
+                    textAlign = TextAlign.Center,
+                    fontFamily = SatoshiFontFamily
                 )
+
+                Spacer(modifier = Modifier.height(44.dp))
+
+                Button(
+                    onClick = {
+                        if (!isGranted) {
+                            notificationPermissionState.launchPermissionRequest()
+                        }
+                    },
+                    enabled = !isGranted,
+                    contentPadding = PaddingValues(horizontal = 28.dp, vertical = 14.dp)
+                ) {
+                    if (isGranted) {
+                        Icon(Icons.Rounded.Check, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = if (isGranted) "Permission Granted" else "Grant Permission",
+                        fontFamily = SatoshiFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat // Import this
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vinnovateit.latch.common.util.formatBitsPerSecond
@@ -24,7 +25,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        // This is the crucial line you were missing
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         SettingsManager.initialize(this)
 
         // Trigger auto-login check on launch if the setting is enabled

@@ -49,7 +49,7 @@ fun WelcomeToLatchPage() {
             textAlign = TextAlign.Start,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 32.dp, bottom = 30.dp)
+                .padding(start = 32.dp, bottom = 250.dp)
         )
     }
 }

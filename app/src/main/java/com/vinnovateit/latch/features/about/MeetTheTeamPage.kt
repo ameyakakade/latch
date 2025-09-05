@@ -70,11 +70,11 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 🔹 Top Row: Back Arrow (left) + Logo (right)
+            // Top Row: Back Arrow (left) + Logo (right)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 2.dp, start = 10.dp, end = 10.dp), // Move arrow up by reducing top padding
+                    .padding(top = 2.dp, start = 5.dp, end = 10.dp),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.Start
             ) {
@@ -162,7 +162,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                 )
             }
 
-            // 🔹 Heading
+            // Heading
             Text(
                 text = "Meet The Team",
                 style = MaterialTheme.typography.headlineMedium.copy(
@@ -183,7 +183,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔹 Team Member Cards
+            // Team Member Cards
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -206,10 +206,11 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
             }
+            // --- FIX: Added a spacer that is exactly the height of the navigation bar ---
+            Spacer(modifier = Modifier.navigationBarsPadding())
         }
     }
 }
-
 
 @Composable
 fun TeamMemberCard(
