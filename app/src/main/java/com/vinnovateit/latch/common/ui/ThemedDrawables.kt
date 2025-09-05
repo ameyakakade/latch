@@ -70,14 +70,14 @@ fun HandsConnectAnimation(
   leftRes: Int = R.drawable.ic_hand_left,
   rightRes: Int = R.drawable.ic_hand_right,
   sizeDp: Dp = 140.dp,
-  durationMs: Int = 500 // total animation time 500ms
+  durationMs: Int = 500
 ) {
 
   // initial positions (off corners)
-  val leftOffsetX = remember { Animatable(-200f) } // top-left X
-  val leftOffsetY = remember { Animatable(-200f) } // top-left Y
-  val rightOffsetX = remember { Animatable(200f) } // bottom-right X
-  val rightOffsetY = remember { Animatable(200f) } // bottom-right Y
+  val leftOffsetX = remember { Animatable(-200f) }
+  val leftOffsetY = remember { Animatable(-200f) }
+  val rightOffsetX = remember { Animatable(200f) }
+  val rightOffsetY = remember { Animatable(200f) }
 
   LaunchedEffect(Unit) {
     val spec = tween<Float>(durationMillis = durationMs, easing = FastOutSlowInEasing)

@@ -88,7 +88,6 @@ fun HomeScreen(
     isConnected: Boolean,
     networkSpeed: String,
     session: SessionSummary?,
-    onConnectClick: () -> Unit, // This is now ignored, but kept for compatibility
     connectionStatus: ConnectionStatus,
     speedUnit: String
 ) {
@@ -177,7 +176,7 @@ fun PortraitHomeScreen(
                     .fillMaxWidth()
                     .weight(0.5f)
             ) {
-                HomeTopSection(isConnected, networkSpeed, modifier = Modifier.statusBarsPadding())
+                HomeTopSection(isConnected = isConnected, networkSpeed = networkSpeed, modifier = Modifier.statusBarsPadding())
             }
             // Bottom Section with Canvas Cutout
             Box(
@@ -239,7 +238,7 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                HomeTopSection(isConnected, networkSpeed, isLandscape = true)
+                HomeTopSection( isConnected =  isConnected, networkSpeed = networkSpeed, isLandscape = true)
                 Spacer(modifier = Modifier.height(24.dp))
                 PowerButtonOverlay(
                     onConnectClick = onConnectClick,
@@ -268,10 +267,10 @@ fun LandscapeHomeScreen(
 
 @Composable
 fun HomeTopSection(
+    modifier: Modifier = Modifier,
     isConnected: Boolean,
     networkSpeed: String,
-    isLandscape: Boolean = false,
-    modifier: Modifier = Modifier
+    isLandscape: Boolean = false
 ) {
     val context = LocalContext.current
     Column(modifier = modifier) {
@@ -512,7 +511,6 @@ fun HomeScreenPortraitPreview() {
             isConnected = false,
             networkSpeed = "6 mbps",
             session = null,
-            onConnectClick = { },
             connectionStatus = ConnectionStatus.Idle,
             "B/s"
         )
@@ -527,7 +525,6 @@ fun HomeScreenLandscapePreview() {
             isConnected = true,
             networkSpeed = "12 mbps",
             session = null,
-            onConnectClick = { },
             connectionStatus = ConnectionStatus.Idle,
             speedUnit = "B/s"
         )

@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.features.onboarding
+package com.vinnovateit.latch.features.onboarding.components
 
 import android.app.Activity
 import android.content.Intent
@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
+import com.vinnovateit.latch.features.onboarding.SecondPageActivity
 import com.vinnovateit.latch.features.onboarding.pages.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -64,12 +65,67 @@ fun OnboardingScreen(
 
     val slides = remember {
         listOf(
-            SlideContent("Welcome to Latch", buildAnnotatedString { append("Let's get everything setup for you.") }, {}, persistentListOf()),
-            SlideContent("How it Works", buildAnnotatedString { append("Latch will handle the \"Sign-in to Network\" page for you every time you connect to the network with your credentials.") }, { Icon(painter = painterResource(id = R.drawable.captive_portal_24px), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(80.dp)) }),
-            SlideContent("Enable Notifications", buildAnnotatedString { append("To monitor your connection and provide status updates, Latch runs a service that requires a persistent notification. You can minimize or hide it from your phone's settings at any time.") }, { Icon(imageVector = Icons.Rounded.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(80.dp)) }),
-            SlideContent("Your Account", buildAnnotatedString { append("Please provide your credentials. And we will handle the magic for you.") }, { Icon(imageVector = Icons.Rounded.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(80.dp)) }),
-            SlideContent("Convenient Access", buildAnnotatedString { append("For quick access, add the Latch widget to your home screen or the tile to your Quick Settings panel.") }, { Icon(imageVector = Icons.Rounded.Widgets, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(80.dp)) }),
-            SlideContent("You're Ready!", buildAnnotatedString { append("Your setup is complete. Latch will now handle your Wi-Fi sign-in.") }, { Icon(imageVector = Icons.Rounded.CheckCircle, contentDescription = null, tint = Color(0xFF1BA83C), modifier = Modifier.size(80.dp)) })
+            SlideContent(
+                "Welcome to Latch",
+                buildAnnotatedString { append("Let's get everything setup for you.") },
+                {},
+                persistentListOf()
+            ),
+            SlideContent(
+                "How it Works",
+                buildAnnotatedString { append("Latch will handle the \"Sign-in to Network\" page for you every time you connect to the network with your credentials.") },
+                {
+                    Icon(
+                        painter = painterResource(id = R.drawable.captive_portal_24px),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(80.dp)
+                    )
+                }),
+            SlideContent(
+                "Enable Notifications",
+                buildAnnotatedString { append("To monitor your connection and provide status updates, Latch runs a service that requires a persistent notification. You can minimize or hide it from your phone's settings at any time.") },
+                {
+                    Icon(
+                        imageVector = Icons.Rounded.Notifications,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(80.dp)
+                    )
+                }),
+            SlideContent(
+                "Your Account",
+                buildAnnotatedString { append("Please provide your credentials. And we will handle the magic for you.") },
+                {
+                    Icon(
+                        imageVector = Icons.Rounded.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(80.dp)
+                    )
+                }),
+            SlideContent(
+                "Convenient Access",
+                buildAnnotatedString { append("For quick access, add the Latch widget to your home screen or the tile to your Quick Settings panel.") },
+                {
+                    Icon(
+                        imageVector = Icons.Rounded.Widgets,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(80.dp)
+                    )
+                }),
+            SlideContent(
+                "You're Ready!",
+                buildAnnotatedString { append("Your setup is complete. Latch will now handle your Wi-Fi sign-in.") },
+                {
+                    Icon(
+                        imageVector = Icons.Rounded.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF1BA83C),
+                        modifier = Modifier.size(80.dp)
+                    )
+                })
         )
     }
 

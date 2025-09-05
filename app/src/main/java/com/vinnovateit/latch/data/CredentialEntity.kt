@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "credentials")
 data class CredentialEntity(
-    @PrimaryKey val id: String = "singleton",  // Always "singleton"
+    @PrimaryKey val id: String = "singleton",
     val registrationNumber: String,
     val password: String
 )

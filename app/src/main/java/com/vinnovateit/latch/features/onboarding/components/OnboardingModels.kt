@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.features.onboarding
+package com.vinnovateit.latch.features.onboarding.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.AnnotatedString

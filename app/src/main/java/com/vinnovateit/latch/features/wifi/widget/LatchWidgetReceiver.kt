@@ -32,6 +32,6 @@ class LatchWidgetReceiver : GlanceAppWidgetReceiver() {
 
   override fun onDisabled(context: Context) {
     super.onDisabled(context)
-    LatchWidgetUpdater.enqueuePeriodicUpdate(context)  // Optional: Clean up periodic work if needed
+    LatchWidgetUpdater.enqueuePeriodicUpdate(context)
   }
 }

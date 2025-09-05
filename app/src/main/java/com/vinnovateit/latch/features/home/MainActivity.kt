@@ -65,9 +65,6 @@ class MainActivity : ComponentActivity() {
                         isConnected = isConnected,
                         networkSpeed = networkSpeedString,
                         session = sessionForHomeScreen,
-                        onConnectClick = {
-                            wifiStatusViewModel.toggleConnection()
-                        },
                         connectionStatus = connectionStatus,
                         speedUnits
                     )

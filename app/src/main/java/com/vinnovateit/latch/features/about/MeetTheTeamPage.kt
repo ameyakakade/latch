@@ -112,7 +112,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 🔹 Social Media Logo
+            // Social Media Logo
             Row(
                 horizontalArrangement = Arrangement.spacedBy(60.dp),
                 verticalAlignment = Alignment.CenterVertically,

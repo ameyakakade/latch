@@ -81,7 +81,6 @@ fun SpectrumCard(
           .weight(1f),
         contentAlignment = Alignment.Center
       ) {
-        // The status is Idle AND there's a valid session with history -> show the graph.
         val showGraph = connectionStatus is ConnectionStatus.Idle && session?.history?.isNotEmpty() == true
 
         AnimatedContent(
@@ -96,7 +95,6 @@ fun SpectrumCard(
               speedUnit = speedUnit
             )
           } else {
-            // Otherwise, show the status indicator.
             StatusIndicator(connectionStatus = connectionStatus)
           }
         }

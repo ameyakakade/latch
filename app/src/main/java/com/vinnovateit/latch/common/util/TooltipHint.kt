@@ -22,10 +22,6 @@ import com.vinnovateit.latch.ui.theme.tooltipContent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 
-//================================================================================
-// Reusable Tooltip Composable
-//================================================================================
-
 /**
  * A simple, reliable PopupPositionProvider that ALWAYS places the tooltip
  * below the anchor, adjusting horizontally to stay on screen.
@@ -37,17 +33,11 @@ private val SimpleBelowTooltipPositionProvider = object : PopupPositionProvider 
     layoutDirection: LayoutDirection,
     popupContentSize: IntSize
   ): IntOffset {
-    // Define margins directly in pixels.
-    val screenEdgeMargin = 32 // ~8.dp
-    val verticalMargin = 24   // ~4.dp
+    val screenEdgeMargin = 32
+    val verticalMargin = 24
 
-    // Calculate the centered horizontal position of the tooltip.
     val centeredX = anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2
-
-    // Force the Y position to be below the anchor, adding the margin.
     val y = anchorBounds.bottom + verticalMargin
-
-    // Adjust the X position to stay within the screen bounds.
     val x = centeredX.coerceIn(
       minimumValue = screenEdgeMargin,
       maximumValue = windowSize.width - popupContentSize.width - screenEdgeMargin
@@ -75,7 +65,6 @@ fun TooltipHint(
   val tooltipState = rememberTooltipState()
   val haptic = LocalHapticFeedback.current
 
-  // Trigger haptic feedback when the tooltip becomes visible
   LaunchedEffect(tooltipState) {
     snapshotFlow { tooltipState.isVisible }
       .distinctUntilChanged()

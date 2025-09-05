@@ -40,7 +40,7 @@ object CaptivePortalDetector {
             responseCode
         } catch (e: Exception) {
             Log.e("CaptivePortalDetector", "Portal check failed with exception", e)
-            -1 // On error, assume portal might be present
+            -1
         }
     }
 }

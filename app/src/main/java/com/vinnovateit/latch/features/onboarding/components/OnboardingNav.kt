@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.features.onboarding
+package com.vinnovateit.latch.features.onboarding.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
