@@ -33,7 +33,7 @@ fun WelcomeToLatchPage() {
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(top = 40.dp, start = 25.dp, end = 25.dp)
+                .padding(start = 25.dp, end = 25.dp)
         )
 
         HandsConnectAnimation()
@@ -49,7 +49,7 @@ fun WelcomeToLatchPage() {
             textAlign = TextAlign.Start,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 32.dp, bottom = 250.dp)
+                .padding(start = 32.dp, bottom = 30.dp)
         )
     }
 }

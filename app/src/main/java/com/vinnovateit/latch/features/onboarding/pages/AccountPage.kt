@@ -57,7 +57,7 @@ fun SetUpAccountPage(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 28.dp, start = 4.dp), // Adjusted padding
+                .padding(start = 4.dp), // Adjusted padding
             textAlign = TextAlign.Start
         )
 
@@ -111,7 +111,7 @@ fun SetUpAccountPage(
 
         // Bottom notice Surface
         Surface(
-            modifier = Modifier.padding(bottom = 200.dp), // Padding from the absolute bottom
+            modifier = Modifier.padding(bottom = 50.dp), // Padding from the absolute bottom
             color = MaterialTheme.colorScheme.surfaceContainer,
             shape = RoundedCornerShape(16.dp)
         ) {
