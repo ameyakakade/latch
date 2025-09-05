@@ -89,7 +89,7 @@ fun HandsConnectAnimation(
   }
 
   Box(
-    modifier = modifier.fillMaxSize().offset(y = -50.dp),
+    modifier = modifier.fillMaxSize(),
     contentAlignment = Alignment.Center
   ) {
     // right hand on top

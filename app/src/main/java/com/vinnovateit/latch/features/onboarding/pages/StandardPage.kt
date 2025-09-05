@@ -25,7 +25,7 @@ fun StandardSlidePage(slide: SlideContent) {
             fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .padding(start = 28.dp, top = 30.dp)
+                .padding(start = 28.dp)
                 .statusBarsPadding()
                 .align(Alignment.TopStart)
         )

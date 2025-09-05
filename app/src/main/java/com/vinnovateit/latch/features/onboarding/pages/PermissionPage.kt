@@ -53,7 +53,7 @@ fun NotificationPermissionPage(
             fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .padding(start = 28.dp, top = 28.dp)
+                .padding(start = 28.dp)
                 .statusBarsPadding()
                 .align(Alignment.TopStart)
         )

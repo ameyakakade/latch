@@ -218,6 +218,7 @@ fun OnboardingScreen(
                 },
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(paddingValues)
             ) { pageIndex ->
                 AnimatedContent(
                     targetState = pageIndex,
