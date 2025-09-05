@@ -4,35 +4,35 @@ import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.Font
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.TooltipHint
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.core.net.toUri
 
 data class TeamMember(
     val name: String,
@@ -43,16 +43,16 @@ data class TeamMember(
 )
 
 val teamMembers = listOf(
-    TeamMember("SOUMOJIT GANGULY", "Project Manager", R.drawable.syro, "https://github.com/soumojit2004", "https://linkedin.com/in/soumojit-ganguly"),
+    TeamMember("SOUMOJIT", "Project Manager", R.drawable.syro, "https://github.com/soumojit2004", "https://linkedin.com/in/soumojit-ganguly"),
     TeamMember("AYUSH KUMAR", "Tech Head", R.drawable.ayush1, "https://github.com/AyushK0808", "https://linkedin.com/in/ayush-kumar-061a58251"),
     TeamMember("AYUSH KUMAR", "Projects Head", R.drawable.ayush2, "https://github.com/thecoder-001", "https://linkedin.com/in/ayush-kumar-cs"),
     TeamMember("MIHIR JOSHI", "Creative Head", R.drawable.mihir, "https://github.com/J-Mihir", "https://linkedin.com/in/mihir-shekhar-joshi"),
-    TeamMember("LAKSHYA GUPTA", "Developer", R.drawable.lakshya, "https://github.com/2005lakshya", "https://linkedin.com/in/lakshya-gupta2005"),
-    TeamMember("SARTHAK MIGLANI", "Developer", R.drawable.sarthak, "https://github.com/SarthakMiglani", "https://www.linkedin.com/in/sarthak--miglani"),
+    TeamMember("LAKSHYA", "Developer", R.drawable.lakshya, "https://github.com/2005lakshya", "https://linkedin.com/in/lakshya-gupta2005"),
+    TeamMember("SARTHAK", "Developer", R.drawable.sarthak, "https://github.com/SarthakMiglani", "https://www.linkedin.com/in/sarthak--miglani"),
     TeamMember("TANMOY SAHA", "Developer", R.drawable.tanmoy, "https://github.com/TSaha4", "https://linkedin.com/in/tanmoy-saha-4b0ab228a"),
     TeamMember("LAVAN", "Developer", R.drawable.lavan, "https://github.com/lavan8t", "https://linkedin.com/in/lavan8t"),
     TeamMember("VIVEK VATTEM", "Designer", R.drawable.vivek, "https://github.com/vivekvattem", "https://www.linkedin.com/in/vivek-vattem-3102662a8"),
-    TeamMember("ARYAMAN BHATIA", "Designer", R.drawable.aryaman, "https://github.com/aryamanbhatia1", "https://linkedin.com/in/aryaman-bhatia-97b99b256"),
+    TeamMember("ARYAMAN", "Designer", R.drawable.aryaman, "https://github.com/aryamanbhatia1", "https://linkedin.com/in/aryaman-bhatia-97b99b256"),
     TeamMember("ARCHIT NIGAM", "Designer", R.drawable.archit, "https://github.com/architnigam", "https://linkedin.com/in/archit-nigam-a18895314"),
     TeamMember("KRISH MEHTA", "Project Manager", R.drawable.krish, "https://github.com/krxsh007", "http://www.linkedin.com/in/krishmmehta-0t")
 )
@@ -60,11 +60,9 @@ val teamMembers = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetTheTeamPage(onBackClick: () -> Unit) {
+    Scaffold { innerPadding ->
+        val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-        }
-    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -72,19 +70,16 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val context = LocalContext.current
-
-            Box(
-                modifier = Modifier.fillMaxWidth()
+            // 🔹 Top Row: Back Arrow (left) + Logo (right)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, start = 10.dp, end = 10.dp), // Move arrow up by reducing top padding
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.Start
             ) {
                 TooltipHint(tooltipText = "Back") {
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 5.dp)
-
-                    ) {
+                    IconButton(onClick = onBackClick) {
                         Icon(
                             Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "Back",
@@ -93,122 +88,112 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
             }
-
+            // Centered Vinnovate Logo with cropped height
             Box(
                 modifier = Modifier
                     .height(70.dp) // your cropped height
-                    .width(220.dp)  // keep width
+                    .width(200.dp), // keep width
+                contentAlignment = Alignment.Center
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_vinnovateit),
                     contentDescription = "Vinnovate Logo",
                     modifier = Modifier
-                        .size(220.dp)
+                        .fillMaxSize()
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) {
-                            val intent =
-                                Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
+                            val intent = Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
+                            context.startActivity(intent)
+                        },
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 🔹 Social Media Logo
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(60.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 20.dp)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.linkedin),
+                    contentDescription = "LinkedIn",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            val intent = Intent(Intent.ACTION_VIEW, "https://www.linkedin.com/company/v-innovate-it/".toUri())
+                            context.startActivity(intent)
+                        },
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.github),
+                    contentDescription = "GitHub",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/vinnovateit".toUri())
+                            context.startActivity(intent)
+                        },
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.instagram),
+                    contentDescription = "Instagram",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            val intent = Intent(Intent.ACTION_VIEW, "https://www.instagram.com/vinnovateit/".toUri())
                             context.startActivity(intent)
                         },
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                 )
             }
 
-            Spacer(Modifier.height(60.dp))
-            // Social Media Logos
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(60.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 20.dp)
-            ) {
-                // LinkedIn Logo
-                Image(
-                    painter = painterResource(id = R.drawable.linkedin),
-                    contentDescription = "LinkedIn",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .offset(y = (-30).dp)
-                        .clickable(
-                            indication = null, // Removes ripple effect
-                            interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
-                        ) {
-                            val intent = Intent(Intent.ACTION_VIEW, "https://www.linkedin.com/company/v-innovate-it/".toUri())
-                            context.startActivity(intent)
-                        },
-                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
-                )
-
-                // GitHub Logo
-                Image(
-                    painter = painterResource(id = R.drawable.github),
-                    contentDescription = "GitHub",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .offset(y = (-30).dp)
-                        .clickable(
-                            indication = null, // Removes ripple effect
-                            interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
-                        ){
-                            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/vinnovateit".toUri())
-                            context.startActivity(intent)
-                        },
-                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
-                )
-
-                // Instagram Logo
-                Image(
-                    painter = painterResource(id = R.drawable.instagram),
-                    contentDescription = "Instagram",
-                    modifier = Modifier
-                        .size(40.dp)
-                        .offset(y = (-30).dp)
-                        .clickable(
-                            indication = null, // Removes ripple effect
-                            interactionSource = remember { MutableInteractionSource() } // Removes ripple effect
-                        ) {
-                            val intent = Intent(Intent.ACTION_VIEW, "https://www.instagram.com/vinnovateit/".toUri())
-                            context.startActivity(intent)
-                        },
-                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Corrected dynamic color
-                )
-            }
-
-            // Meet The Team Heading
+            // 🔹 Heading
             Text(
                 text = "Meet The Team",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontFamily = FontFamily(Font(R.font.outfit_variable))
                 ),
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary, // Changed to dynamic theme color
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
-            // Underline
             Box(
                 modifier = Modifier
                     .width(200.dp)
                     .height(3.dp)
-                    .background(MaterialTheme.colorScheme.primary) // Removed rounded clipping
+                    .background(MaterialTheme.colorScheme.primary)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Team Member Cards
+            // 🔹 Team Member Cards
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
             Column(
-                modifier = Modifier
-                    .padding(horizontal = if (isLandscape) 32.dp else 16.dp), // Adjust padding for landscape
-                verticalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 20.dp) // Adjust spacing for landscape
+                modifier = Modifier.padding(horizontal = if (isLandscape) 32.dp else 16.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 20.dp)
             ) {
-                teamMembers.chunked(if (isLandscape) 3 else 2).forEach { rowMembers -> // Adjust chunk size for landscape
+                teamMembers.chunked(if (isLandscape) 3 else 2).forEach { rowMembers ->
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 15.dp else 25.dp), // Adjust spacing for landscape
+                        horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 15.dp else 25.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         rowMembers.forEach { member ->
@@ -221,8 +206,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(50.dp)) // Added empty space at the bottom after the last team member
         }
     }
 }
@@ -243,10 +226,10 @@ fun TeamMemberCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(0.dp), // Set to no shape for rectangle
+        shape = RoundedCornerShape(0.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.primary // Dynamic color for border
+            color = MaterialTheme.colorScheme.primary
         ),
     ) {
         Column(
@@ -256,56 +239,49 @@ fun TeamMemberCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Profile Image (circle)
             Image(
                 painter = painterResource(id = teamMember.imageRes),
                 contentDescription = "Profile picture of ${teamMember.name}",
                 modifier = Modifier
-                    .size(160.dp) // Removed rounded border
+                    .size(160.dp)
                     .border(
                         width = 2.dp,
-                        color = MaterialTheme.colorScheme.primary, // Dynamic color for border
+                        color = MaterialTheme.colorScheme.primary
                     ),
                 contentScale = ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Name
-            val configuration = LocalConfiguration.current
-            val screenWidth = configuration.screenWidthDp.dp
-
             Text(
                 text = teamMember.name,
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontFamily = FontFamily(Font(R.font.moderniz)),
-                    fontSize = 10.sp // Reduced font size
+                    fontSize = 10.sp
                 ),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary, // Dynamic color
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Role
             Text(
                 text = teamMember.role,
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = FontFamily(Font(R.font.satoshi_regular))
                 ),
                 fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.primary, // Dynamic color
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Socials
             Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally), // Centered with spacing
+                horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -313,7 +289,7 @@ fun TeamMemberCard(
                     modifier = Modifier
                         .size(24.dp)
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() }, // Disable ripple effect
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
                             val intent = Intent(Intent.ACTION_VIEW, teamMember.githubUrl.toUri())
@@ -325,15 +301,14 @@ fun TeamMemberCard(
                         painter = painterResource(id = R.drawable.github),
                         contentDescription = "GitHub of ${teamMember.name}",
                         modifier = Modifier.size(25.dp),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Dynamic color
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
                 }
-
                 Box(
                     modifier = Modifier
                         .size(24.dp)
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() }, // Disable ripple effect
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
                             val intent = Intent(Intent.ACTION_VIEW, teamMember.linkedinUrl.toUri())
@@ -345,7 +320,7 @@ fun TeamMemberCard(
                         painter = painterResource(id = R.drawable.linkedin),
                         contentDescription = "LinkedIn of ${teamMember.name}",
                         modifier = Modifier.size(25.dp),
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary) // Dynamic color
+                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
                 }
             }
