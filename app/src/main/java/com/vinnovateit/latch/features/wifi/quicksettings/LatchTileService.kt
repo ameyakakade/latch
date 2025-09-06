@@ -1,40 +1,44 @@
 package com.vinnovateit.latch.features.wifi.quicksettings
 
-import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.Intent
-import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
-import com.vinnovateit.latch.features.home.MainActivity
-import com.vinnovateit.latch.features.wifi.manager.WiFiStatusViewModel
-import android.app.Application
 import com.vinnovateit.latch.domain.model.SessionRepository
-import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.vinnovateit.latch.features.wifi.background.ForegroundService
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import kotlinx.coroutines.*
 
 class LatchTileService : TileService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var isProcessing = false
-    private val wifiStatusViewModel by lazy {
-        WiFiStatusViewModel(application as Application)
-    }
 
     companion object {
         private const val TAG = "LatchTileService"
+        private const val ACTION_TIMEOUT_MS = 10000L // 10 seconds timeout
     }
 
     override fun onStartListening() {
         super.onStartListening()
         Log.d(TAG, "=== onStartListening called ===")
         updateTileState()
+
+        serviceScope.launch {
+            SessionRepository.liveStatus.collect {
+                if (!isProcessing) {
+                    updateTileState()
+                }
+            }
+        }
     }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        Log.d(TAG, "=== onStopListening called ===")
+        serviceScope.coroutineContext.cancelChildren()
+    }
+
 
     override fun onClick() {
         Log.d(TAG, "=== TILE CLICKED ===")
@@ -44,49 +48,49 @@ class LatchTileService : TileService() {
             return
         }
 
-        serviceScope.launch(Dispatchers.IO) {
+        serviceScope.launch {
             try {
                 isProcessing = true
-                withContext(Dispatchers.Main) { updateTileState() }
+                updateTileState()
 
+                val autoLoginEnabled = SettingsManager.autoLogin.value
                 val isConnected = SessionRepository.liveStatus.value != null
-                if (isConnected) {
-                    Log.d(TAG, "Currently connected. Attempting logout...")
-                    AutoLoginManager.attemptLogout()
+
+                if (autoLoginEnabled || isConnected) {
+                    Log.d(TAG, "Currently connected or auto-login enabled. Triggering logout...")
+                    val intent = Intent(this@LatchTileService, ForegroundService::class.java).apply {
+                        action = ForegroundService.ACTION_TRIGGER_LOGOUT
+                    }
+                    startService(intent)
+                    if (autoLoginEnabled) {
+                        SettingsManager.setAutoLogin(false)
+                    }
                 } else {
-                    Log.d(TAG, "Currently disconnected. Attempting portal authentication...")
-                    wifiStatusViewModel.authenticatePortal()
+                    Log.d(TAG, "Currently disconnected and auto-login disabled. Triggering login check...")
+                    val intent = Intent(this@LatchTileService, ForegroundService::class.java).apply {
+                        action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+                    }
+                    startService(intent)
                 }
+
+                waitForStatusChange(timeoutMs = ACTION_TIMEOUT_MS)
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error handling tile click", e)
-                withContext(Dispatchers.Main) { openApp() }
             } finally {
                 isProcessing = false
-                withContext(Dispatchers.Main) { updateTileState() }
+                updateTileState()
             }
         }
     }
+    private suspend fun waitForStatusChange(timeoutMs: Long) {
+        val initialStatus = SessionRepository.liveStatus.value
+        val startTime = System.currentTimeMillis()
 
-    @SuppressLint("StartActivityAndCollapseDeprecated")
-    private fun openApp() {
-        try {
-            val intent = Intent(this, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                val pendingIntent = PendingIntent.getActivity(
-                    this,
-                    0,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                startActivityAndCollapse(pendingIntent)
-            } else {
-                startActivityAndCollapse(intent)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error opening app", e)
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            val currentStatus = SessionRepository.liveStatus.value
+            if (currentStatus != initialStatus) break
+            delay(200)
         }
     }
 
@@ -94,20 +98,27 @@ class LatchTileService : TileService() {
         serviceScope.launch {
             try {
                 val qsTile = qsTile ?: return@launch
+                val isConnected = SessionRepository.liveStatus.value != null
+
                 when {
-                    isProcessing -> {
-                        qsTile.state = Tile.STATE_UNAVAILABLE
-                        qsTile.label = "Processing..."
-                    }
-                    SessionRepository.liveStatus.value != null -> {
+                    isConnected && !isProcessing -> {
                         qsTile.state = Tile.STATE_ACTIVE
                         qsTile.label = "Connected"
                     }
-                    else -> {
+                    !isConnected && !isProcessing -> {
                         qsTile.state = Tile.STATE_INACTIVE
-                        qsTile.label = "Connect"
+                        qsTile.label = "Latch"
+                    }
+                    isProcessing && isConnected -> {
+                        qsTile.state = Tile.STATE_ACTIVE
+                        qsTile.label = "Disconnecting..."
+                    }
+                    isProcessing && !isConnected -> {
+                        qsTile.state = Tile.STATE_INACTIVE
+                        qsTile.label = "Connecting..."
                     }
                 }
+
                 qsTile.updateTile()
             } catch (e: Exception) {
                 Log.e(TAG, "Error updating tile state", e)
