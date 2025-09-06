@@ -1,7 +1,9 @@
 package com.vinnovateit.latch.domain.model
 
 import android.app.Application
+import android.content.ComponentName
 import android.content.Context
+import android.service.quicksettings.TileService
 import com.vinnovateit.latch.data.StatsDao
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +16,7 @@ import com.vinnovateit.latch.data.LatchDatabase
 import com.vinnovateit.latch.data.Session
 import com.vinnovateit.latch.features.wifi.manager.TrafficStatsLogger
 import com.vinnovateit.latch.features.wifi.manager.UiNotifier
+import com.vinnovateit.latch.features.wifi.quicksettings.LatchTileService
 import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -106,6 +109,7 @@ object SessionRepository {
       }
     }
     triggerWidgetUpdate()
+    notifyTileUpdate()
   }
 
   fun stopSession() {
@@ -131,6 +135,7 @@ object SessionRepository {
 
     if (totalDataUsed < 1024) {
       triggerWidgetUpdate()
+      notifyTileUpdate()
       return
     }
 
@@ -146,6 +151,7 @@ object SessionRepository {
       addSessionToDb(session)
     }
     triggerWidgetUpdate()
+    notifyTileUpdate()
   }
 
   private suspend fun addSessionToDb(session: Session) {
@@ -163,5 +169,13 @@ object SessionRepository {
     val context = applicationContext ?: return
     val workRequest = androidx.work.OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
     androidx.work.WorkManager.getInstance(context).enqueue(workRequest)
+  }
+
+  private fun notifyTileUpdate() {
+    val context = applicationContext ?: return
+    TileService.requestListeningState(
+      context,
+      ComponentName(context, LatchTileService::class.java)
+    )
   }
 }
