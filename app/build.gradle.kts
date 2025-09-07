@@ -2,18 +2,18 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.23"
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
     namespace = "com.vinnovateit.latch"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.vinnovateit.latch"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -29,18 +29,20 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+
     buildFeatures {
         compose = true
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
@@ -54,24 +56,24 @@ dependencies {
 
     // Compose (using BOM)
     implementation(platform(libs.androidx.compose.bom))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha01")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.materialkolor:material-kolor:3.0.0")
+    implementation(libs.androidx.compose.ui.ui2)
+    implementation(libs.androidx.compose.ui.ui.graphics)
+    implementation(libs.androidx.material3.v150alpha01)
+    implementation(libs.androidx.compose.material.material.icons.extended)
+    implementation(libs.material.kolor)
     implementation(libs.androidx.core.splashscreen)
 
-    implementation("androidx.compose.animation:animation")
+    implementation(libs.animation)
 
-    implementation("com.google.accompanist:accompanist-pager:0.32.0")
-    implementation("com.google.accompanist:accompanist-pager-indicators:0.32.0")
-    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-collections-immutable:0.3.5")
+    implementation(libs.accompanist.pager)
+    implementation(libs.accompanist.pager.indicators)
+    implementation(libs.accompanist.permissions)
+    implementation(libs.kotlinx.collections.immutable)
 
     // Widget
-    implementation("androidx.glance:glance-appwidget:1.1.1")
-    implementation("androidx.glance:glance-material3:1.1.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    implementation(libs.kotlinx.serialization.json)
 
     // Data
     implementation(libs.androidx.datastore.preferences)
@@ -79,13 +81,13 @@ dependencies {
     implementation(libs.androidx.security.crypto)
 
     // Compose Core UI modules
-    implementation("androidx.compose.foundation:foundation")
+    implementation(libs.androidx.compose.foundation.foundation)
     implementation(libs.foundation)
     implementation(libs.androidx.animation)
 
     // Tooling and Preview
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation(libs.androidx.compose.ui.ui.tooling3)
+    implementation(libs.androidx.compose.ui.ui.tooling.preview2)
 
     // Testing
     implementation(libs.protolite.well.known.types)
@@ -94,26 +96,26 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    androidTestImplementation(libs.androidx.compose.ui.ui.test.junit42)
+    debugImplementation(libs.androidx.compose.ui.ui.test.manifest4)
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
 
     // Settings
-    implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.androidx.preference.ktx)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // JSON
-    implementation("com.google.code.gson:gson:2.11.0")
+    implementation(libs.gson.v2110)
 
     // Room
-    implementation("androidx.room:room-runtime:2.7.2")
-    kapt("androidx.room:room-compiler:2.7.2")
-    implementation("androidx.room:room-ktx:2.7.2")
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.room.ktx)
 
     // AppCompat (deduplicate)
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation ("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.appcompat.v161)
+    implementation(libs.androidx.compose.material.material.icons.extended2)
 }
