@@ -116,7 +116,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(60.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 20.dp)
+                modifier = Modifier.padding(top = 30.dp, bottom = 30.dp)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.linkedin),
@@ -181,7 +181,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.primary)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             // Team Member Cards
             val configuration = LocalConfiguration.current
@@ -206,8 +206,9 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
             }
-            // --- FIX: Added a spacer that is exactly the height of the navigation bar ---
-            Spacer(modifier = Modifier.navigationBarsPadding())
+            ContributingSection()
+            // Added extra space at the end
+            Spacer(modifier = Modifier.height(100.dp))
         }
     }
 }
@@ -326,5 +327,66 @@ fun TeamMemberCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ContributingSection() {
+    val context = LocalContext.current
+    Spacer(modifier = Modifier.height(30.dp))
+
+    // Heading
+    Text(
+        text = "Contribute",
+        style = MaterialTheme.typography.headlineMedium.copy(
+            fontFamily = FontFamily(Font(R.font.outfit_variable))
+        ),
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+    Box(
+        modifier = Modifier
+            .width(150.dp)
+            .height(3.dp)
+            .background(MaterialTheme.colorScheme.primary)
+    )
+
+    Spacer(modifier = Modifier.height(20.dp))
+
+    // Simple description
+    Text(
+        text = "We welcome contributions. Visit our GitHub repository to get started.",
+        style = MaterialTheme.typography.bodyMedium.copy(
+            fontFamily = FontFamily(Font(R.font.satoshi_regular))
+        ),
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+    )
+
+    // GitHub button
+    OutlinedButton(
+        onClick = {
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                "https://github.com/vinnovateit/auto-net-connector".toUri()
+            )
+            context.startActivity(intent)
+        },
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = MaterialTheme.colorScheme.primary
+        )
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.github),
+            contentDescription = "GitHub",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Contribute on GitHub")
     }
 }
