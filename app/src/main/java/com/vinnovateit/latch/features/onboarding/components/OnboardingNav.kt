@@ -14,16 +14,13 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +28,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFloatingActionButton
@@ -42,11 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vinnovateit.latch.R
+import com.vinnovateit.latch.common.ui.VinnovateITLogo
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
 @OptIn(
@@ -82,13 +76,8 @@ fun LatchSetupBottomBar(
     )
 
     Surface(
-        modifier = modifier
-            .shadow(elevation = 8.dp, clip = true),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(
-            topStart = 36.dp,
-            topEnd = 36.dp
-        )
+        modifier = modifier
     ) {
         Column(
             modifier = Modifier
@@ -122,13 +111,7 @@ fun LatchSetupBottomBar(
                         label = "LogoVsStepText"
                     ) { currentPage ->
                         if (currentPage == 0) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_vinnovateit),
-                                contentDescription = "VinnovateIT Logo",
-                                modifier = Modifier
-                                    .size(110.dp)
-                                    .offset(x = 10.dp)
-                            )
+                            VinnovateITLogo(modifier = Modifier.padding(start = 10.dp))
                         } else {
                             Text(
                                 text = "Step $currentPage of ${pagerState.pageCount - 1}",
@@ -157,12 +140,10 @@ fun LatchSetupBottomBar(
                         bottomStart = animatedBottomStart.toInt().dp,
                         bottomEnd = animatedBottomEnd.toInt().dp
                     ),
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
                     containerColor = containerColor,
                     contentColor = contentColor,
                     modifier = Modifier
                         .rotate(animatedRotation)
-                        .padding(end = 0.dp)
                 ) {
                     AnimatedContent(
                         modifier = Modifier.rotate(-animatedRotation),
@@ -250,12 +231,7 @@ fun LandscapeFloatingNavControls(
                 label = "LogoVsStepText"
             ) { currentPage ->
                 if (currentPage == 0) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_vinnovateit),
-                        contentDescription = "VinnovateIT Logo",
-                        modifier = Modifier
-                            .size(110.dp)
-                    )
+                    VinnovateITLogo(modifier = Modifier.padding(start = 10.dp))
                 } else {
                     Text(
                         text = "Step $currentPage of ${pagerState.pageCount - 1}",
@@ -269,7 +245,7 @@ fun LandscapeFloatingNavControls(
         }
 
         val isLastPage = pagerState.currentPage == pagerState.pageCount - 1
-        val containerColor = if (!isFinishButtonEnabled) { MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f) } else { MaterialTheme.colorScheme.primaryContainer }
+        val containerColor = if (!isFinishButtonEnabled) { MaterialTheme.colorScheme.onSurface } else { MaterialTheme.colorScheme.primaryContainer }
         val contentColor = if (!isFinishButtonEnabled) { MaterialTheme.colorScheme.onSurface.copy() } else { MaterialTheme.colorScheme.onPrimaryContainer }
 
         // --- Button updated to MediumFloatingActionButton with animation modifiers ---
@@ -284,7 +260,6 @@ fun LandscapeFloatingNavControls(
                 bottomStart = animatedBottomStart.toInt().dp,
                 bottomEnd = animatedBottomEnd.toInt().dp
             ),
-            elevation = FloatingActionButtonDefaults.elevation(4.dp),
             containerColor = containerColor,
             contentColor = contentColor,
             modifier = Modifier
