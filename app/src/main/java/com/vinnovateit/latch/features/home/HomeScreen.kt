@@ -56,6 +56,7 @@ fun HomeRedCanvasBackground(buttonSizePx: Float, isPortrait: Boolean) {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer(alpha = 0.99f)
     ) {
         drawRect(
             color = colorScheme.primaryContainer,
