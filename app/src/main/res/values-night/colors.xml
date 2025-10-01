@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="latch_primary">#FF6B6B</color>
+    <color name="latch_secondary">#073691</color>
+    <color name="bg_leaf">#FFFFFF</color>
+    <color name="splash_background_dark">#00092E</color>
+</resources>

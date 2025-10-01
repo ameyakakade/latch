@@ -1,0 +1,184 @@
+package com.vinnovateit.latch.features.stats.components
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.R
+import com.vinnovateit.latch.domain.model.LiveConnectionStatus
+import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.features.stats.DownloadReportButton
+import com.vinnovateit.latch.features.stats.StatsViewModel
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun StatsList(
+  modifier: Modifier = Modifier,
+  isLive: Boolean,
+  showSessionCard: Boolean = true,
+  sessionToShow: SessionSummary?,
+  historyToShow: List<SessionSummary>,
+  liveStatus: LiveConnectionStatus?,
+  speedUnits: String,
+  showAllSessions: Boolean,
+  onToggleShowAll: () -> Unit,
+  onDownloadReport: () -> Unit,
+  addSpacer: Boolean = false,
+  statsViewModel: StatsViewModel
+) {
+  val itemsToDisplay = if (showAllSessions) historyToShow else historyToShow.take(5)
+
+  LazyColumn(
+    modifier = modifier,
+    verticalArrangement = Arrangement.spacedBy(2.dp),
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
+    if(addSpacer){
+      item {
+        Spacer(modifier = Modifier.height(20.dp))
+      }
+    }
+    if (isLive && sessionToShow != null) {
+      // WHEN CONNECTED:
+      if (showSessionCard) {
+        item {
+          Box(Modifier.height(250.dp)) {
+            SessionCard(
+              session = sessionToShow,
+              speedUnit = speedUnits
+            )
+          }
+          Spacer(modifier = Modifier.height(15.dp))
+        }
+      }
+      item {
+        val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
+        val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBytes ?: 0L
+        LiveSpeedSection(
+          isLive = true,
+          downloadBps = liveDownloadBps,
+          uploadBps = liveUploadBps,
+          speedUnit = speedUnits,
+        )
+      }
+      item {
+        val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
+        HistoryBarChart(history = chartItems)
+        Spacer(modifier = Modifier.height(15.dp))
+      }
+    } else {
+      // WHEN NOT CONNECTED:
+      item {
+        val allTimeMaxDownloadBps = historyToShow.maxOfOrNull { it.maxRxBps } ?: 0L
+        val allTimeMaxUploadBps = historyToShow.maxOfOrNull { it.maxTxBps } ?: 0L
+        LiveSpeedSection(
+          isLive = false,
+          downloadBps = allTimeMaxDownloadBps,
+          uploadBps = allTimeMaxUploadBps,
+          speedUnit = speedUnits,
+        )
+      }
+      item {
+        val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
+        HistoryBarChart(history = chartItems)
+        Spacer(modifier = Modifier.height(15.dp))
+      }
+    }
+
+    if (itemsToDisplay.isNotEmpty()) {
+      item {
+        Column(modifier = Modifier
+          .padding(vertical = 8.dp)) {
+          Text(
+            stringResource(R.string.stats_sessions),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Left,
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(16.dp)
+          )
+        }
+      }
+      itemsIndexed(itemsToDisplay) { index, session ->
+        val cornerRadius = 24.dp
+        val listSize = itemsToDisplay.size
+        val shape = when {
+          listSize == 1 -> RoundedCornerShape(cornerRadius)
+          index == 0 -> RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius, bottomStart = 5.dp, bottomEnd = 5.dp)
+          index == listSize - 1 -> RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp, bottomStart = cornerRadius, bottomEnd = cornerRadius)
+          else -> RoundedCornerShape(5.dp)
+        }
+
+        // --- New Animation Logic ---
+        var itemVisible by remember { mutableStateOf(index < 5) }
+        LaunchedEffect(showAllSessions) {
+          if (showAllSessions) {
+            // This will trigger the animation for items beyond the initial 5
+            itemVisible = true
+          }
+        }
+
+        val alpha by animateFloatAsState(
+          targetValue = if (itemVisible) 1f else 0f,
+          animationSpec = tween(
+            durationMillis = 300,
+            // Stagger the animation start time for each item
+            delayMillis = if (index >= 5) (index - 4) * 70 else 0
+          ),
+          label = "alphaAnim"
+        )
+
+        Box(modifier = Modifier.graphicsLayer { this.alpha = alpha }.padding(start = 16.dp, end = 16.dp)) {
+          StatsItemCard(session = session, shape = shape)
+        }
+      }
+      if (historyToShow.size > 5 && !showAllSessions) {
+        item {
+          TextButton(
+            onClick = onToggleShowAll,
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
+          ) {
+            Text(stringResource(R.string.stats_view_more))
+          }
+        }
+      }
+    }
+
+    if (historyToShow.isNotEmpty()) {
+      item {
+        Spacer(modifier = Modifier.height(15.dp))
+        DownloadReportButton(onDownloadReport)
+      }
+    }
+    item { Spacer(modifier = Modifier.height(100.dp)) }
+  }
+}

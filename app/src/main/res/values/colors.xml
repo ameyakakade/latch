@@ -7,4 +7,23 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Widget Light Theme -->
+    <color name="widget_light_background">#FFFBEF</color>
+    <color name="widget_light_primary">#C53F3F</color>
+    <color name="widget_light_on_primary">#FFFBEF</color>
+    <color name="widget_light_text">#3D2B2B</color>
+
+    <!-- Widget Dark Theme -->
+    <color name="widget_dark_background">#C53F3F</color>
+    <color name="widget_dark_primary">#FFFBEF</color>
+    <color name="widget_dark_on_primary">#C53F3F</color>
+    <color name="widget_dark_text">#FFFBEF</color>
+
+    <color name="bg_leaf">#C01221</color>
+
+    <color name="latch_primary">#C01221</color>  <!-- Light background/fill -->
+    <color name="latch_secondary">#670002</color>  <!-- Light accents -->
+    <color name="splash_background_light">#FDF0D5</color>
+    <color name="splash_background_dark">#00092E</color>
 </resources>
