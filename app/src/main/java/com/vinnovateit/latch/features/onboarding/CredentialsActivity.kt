@@ -49,7 +49,6 @@ class SecondPageActivity : ComponentActivity() {
         val editMode = intent.getBooleanExtra("editMode", false)
         val fromOnboarding = intent.getBooleanExtra("fromOnboarding", false)
 
-        // --- FIX 1: Enable edge-to-edge display ---
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
@@ -107,7 +106,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    // --- FIX 2: Replaced statusBarsPadding with safeDrawingPadding ---
                     .safeDrawingPadding()
                     .padding(horizontal = 32.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -196,7 +194,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    // --- FIX 2: Added safeDrawingPadding to respect system bars ---
                     .safeDrawingPadding()
                     .offset(y = (-40).dp)
                     .padding(16.dp)

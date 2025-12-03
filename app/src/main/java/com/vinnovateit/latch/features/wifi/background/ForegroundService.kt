@@ -46,7 +46,11 @@ class ForegroundService : Service() {
         when (intent?.action) {
             ACTION_TRIGGER_LOGIN_CHECK -> {
                 Log.d("ForegroundService", "Manual login check triggered via intent.")
-                ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_initializing)))
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Companion.Connecting(
+                        getApplication(applicationContext).getString(R.string.status_initializing)
+                    )
+                )
 
                 if (!WiFiStateDetector.isWiFiEnabled(this)) {
                     Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
@@ -109,9 +113,11 @@ class ForegroundService : Service() {
 
     private fun checkNetworkAndAct(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
-                getApplication(applicationContext).getString(R.string.status_checking_internet)
-            ))
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(
+                    getApplication(applicationContext).getString(R.string.status_checking_internet)
+                )
+            )
 
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
 
@@ -135,9 +141,11 @@ class ForegroundService : Service() {
             }
 
             // Fallback: captive portal flow
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
-                getApplication(applicationContext).getString(R.string.status_verifying_network)
-            ))
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(
+                    getApplication(applicationContext).getString(R.string.status_verifying_network)
+                )
+            )
             if (AutoLoginManager.isTargetCaptivePortal(network)) {
                 Log.d("ForegroundService", "Target captive portal confirmed (VIT).")
                 handleCaptivePortal(network)
@@ -153,7 +161,13 @@ class ForegroundService : Service() {
 
     private fun handleCaptivePortal(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_authenticating)))
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(
+                    getApplication(
+                        applicationContext
+                    ).getString(R.string.status_authenticating)
+                )
+            )
             connectivityManager.bindProcessToNetwork(network)
             try {
                 val user = StoredCredentials.getUserId(applicationContext)
@@ -181,7 +195,13 @@ class ForegroundService : Service() {
     }
 
     private fun logoutAndStop() {
-        ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_logging_out)))
+        ConnectionStatusManager.postStatus(
+            ConnectionStatus.Companion.Connecting(
+                getApplication(
+                    applicationContext
+                ).getString(R.string.status_logging_out)
+            )
+        )
         healthCheckJob?.cancel()
 
         val network = connectivityManager.activeNetwork
