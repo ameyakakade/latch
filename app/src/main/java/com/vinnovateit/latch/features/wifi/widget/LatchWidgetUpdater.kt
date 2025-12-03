@@ -16,13 +16,10 @@ import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.serialization.encodeToString
 
 class LatchWidgetUpdater(
   context: Context,
@@ -64,7 +61,7 @@ class LatchWidgetUpdater(
     val detailedStatus = ConnectionStatusManager.status.firstOrNull()
 
     val widgetState = when (detailedStatus) {
-      is ConnectionStatus.Connecting -> LatchWidgetState(
+      is ConnectionStatus.Companion.Connecting -> LatchWidgetState(
         status = detailedStatus.message,
         connectedDuration = "...",
         isConnected = false,
