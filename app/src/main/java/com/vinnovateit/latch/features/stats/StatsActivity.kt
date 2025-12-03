@@ -95,7 +95,6 @@ class StatsActivity : ComponentActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    // --- FIX: Add this line to enable edge-to-edge display ---
     WindowCompat.setDecorFitsSystemWindows(window, false)
     setContent {
       LatchTheme {
@@ -315,13 +314,11 @@ private fun StatsTopAppBar(
 ) {
   if(isLarge) {
     LargeTopAppBar(
-      modifier = Modifier.statusBarsPadding(), // --- FIX: Add padding here
       title = {
         Text(
           "Stats",
           fontSize = 23.sp,
           maxLines = 1,
-          color = MaterialTheme.colorScheme.primary,
           fontFamily = ModernizFontFamily,
           overflow = TextOverflow.Ellipsis
         )
@@ -334,7 +331,7 @@ private fun StatsTopAppBar(
         }
       },
       colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = Color.Transparent, // --- FIX: Change to Transparent
+        containerColor = Color.Transparent,
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         navigationIconContentColor = Color.Unspecified,
         titleContentColor = Color.Unspecified,
@@ -344,7 +341,7 @@ private fun StatsTopAppBar(
     )
   } else {
     TopAppBar(
-      modifier = Modifier.statusBarsPadding(), // --- FIX: Add padding here
+      modifier = Modifier.statusBarsPadding(),
       title = {
         Text(
           "Stats",
@@ -363,7 +360,7 @@ private fun StatsTopAppBar(
         }
       },
       colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = Color.Transparent, // --- FIX: Change to Transparent
+        containerColor = Color.Transparent,
         scrolledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
         navigationIconContentColor = Color.Unspecified,
         titleContentColor = Color.Unspecified,
