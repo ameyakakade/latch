@@ -65,11 +65,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -104,6 +106,7 @@ private fun SettingsTopBar(
   onBackPressed: () -> Unit
 ) {
   val surfaceColor = MaterialTheme.colorScheme.surface
+  val haptic = LocalHapticFeedback.current
 
   Box(
     modifier = Modifier
@@ -120,7 +123,10 @@ private fun SettingsTopBar(
         modifier = Modifier
           .align(Alignment.TopStart)
           .padding(start = 12.dp, top = 4.dp),
-        onClick = onBackPressed,
+        onClick = {
+          haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+          onBackPressed()
+        },
         colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
       ) {
         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
@@ -141,6 +147,7 @@ private fun SettingsTopBar(
 @Composable
 fun SettingsScreen(onBackClick: () -> Unit) {
   val context = LocalContext.current
+  val haptic = LocalHapticFeedback.current
   val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
   val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
@@ -236,7 +243,10 @@ fun SettingsScreen(onBackClick: () -> Unit) {
               trailingContent = {
                 Switch(
                   checked = autoLogin,
-                  onCheckedChange = { SettingsManager.setAutoLogin(it) })
+                  onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    SettingsManager.setAutoLogin(it)
+                  })
               },
               onClick = { SettingsManager.setAutoLogin(!autoLogin) }
             )
@@ -312,7 +322,10 @@ fun SettingsScreen(onBackClick: () -> Unit) {
               trailingContent = {
                 Switch(
                   checked = useDynamicColors,
-                  onCheckedChange = { SettingsManager.setUseDynamicColors(it) })
+                  onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    SettingsManager.setUseDynamicColors(it)
+                  })
               },
               onClick = { SettingsManager.setUseDynamicColors(!useDynamicColors) },
             )
@@ -342,7 +355,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
           }
         }
       }
-      item { Spacer(modifier = Modifier.height(36.dp)) }
+      item { Spacer(modifier = Modifier.height(72.dp)) }
     }
     SettingsTopBar(
       collapseFraction = collapseFraction,
@@ -438,12 +451,16 @@ fun SettingsItem(
   trailingContent: @Composable () -> Unit = {},
   onClick: () -> Unit
 ) {
+  val haptic = LocalHapticFeedback.current
   Surface(
     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(10.dp))
-      .clickable(onClick = onClick)
+      .clickable(onClick = {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        onClick()
+      })
   ) {
     Row(
       verticalAlignment = Alignment.CenterVertically,
@@ -502,6 +519,7 @@ fun SettingsSelectionBottomSheet(
   onDismiss: () -> Unit
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  val haptic = LocalHapticFeedback.current
 
   ModalBottomSheet(
     onDismissRequest = onDismiss,
@@ -535,7 +553,10 @@ fun SettingsSelectionBottomSheet(
             .clickable(
               interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
               indication = ripple(),
-              onClick = { onSelect(option) }
+              onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onSelect(option)
+              }
             )
             .padding(vertical = 12.dp),
           verticalAlignment = Alignment.CenterVertically
@@ -564,6 +585,7 @@ fun SettingsActionBottomSheet(
   onConfirm: () -> Unit,
   onDismiss: () -> Unit
 ) {
+  val haptic = LocalHapticFeedback.current
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     containerColor = MaterialTheme.colorScheme.surface,
@@ -584,11 +606,20 @@ fun SettingsActionBottomSheet(
             .padding(horizontal = 16.dp),
           horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-          OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+          OutlinedButton(
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+              onDismiss()
+            },
+            modifier = Modifier.weight(1f)
+          ) {
             Text(cancelText, fontWeight = FontWeight.Bold)
           }
           Button(
-            onClick = onConfirm,
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+              onConfirm()
+            },
             modifier = Modifier.weight(1f)
           ) {
             Text(confirmText, fontWeight = FontWeight.Bold)
