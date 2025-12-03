@@ -169,7 +169,7 @@ private fun StatsScreenContent(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     Scaffold(
       modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-      topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+      topBar = { StatsAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
     ) { innerPadding ->
       EmptyStatsView(modifier = Modifier.padding(innerPadding).fillMaxSize())
     }
@@ -187,7 +187,7 @@ private fun StatsScreenContent(
               .fillMaxHeight()
               .nestedScroll(scrollBehavior.nestedScrollConnection),
             containerColor = MaterialTheme.colorScheme.background,
-            topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick, isLarge = false) } // Normal TopAppBar
+            topBar = { StatsAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick, isLarge = false) } // Normal TopAppBar
           ) { innerPadding ->
             Box(
               modifier = Modifier
@@ -201,7 +201,7 @@ private fun StatsScreenContent(
 
           StatsList(
             modifier = Modifier
-              .weight(0.5f) // 50% width
+              .weight(0.5f)
               .fillMaxHeight()
               .background(MaterialTheme.colorScheme.background), // Matching background
             isLive = true,
@@ -222,7 +222,7 @@ private fun StatsScreenContent(
 
         Scaffold(
           modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-          topBar = { StatsTopAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
+          topBar = { StatsAppBar(scrollBehavior = scrollBehavior, onBackClick = onBackClick) }
         ) { innerPadding ->
           StatsList(
             modifier = (if (isPortrait) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=32.dp))
@@ -307,7 +307,7 @@ fun DownloadReportButton(onDownloadReport: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StatsTopAppBar(
+private fun StatsAppBar(
   scrollBehavior: TopAppBarScrollBehavior,
   onBackClick: () -> Unit,
   isLarge: Boolean = true
@@ -317,7 +317,7 @@ private fun StatsTopAppBar(
       title = {
         Text(
           "Stats",
-          fontSize = 23.sp,
+          fontSize = 24.sp,
           maxLines = 1,
           fontFamily = ModernizFontFamily,
           overflow = TextOverflow.Ellipsis
@@ -326,7 +326,7 @@ private fun StatsTopAppBar(
       navigationIcon = {
         TooltipHint(tooltipText = stringResource(R.string.stats_go_back)) {
           IconButton(onClick = onBackClick) {
-            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back",  tint = MaterialTheme.colorScheme.primary)
+            Icon(imageVector = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back",  tint = MaterialTheme.colorScheme.onSurface)
           }
         }
       },
