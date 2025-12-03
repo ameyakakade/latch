@@ -84,6 +84,8 @@ dependencies {
     implementation(libs.androidx.compose.foundation.foundation)
     implementation(libs.foundation)
     implementation(libs.androidx.animation)
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.animation.core)
 
     // Tooling and Preview
     debugImplementation(libs.androidx.compose.ui.ui.tooling3)
@@ -118,4 +120,8 @@ dependencies {
     // AppCompat (deduplicate)
     implementation(libs.androidx.appcompat.v161)
     implementation(libs.androidx.compose.material.material.icons.extended2)
+
+    // In app updates
+    implementation(libs.app.update)
+    implementation(libs.app.update.ktx)
 }
