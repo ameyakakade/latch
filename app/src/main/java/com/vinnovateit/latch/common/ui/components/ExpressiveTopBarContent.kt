@@ -28,7 +28,7 @@ fun ExpressiveTopBarContent(
   modifier: Modifier = Modifier,
   subtitle: String? = null,
   containerHeightRange: Pair<Dp, Dp> = 88.dp to 56.dp,
-  titlePaddingRange: Pair<Dp, Dp> = 45.dp to 58.dp,
+  titlePaddingRange: Pair<Dp, Dp> = 40.dp to 58.dp,
   collapsedTitleVerticalBias: Float = -1f,
   supportingContent: (@Composable () -> Unit)? = null
 ) {
