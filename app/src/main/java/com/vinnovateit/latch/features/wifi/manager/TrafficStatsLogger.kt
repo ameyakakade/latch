@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
  * TrafficStats and emitting the data usage in intervals.
  */
 object TrafficStatsLogger {
-  private const val POLLING_INTERVAL_MS = 2000L
+  private const val POLLING_INTERVAL_MS = 1000L
   private val loggerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var loggingJob: Job? = null
 
@@ -25,12 +25,7 @@ object TrafficStatsLogger {
   private var lastTimestampTxBytes: Long = 0
 
   // This flow emits the data usage (delta) for each interval.
-  private val _dataUsageFlow = MutableStateFlow(
-    DataUsage(
-      0,
-      0
-    )
-  )
+  private val _dataUsageFlow = MutableStateFlow(DataUsage(0, 0))
   val dataUsageFlow = _dataUsageFlow.asStateFlow()
 
   /**
@@ -57,15 +52,10 @@ object TrafficStatsLogger {
         val currentRxBytes = TrafficStats.getTotalRxBytes()
         val currentTxBytes = TrafficStats.getTotalTxBytes()
 
-        // Calculate the data used during this interval.
         val intervalRx = (currentRxBytes - lastTimestampRxBytes).coerceAtLeast(0)
         val intervalTx = (currentTxBytes - lastTimestampTxBytes).coerceAtLeast(0)
 
-        _dataUsageFlow.value =
-          DataUsage(
-            intervalRx,
-            intervalTx
-          )
+        _dataUsageFlow.value = DataUsage(intervalRx, intervalTx)
 
         // Update the baseline for the next interval.
         lastTimestampRxBytes = currentRxBytes
@@ -80,10 +70,6 @@ object TrafficStatsLogger {
   fun stop() {
     loggingJob?.cancel()
     loggingJob = null
-    _dataUsageFlow.value =
-      _root_ide_package_.com.vinnovateit.latch.domain.model.DataUsage(
-        0,
-        0
-      ) // Reset flow to zero
+    _dataUsageFlow.value = DataUsage(0, 0) // Reset flow to zero
   }
 }

@@ -21,16 +21,21 @@ import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import com.vinnovateit.latch.features.wifi.manager.LoginResult
 import dagger.hilt.android.internal.Contexts.getApplication
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private lateinit var connectivityManager: ConnectivityManager
     private var healthCheckJob: Job? = null
+    private val notificationId = 1
+    private val channelId = "WIFI_LOGIN_CHANNEL"
 
     companion object {
         const val ACTION_TRIGGER_LOGIN_CHECK = "com.vinnovateit.latch.ACTION_TRIGGER_LOGIN_CHECK"
-        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT" // ADD
+        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT"
     }
 
 
@@ -38,7 +43,10 @@ class ForegroundService : Service() {
         super.onCreate()
         Log.d("ForegroundService", "Service created")
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        startForeground(1, createNotification())
+
+        // Initial notification (Basic state)
+        startForeground(notificationId, createNotificationBuilder("Latch is Running", getApplication(applicationContext).getString(R.string.notification_text)).build())
+
         registerNetworkCallback()
     }
 
@@ -92,23 +100,29 @@ class ForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun createNotification(): Notification {
-        val notificationChannelId = "WIFI_LOGIN_CHANNEL"
+    private fun createNotificationBuilder(title: String, text: String): NotificationCompat.Builder {
         val channelName = getApplication(applicationContext).getString(R.string.notification_channel_name)
 
+        // Updated importance to DEFAULT to ensure it can make sound/vibrate on update
         val chan = NotificationChannel(
-            notificationChannelId,
+            channelId,
             channelName,
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         )
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(chan)
 
-        return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle(getApplication(applicationContext).getString(R.string.notification_title))
-            .setContentText(getApplication(applicationContext).getString(R.string.notification_text))
+        return NotificationCompat.Builder(this, channelId)
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_latch)
-            .build()
+            .setOnlyAlertOnce(false) // Allows re-alerting (sound/vibration) when we update the notification
+    }
+
+    private fun updateNotification(title: String, text: String) {
+        val notification = createNotificationBuilder(title, text).build()
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(notificationId, notification)
     }
 
     private fun checkNetworkAndAct(network: Network) {
@@ -128,6 +142,12 @@ class ForegroundService : Service() {
                     connectivityManager.reportNetworkConnectivity(network, true)
                     ConnectionStatusManager.postStatus(ConnectionStatus.Success)
                     SessionRepository.startSession(network)
+
+                    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                    val timeString = timeFormat.format(Date())
+                    // Triggers the "Latched" notification with sound due to IMPORTANCE_DEFAULT and setOnlyAlertOnce(false)
+                    updateNotification("Latched", "Connected at $timeString")
+
                     startHealthCheck(network)
                 } else {
                     Log.d("ForegroundService", "Non-VIT WiFi with internet. Ignoring.")
