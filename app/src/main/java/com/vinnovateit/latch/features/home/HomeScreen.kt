@@ -3,11 +3,13 @@ package com.vinnovateit.latch.features.home
 import android.app.Activity
 import android.content.Intent
 import android.graphics.BlurMaskFilter
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,19 +19,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Menu
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
@@ -37,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -46,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.R
@@ -61,6 +67,8 @@ import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +81,22 @@ fun HomeScreen(
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val autoLoginEnabled by SettingsManager.autoLogin.collectAsStateWithLifecycle()
+
+    var showHowItWorksDialog by remember { mutableStateOf(false) }
+
+    // --- Status Text Visibility Logic ---
+    var showStatusText by remember { mutableStateOf(false) }
+    // Trigger allows us to restart the timer even if showStatusText is already true
+    var statusTimerTrigger by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(statusTimerTrigger) {
+        showStatusText = true
+        delay(5000) // Show for 5 seconds
+        showStatusText = false
+    }
+    // ------------------------------------
 
     val view = LocalView.current
     val isDarkTheme = isSystemInDarkTheme()
@@ -90,6 +113,11 @@ fun HomeScreen(
     }
 
     val smartOnConnectClick = {
+        // Haptic Feedback
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        // Reset Timer for Status Text
+        statusTimerTrigger = System.currentTimeMillis()
+
         if (autoLoginEnabled) {
             val intent = Intent(context, ForegroundService::class.java).apply {
                 action = ForegroundService.ACTION_TRIGGER_LOGOUT
@@ -120,6 +148,8 @@ fun HomeScreen(
                 historyForHomeScreen = historyForHomeScreen,
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
+                onHowItWorksClick = { showHowItWorksDialog = true },
+                showStatusText = showStatusText
             )
         } else {
             LandscapeHomeScreen(
@@ -130,7 +160,13 @@ fun HomeScreen(
                 historyForHomeScreen = historyForHomeScreen,
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
+                onHowItWorksClick = { showHowItWorksDialog = true },
+                showStatusText = showStatusText
             )
+        }
+
+        if (showHowItWorksDialog) {
+            HowItWorksDialog(onDismiss = { showHowItWorksDialog = false })
         }
     }
 }
@@ -144,11 +180,13 @@ fun PortraitHomeScreen(
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
     speedUnit: String,
+    onHowItWorksClick: () -> Unit,
+    showStatusText: Boolean
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
-    val buttonDiameterPx = screenWidthPx * 0.6f // Increased from 0.5f
+    val buttonDiameterPx = screenWidthPx * 0.6f
     val colorScheme = MaterialTheme.colorScheme
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -169,11 +207,21 @@ fun PortraitHomeScreen(
             ) {
                 TopBarSection(
                     onPreferencesClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) },
-                    onHowItWorksClick = { context.startActivity(Intent(context, OnboardingActivity::class.java).apply { putExtra("start_from_step_one", true) }) },
+                    onHowItWorksClick = onHowItWorksClick,
                     onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) }
                 )
+
+                // Status Text placed directly below App Bar, before network stats
+                // Offset moves it up to reduce the visual gap between App Bar title and this text
+                StaggeredStatusText(
+                    visible = showStatusText,
+                    isConnected = isConnected,
+                    modifier = Modifier.offset(y = (-14).dp)
+                )
+
                 Spacer(modifier = Modifier.height(10.dp))
-                NetworkStatusRow(isConnected = isConnected, networkSpeed = networkSpeed)
+                // NetworkStatusRow updated to remove pill
+                NetworkStatusRow(networkSpeed = networkSpeed)
                 Spacer(modifier = Modifier.height(60.dp))
             }
 
@@ -219,6 +267,8 @@ fun LandscapeHomeScreen(
     historyForHomeScreen: List<LiveDataPoint>,
     connectionStatus: ConnectionStatus,
     speedUnit: String,
+    onHowItWorksClick: () -> Unit,
+    showStatusText: Boolean
 ) {
     val context = LocalContext.current
 
@@ -247,12 +297,20 @@ fun LandscapeHomeScreen(
             ) {
                 TopBarSection(
                     onPreferencesClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) },
-                    onHowItWorksClick = { context.startActivity(Intent(context, OnboardingActivity::class.java).apply { putExtra("start_from_step_one", true) }) },
+                    onHowItWorksClick = onHowItWorksClick,
                     onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) },
                 )
+
+                // Status Text placed below App Bar
+                StaggeredStatusText(
+                    visible = showStatusText,
+                    isConnected = isConnected,
+                    modifier = Modifier.offset(y = (-14).dp)
+                )
+
                 Column(modifier = Modifier.weight(1f)) {
                     Box(modifier = Modifier.fillMaxWidth().weight(0.3f), contentAlignment = Alignment.Center) {
-                        NetworkStatusRow(isConnected, networkSpeed)
+                        NetworkStatusRow(networkSpeed = networkSpeed)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(modifier = Modifier.fillMaxWidth().weight(0.7f).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
@@ -285,27 +343,102 @@ fun LandscapeHomeScreen(
 }
 
 @Composable
-fun NetworkStatusRow(isConnected: Boolean, networkSpeed: String) {
+fun StaggeredStatusText(
+    visible: Boolean,
+    isConnected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val text = if (isConnected) "CONNECTED" else "DISCONNECTED"
+    val color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected
+
+    // Increased height to 28.dp to prevent bottom clipping
+    val containerHeight by animateDpAsState(
+        targetValue = if (visible) 28.dp else 0.dp,
+        animationSpec = if (visible) {
+            spring(stiffness = Spring.StiffnessMediumLow)
+        } else {
+            tween(durationMillis = 300, delayMillis = 400, easing = FastOutSlowInEasing)
+        },
+        label = "containerHeight"
+    )
+
+    // ClipToBounds ensures that as letters roll up/down outside the box, they aren't seen.
+    // Added fading mask to the top so the text doesn't look sharply cut when animating out.
+    // Fade confined to the top 20% to avoid dimming the text itself.
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(containerHeight)
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.Transparent,
+                        0.2f to Color.Black,
+                        1f to Color.Black
+                    ),
+                    blendMode = BlendMode.DstIn
+                )
+            }
+            .clipToBounds(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        if (containerHeight > 0.dp) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(top = 4.dp) // Reduced inner padding to move text up within box
+            ) {
+                text.forEachIndexed { index, char ->
+                    // Individual Letter Animation State
+                    val offsetY = remember { Animatable(-20f) }
+
+                    LaunchedEffect(visible) {
+                        if (visible) {
+                            // Staggered Entry: Roll down with overshoot
+                            delay(index * 30L)
+                            offsetY.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = 0.55f, // Higher bounce/overshoot
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                        } else {
+                            // Staggered Exit: Roll up
+                            delay(index * 20L)
+                            offsetY.animateTo(
+                                targetValue = -20f,
+                                animationSpec = tween(300)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = char.toString(),
+                        color = color,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SatoshiFontFamily,
+                        modifier = Modifier.offset(y = offsetY.value.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NetworkStatusRow(networkSpeed: String) {
+    // Modified: Removed the status pill, only kept the speed text
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Center, // Centered the speed
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .background(if (isConnected) ColorBoxConnected else ColorBoxDisconnected, RoundedCornerShape(10.dp))
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-        ) {
-            Text(
-                text = if (isConnected) "CONNECTED" else "DISCONNECTED",
-                color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = SatoshiFontFamily
-            )
-        }
         Text(
             text = networkSpeed,
             color = MaterialTheme.colorScheme.onBackground,
@@ -428,7 +561,8 @@ fun TopBarSection(
     var menuExpanded by remember { mutableStateOf(false) }
     CenterAlignedTopAppBar(
         title = {
-            Text(modifier = Modifier.padding(top = 5.dp), text = stringResource(R.string.app_name_uppercase), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontFamily = ModernizFontFamily, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
+            // Reduced top padding from 5.dp to 0.dp
+            Text(modifier = Modifier.padding(top = 0.dp), text = stringResource(R.string.app_name_uppercase), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontFamily = ModernizFontFamily, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
         },
         navigationIcon = {
             Icon(painter = if (isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(id = R.drawable.ic_latch_light), contentDescription = "LATCH Logo", tint = Color.Unspecified, modifier = Modifier.size(48.dp).padding(start = 12.dp))
@@ -446,6 +580,109 @@ fun TopBarSection(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, scrolledContainerColor = Color.Transparent, navigationIconContentColor = MaterialTheme.colorScheme.primary, titleContentColor = MaterialTheme.colorScheme.primary, actionIconContentColor = MaterialTheme.colorScheme.primary)
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun HowItWorksDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "How it Works",
+                style = MaterialTheme.typography.headlineMedium,
+                fontFamily = ModernizFontFamily,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Bold,
+                // Add padding to separate Title from Content
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+        },
+        text = {
+            // Add vertical padding to the column to spacing top and bottom relative to title/button
+            Column(
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.padding(vertical = 8.dp)
+            ) {
+                // Item 1
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        imageVector = Icons.Rounded.Wifi,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp).padding(top=2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "If any VIT Wi-Fi is auto-connected, Latch retrieves your encrypted credentials and attempts to connect.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = SatoshiFontFamily,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                // Item 2
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        imageVector = Icons.Rounded.BarChart,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp).padding(top=2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Once connected, you can watch your real-time stats and data usage.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = SatoshiFontFamily,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                // Item 3
+                Row(verticalAlignment = Alignment.Top) {
+                    Icon(
+                        imageVector = Icons.Rounded.PowerSettingsNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp).padding(top=2.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "If you do not wish this to work, disable auto-connect from settings or press the disconnect button (which also disables auto-connect).",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontFamily = SatoshiFontFamily,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp), // Add padding to bottom of dialog
+                contentAlignment = Alignment.Center
+            ) {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    shape = RoundedCornerShape(50),
+                    // More inner padding for the "chip" look
+                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "Got It",
+                        fontSize = 18.sp,
+                        fontFamily = SatoshiFontFamily,
+                        // Removed FontWeight.Bold (Default is normal)
+                    )
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(28.dp)
     )
 }
 
