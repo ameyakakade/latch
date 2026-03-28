@@ -116,10 +116,6 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
     SessionRepository.clearHistory()
   }
 
-  fun generateDummyData() {
-    SessionRepository.generateDummyData()
-  }
-
   override fun onCleared() {
     super.onCleared()
   }

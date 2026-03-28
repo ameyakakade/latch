@@ -255,8 +255,8 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(3.dp))
             SettingsItem(
-              title = "Direct Login (Bypass Validation)",
-              subtitle = "Immediately send login request when connected",
+              title = "Direct Login",
+              subtitle = "Immediately send login request without validating wifi when connected",
               leadingIcon = {
                 Icon(
                   Icons.Rounded.FlashOn,
@@ -475,7 +475,7 @@ fun SettingsItem(
 ) {
   val haptic = LocalHapticFeedback.current
   Surface(
-    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+    color = MaterialTheme.colorScheme.surfaceVariant,
     modifier = Modifier
       .fillMaxWidth()
       .clip(RoundedCornerShape(10.dp))

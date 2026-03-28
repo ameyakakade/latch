@@ -38,7 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.LiveConnectionStatus
 import com.vinnovateit.latch.domain.model.SessionSummary
-import com.vinnovateit.latch.features.stats.DownloadReportButton
 import com.vinnovateit.latch.features.stats.StatsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -53,7 +52,7 @@ fun StatsList(
   speedUnits: String,
   showAllSessions: Boolean,
   onToggleShowAll: () -> Unit,
-  onDownloadReport: () -> Unit,
+  // REMOVED: onDownloadReport parameter as it's now in the TopAppBar
   addSpacer: Boolean = false,
   contentPadding: PaddingValues = PaddingValues(0.dp),
   statsViewModel: StatsViewModel
@@ -137,7 +136,7 @@ fun StatsList(
           )
         }
       }
-      // CRITICAL FIX: Add a stable key (startTimestamp) to prevent destructive recompositions
+      // Added key for stable list animations
       itemsIndexed(itemsToDisplay, key = { _, session -> session.startTimestamp }) { index, session ->
         val cornerRadius = 24.dp
         val listSize = itemsToDisplay.size
@@ -177,13 +176,6 @@ fun StatsList(
             Text(stringResource(R.string.stats_view_more))
           }
         }
-      }
-    }
-
-    if (historyToShow.isNotEmpty()) {
-      item {
-        Spacer(modifier = Modifier.height(15.dp))
-        DownloadReportButton(onDownloadReport)
       }
     }
   }
