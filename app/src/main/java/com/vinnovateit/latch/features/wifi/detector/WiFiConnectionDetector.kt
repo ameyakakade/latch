@@ -14,9 +14,18 @@ object WiFiConnectionDetector {
      */
     fun isConnectedToWiFi(context: Context): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        val network = connectivityManager?.activeNetwork
-        val capabilities = connectivityManager?.getNetworkCapabilities(network)
+            ?: return false
 
-        return capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        // activeNetwork might be null or point to Cellular if Wi-Fi has no internet (like a captive portal)
+        // So we iterate through all currently connected networks to find a Wi-Fi transport.
+        val networks = connectivityManager.allNetworks
+        for (network in networks) {
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
+                return true
+            }
+        }
+
+        return false
     }
 }

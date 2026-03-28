@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
@@ -99,6 +100,7 @@ class SettingsActivity : ComponentActivity() {
     }
   }
 }
+
 @Composable
 private fun SettingsTopBar(
   collapseFraction: Float,
@@ -149,6 +151,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   val context = LocalContext.current
   val haptic = LocalHapticFeedback.current
   val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
+  val bypassPortalCheck by SettingsManager.bypassPortalCheck.collectAsStateWithLifecycle()
   val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
   val theme by SettingsManager.theme.collectAsStateWithLifecycle()
 
@@ -252,6 +255,27 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(3.dp))
             SettingsItem(
+              title = "Direct Login (Bypass Validation)",
+              subtitle = "Immediately send login request when connected",
+              leadingIcon = {
+                Icon(
+                  Icons.Rounded.FlashOn,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary
+                )
+              },
+              trailingContent = {
+                Switch(
+                  checked = bypassPortalCheck,
+                  onCheckedChange = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    SettingsManager.setBypassPortalCheck(it)
+                  })
+              },
+              onClick = { SettingsManager.setBypassPortalCheck(!bypassPortalCheck) }
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            SettingsItem(
               title = "Update Credentials",
               subtitle = "Change your registration number and password",
               leadingIcon = {
@@ -278,7 +302,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       // DISPLAY
       item {
         SettingsSection(title = "Display") {
-
           Column(modifier = Modifier.clip(shape = RoundedCornerShape(24.dp))) {
             SettingsItem(
               title = "Speed Units",
@@ -338,7 +361,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       // DATA MANAGEMENT
       item {
         SettingsSection(title = "Data Management") {
-
           Column(modifier = Modifier.clip(shape = RoundedCornerShape(24.dp))) {
             SettingsItem(
               title = "Clear Stats",
@@ -507,7 +529,6 @@ fun SettingsItem(
   }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSelectionBottomSheet(
@@ -574,7 +595,6 @@ fun SettingsSelectionBottomSheet(
   }
 }
 
-// Bottom Sheet for Actions (confirm dialogs)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsActionBottomSheet(

@@ -82,21 +82,16 @@ fun HomeScreen(
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
-    val autoLoginEnabled by SettingsManager.autoLogin.collectAsStateWithLifecycle()
 
     var showHowItWorksDialog by remember { mutableStateOf(false) }
-
-    // --- Status Text Visibility Logic ---
     var showStatusText by remember { mutableStateOf(false) }
-    // Trigger allows us to restart the timer even if showStatusText is already true
     var statusTimerTrigger by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     LaunchedEffect(statusTimerTrigger) {
         showStatusText = true
-        delay(5000) // Show for 5 seconds
+        delay(5000)
         showStatusText = false
     }
-    // ------------------------------------
 
     val view = LocalView.current
     val isDarkTheme = isSystemInDarkTheme()
@@ -112,13 +107,13 @@ fun HomeScreen(
         }
     }
 
+    // CRITICAL FIX: The button action is now based purely on the `isConnected` state
+    // rather than the `autoLoginEnabled` setting.
     val smartOnConnectClick = {
-        // Haptic Feedback
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        // Reset Timer for Status Text
         statusTimerTrigger = System.currentTimeMillis()
 
-        if (autoLoginEnabled) {
+        if (isConnected) {
             val intent = Intent(context, ForegroundService::class.java).apply {
                 action = ForegroundService.ACTION_TRIGGER_LOGOUT
             }
@@ -129,6 +124,7 @@ fun HomeScreen(
                 action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
             }
             context.startService(intent)
+            SettingsManager.setAutoLogin(true)
         }
     }
 
@@ -198,7 +194,6 @@ fun PortraitHomeScreen(
         )
 
         Column(modifier = Modifier.fillMaxSize()) {
-            // --- TOP 50% SECTION ---
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -211,8 +206,6 @@ fun PortraitHomeScreen(
                     onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) }
                 )
 
-                // Status Text placed directly below App Bar, before network stats
-                // Offset moves it up to reduce the visual gap between App Bar title and this text
                 StaggeredStatusText(
                     visible = showStatusText,
                     isConnected = isConnected,
@@ -220,12 +213,10 @@ fun PortraitHomeScreen(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                // NetworkStatusRow updated to remove pill
                 NetworkStatusRow(networkSpeed = networkSpeed)
                 Spacer(modifier = Modifier.height(60.dp))
             }
 
-            // --- BOTTOM 50% SECTION ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -249,7 +240,6 @@ fun PortraitHomeScreen(
                 SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit, false)
             }
         }
-        // --- CENTRAL OVERLAY ---
         PowerButtonOverlay(
             onConnectClick = onConnectClick,
             isConnected = isConnected,
@@ -283,7 +273,6 @@ fun LandscapeHomeScreen(
             .fillMaxSize()
             .safeDrawingPadding()
     ) {
-        // --- LEFT SECTION (CONTROLS) ---
         Box(
             modifier = Modifier
                 .weight(0.45f)
@@ -301,7 +290,6 @@ fun LandscapeHomeScreen(
                     onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) },
                 )
 
-                // Status Text placed below App Bar
                 StaggeredStatusText(
                     visible = showStatusText,
                     isConnected = isConnected,
@@ -323,7 +311,6 @@ fun LandscapeHomeScreen(
                 }
             }
         }
-        // --- RIGHT SECTION (GRAPH) ---
         Box(
             modifier = Modifier
                 .weight(0.55f)
@@ -351,7 +338,6 @@ fun StaggeredStatusText(
     val text = if (isConnected) "CONNECTED" else "DISCONNECTED"
     val color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected
 
-    // Increased height to 28.dp to prevent bottom clipping
     val containerHeight by animateDpAsState(
         targetValue = if (visible) 28.dp else 0.dp,
         animationSpec = if (visible) {
@@ -362,9 +348,6 @@ fun StaggeredStatusText(
         label = "containerHeight"
     )
 
-    // ClipToBounds ensures that as letters roll up/down outside the box, they aren't seen.
-    // Added fading mask to the top so the text doesn't look sharply cut when animating out.
-    // Fade confined to the top 20% to avoid dimming the text itself.
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -388,41 +371,40 @@ fun StaggeredStatusText(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(top = 4.dp) // Reduced inner padding to move text up within box
+                modifier = Modifier.padding(top = 4.dp)
             ) {
                 text.forEachIndexed { index, char ->
-                    // Individual Letter Animation State
-                    val offsetY = remember { Animatable(-20f) }
+                    key(index, char) {
+                        val offsetY = remember { Animatable(-20f) }
 
-                    LaunchedEffect(visible) {
-                        if (visible) {
-                            // Staggered Entry: Roll down with overshoot
-                            delay(index * 30L)
-                            offsetY.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    dampingRatio = 0.55f, // Higher bounce/overshoot
-                                    stiffness = Spring.StiffnessLow
+                        LaunchedEffect(visible) {
+                            if (visible) {
+                                delay(index * 30L)
+                                offsetY.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.55f,
+                                        stiffness = Spring.StiffnessLow
+                                    )
                                 )
-                            )
-                        } else {
-                            // Staggered Exit: Roll up
-                            delay(index * 20L)
-                            offsetY.animateTo(
-                                targetValue = -20f,
-                                animationSpec = tween(300)
-                            )
+                            } else {
+                                delay(index * 20L)
+                                offsetY.animateTo(
+                                    targetValue = -20f,
+                                    animationSpec = tween(300)
+                                )
+                            }
                         }
-                    }
 
-                    Text(
-                        text = char.toString(),
-                        color = color,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = SatoshiFontFamily,
-                        modifier = Modifier.offset(y = offsetY.value.dp)
-                    )
+                        Text(
+                            text = char.toString(),
+                            color = color,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = SatoshiFontFamily,
+                            modifier = Modifier.offset(y = offsetY.value.dp)
+                        )
+                    }
                 }
             }
         }
@@ -431,12 +413,11 @@ fun StaggeredStatusText(
 
 @Composable
 fun NetworkStatusRow(networkSpeed: String) {
-    // Modified: Removed the status pill, only kept the speed text
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp),
-        horizontalArrangement = Arrangement.Center, // Centered the speed
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -561,7 +542,6 @@ fun TopBarSection(
     var menuExpanded by remember { mutableStateOf(false) }
     CenterAlignedTopAppBar(
         title = {
-            // Reduced top padding from 5.dp to 0.dp
             Text(modifier = Modifier.padding(top = 0.dp), text = stringResource(R.string.app_name_uppercase), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontFamily = ModernizFontFamily, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
         },
         navigationIcon = {
@@ -595,17 +575,14 @@ fun HowItWorksDialog(onDismiss: () -> Unit) {
                 fontFamily = ModernizFontFamily,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
-                // Add padding to separate Title from Content
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         },
         text = {
-            // Add vertical padding to the column to spacing top and bottom relative to title/button
             Column(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 modifier = Modifier.padding(vertical = 8.dp)
             ) {
-                // Item 1
                 Row(verticalAlignment = Alignment.Top) {
                     Icon(
                         imageVector = Icons.Rounded.Wifi,
@@ -621,7 +598,6 @@ fun HowItWorksDialog(onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                // Item 2
                 Row(verticalAlignment = Alignment.Top) {
                     Icon(
                         imageVector = Icons.Rounded.BarChart,
@@ -637,7 +613,6 @@ fun HowItWorksDialog(onDismiss: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                // Item 3
                 Row(verticalAlignment = Alignment.Top) {
                     Icon(
                         imageVector = Icons.Rounded.PowerSettingsNew,
@@ -659,7 +634,7 @@ fun HowItWorksDialog(onDismiss: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp), // Add padding to bottom of dialog
+                    .padding(bottom = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Button(
@@ -669,14 +644,12 @@ fun HowItWorksDialog(onDismiss: () -> Unit) {
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
                     shape = RoundedCornerShape(50),
-                    // More inner padding for the "chip" look
                     contentPadding = PaddingValues(horizontal = 48.dp, vertical = 16.dp)
                 ) {
                     Text(
                         text = "Got It",
                         fontSize = 18.sp,
                         fontFamily = SatoshiFontFamily,
-                        // Removed FontWeight.Bold (Default is normal)
                     )
                 }
             }

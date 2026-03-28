@@ -190,15 +190,17 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 }
             }
         } else {
-            // --- Portrait Layout (Original Code) ---
+            // --- Portrait Layout ---
+            // CRITICAL FIX: Changed from .align(Alignment.Center) to .fillMaxSize() + Arrangement.Center
+            // to stop infinite height constraint crashes while allowing vertical scrolling.
             Column(
                 modifier = Modifier
-                    .align(Alignment.Center)
+                    .fillMaxSize()
                     .safeDrawingPadding()
-                    .offset(y = (-40).dp)
                     .padding(16.dp)
-                    .verticalScroll(rememberScrollState()), // Added scroll for small screens
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = stringResource(id = R.string.credentials_title),
@@ -270,9 +272,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     }
 }
 
-/**
- * A shared composable for the TextFields to reduce code duplication.
- */
 @Composable
 private fun CredentialFormInputs(
     regNo: String,

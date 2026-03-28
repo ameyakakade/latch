@@ -7,6 +7,7 @@ import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -31,7 +32,11 @@ class LatchWidgetUpdater(
 
     fun enqueueOneTimeUpdate(context: Context) {
       val request = OneTimeWorkRequestBuilder<LatchWidgetUpdater>().build()
-      WorkManager.getInstance(context).enqueue(request)
+      WorkManager.getInstance(context).enqueueUniqueWork(
+        "latch_widget_update_immediate",
+        ExistingWorkPolicy.REPLACE,
+        request
+      )
     }
 
     fun enqueuePeriodicUpdate(context: Context) {
@@ -75,7 +80,6 @@ class LatchWidgetUpdater(
         isLightTheme = !isDarkMode,
         useDynamicColors = useDynamic
       )
-      // For Success, Idle, or null, we rely on the session state.
       else -> {
         if (liveSession != null) {
           val connectedAt = liveSession.startTimeMillis
