@@ -89,8 +89,8 @@ fun StatsList(
         }
       }
       item {
-        val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-        val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBytes ?: 0L
+        val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBps ?: 0L
+        val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBps ?: 0L
         LiveSpeedSection(
           isLive = true,
           downloadBps = liveDownloadBps,

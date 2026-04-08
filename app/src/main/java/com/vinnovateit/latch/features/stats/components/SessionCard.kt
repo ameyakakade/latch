@@ -258,8 +258,8 @@ private fun SessionRateGraph(
                         it.timestamp in visibleStartTime..visibleEndTime
                     }
 
-                    val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 0L
-                    val maxTx = visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 0L
+                    val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBps } ?: 0L
+                    val maxTx = visiblePoints.maxOfOrNull { it.usage.txBps } ?: 0L
                     maxSpeed = if (visiblePoints.isEmpty()) 1L else max(maxRx, maxTx)
                     onMaxSpeedUpdate(maxSpeed, maxRx >= maxTx)
                 }
