@@ -101,8 +101,13 @@ object AutoLoginManager {
                     logDebug("Received 200 OK. Reading response body...")
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
                     logDebug("Response body length: ${response.length} chars")
-
-                    val isSuccess = "Access Granted" in response || "You have successfully connected" in response || "already logged in" in response.lowercase()
+                    logDebug("Response body content: $response")
+                    val responseLower = response.lowercase()
+                    val isSuccess = "access granted" in responseLower ||
+                            "you have successfully connected" in responseLower ||
+                            "already logged in" in responseLower ||
+                            "http-equiv=\"refresh\"" in responseLower ||
+                            "http://example.com" in responseLower
                     logDebug("Login success evaluation string match: $isSuccess")
 
                     if (isSuccess) LoginResult.Success else LoginResult.Failure
