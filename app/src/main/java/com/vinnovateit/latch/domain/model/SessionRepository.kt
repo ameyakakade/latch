@@ -132,8 +132,8 @@ object SessionRepository {
     val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
     val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
     val totalDataUsed = totalRxBytes + totalTxBytes
-    val maxRxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.rxBytes } ?: 0L
-    val maxTxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.txBytes } ?: 0L
+    val maxRxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.rxBps } ?: 0L
+    val maxTxBps = sessionToFinalize.liveData.maxOfOrNull { it.usage.txBps } ?: 0L
 
     if (totalDataUsed < 1024) {
       triggerWidgetUpdate()

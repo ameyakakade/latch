@@ -23,7 +23,7 @@ object TrafficStatsLogger {
   // These track the bytes at the last polling interval to calculate the delta.
   private var lastTimestampRxBytes: Long = 0
   private var lastTimestampTxBytes: Long = 0
-
+  private var lastPollTimeMs: Long = 0 // Tracks exact time
   // This flow emits the data usage (delta) for each interval.
   private val _dataUsageFlow = MutableStateFlow(DataUsage(0, 0))
   val dataUsageFlow = _dataUsageFlow.asStateFlow()
@@ -45,21 +45,31 @@ object TrafficStatsLogger {
 
     lastTimestampRxBytes = startRxBytes
     lastTimestampTxBytes = startTxBytes
-
+    lastPollTimeMs = System.currentTimeMillis() // Initialize time
     loggingJob = loggerScope.launch {
       while (true) {
         delay(POLLING_INTERVAL_MS)
         val currentRxBytes = TrafficStats.getTotalRxBytes()
         val currentTxBytes = TrafficStats.getTotalTxBytes()
-
+        val currentTimeMs = System.currentTimeMillis()
         val intervalRx = (currentRxBytes - lastTimestampRxBytes).coerceAtLeast(0)
         val intervalTx = (currentTxBytes - lastTimestampTxBytes).coerceAtLeast(0)
-
-        _dataUsageFlow.value = DataUsage(intervalRx, intervalTx)
+        // Calculate exact elapsed time (prevent division by zero)
+        val timeDeltaMs = (currentTimeMs - lastPollTimeMs).coerceAtLeast(1)
+        // Calculate true Bytes Per Second
+        val normalizedRxBps = (intervalRx * 1000L) / timeDeltaMs
+        val normalizedTxBps = (intervalTx * 1000L) / timeDeltaMs
+        _dataUsageFlow.value = DataUsage(
+          rxBytes = intervalRx,
+          txBytes = intervalTx,
+          rxBps = normalizedRxBps,
+          txBps = normalizedTxBps
+        )
 
         // Update the baseline for the next interval.
         lastTimestampRxBytes = currentRxBytes
         lastTimestampTxBytes = currentTxBytes
+        lastPollTimeMs = currentTimeMs // Update time
       }
     }
   }
