@@ -141,7 +141,8 @@ class ForegroundService : Service() {
         manager.notify(notificationId, notification)
     }
 
-    private fun checkNetworkAndAct(network: Network, isRevalidating: Boolean) {
+    // Note: I added a default parameter `retryCount: Int = 0` to the function signature
+    private fun checkNetworkAndAct(network: Network, isRevalidating: Boolean, retryCount: Int = 0) {
         serviceScope.launch(Dispatchers.IO) {
             ConnectionStatusManager.postStatus(
                 ConnectionStatus.Companion.Connecting(getString(R.string.status_checking_internet))
@@ -158,7 +159,11 @@ class ForegroundService : Service() {
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
 
             if (internetStatus == 204) {
-                if (AutoLoginManager.isTargetCaptivePortal(network)) {
+                // FIX #1: If we just successfully logged in (isRevalidating), we KNOW it's the target network.
+                // No need to check isTargetCaptivePortal again, which fails when the internet is already open!
+                val isTarget = isRevalidating || AutoLoginManager.isTargetCaptivePortal(network)
+
+                if (isTarget) {
                     Log.d("ForegroundService", "Valid WiFi with internet. Starting session.")
                     connectivityManager.reportNetworkConnectivity(network, true)
                     ConnectionStatusManager.postStatus(ConnectionStatus.Success)
@@ -174,6 +179,21 @@ class ForegroundService : Service() {
                     ConnectionStatusManager.postStatus(
                         ConnectionStatus.Failed(getString(R.string.status_unsupported_network))
                     )
+                }
+                return@launch
+            }
+
+            // --- IF INTERNET IS NOT 204 YET ---
+
+            // FIX #2: If we just logged in, give the portal 2 seconds to open the gates instead of infinite looping.
+            if (isRevalidating) {
+                if (retryCount < 3) {
+                    Log.d("ForegroundService", "Waiting for network gates to open... (Attempt ${retryCount + 1})")
+                    delay(2000) // Wait 2 seconds
+                    checkNetworkAndAct(network, true, retryCount + 1)
+                } else {
+                    Log.w("ForegroundService", "Network never granted internet after successful login.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Network timeout after login"))
                 }
                 return@launch
             }
