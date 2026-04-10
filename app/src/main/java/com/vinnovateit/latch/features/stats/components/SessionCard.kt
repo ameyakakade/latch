@@ -60,10 +60,6 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
     var lastInteraction by remember { mutableStateOf(0L) }
     var showOverlay by remember { mutableStateOf(true) }
 
-    // CRITICAL FIX: Wrapped in state containers to allow deferred reads via lambdas
-    val visibleMaxSpeed = remember { mutableLongStateOf(0L) }
-    val visibleMaxSpeedIsDownload = remember { mutableStateOf(true) }
-
     LaunchedEffect(lastInteraction) {
         if (lastInteraction != 0L) {
             delay(3000)
@@ -87,23 +83,12 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
                 onUserInteraction = { timestamp ->
                     lastInteraction = timestamp
                     showOverlay = false
-                },
-                onMaxSpeedUpdate = { maxSpeed, isDl ->
-                    visibleMaxSpeed.longValue = maxSpeed
-                    visibleMaxSpeedIsDownload.value = isDl
                 }
             )
 
             SessionDetailsOverlay(
                 modifier = Modifier.graphicsLayer { alpha = overlayAlpha },
                 session = session,
-            )
-
-            MaxSpeedTag(
-                modifier = Modifier.align(Alignment.TopEnd).padding(top = 3.dp),
-                maxSpeedProvider = { visibleMaxSpeed.longValue },
-                isDownloadProvider = { visibleMaxSpeedIsDownload.value },
-                speedUnit = speedUnit
             )
         }
     }
@@ -171,7 +156,6 @@ private fun SessionRateGraph(
     rateHistory: List<LiveDataPoint>,
     overlayAlpha: Float,
     onUserInteraction: (Long) -> Unit,
-    onMaxSpeedUpdate: (Long, Boolean) -> Unit
 ) {
     val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
         rateHistory.size.toFloat() / POINTS_IN_30_SECONDS
@@ -261,7 +245,6 @@ private fun SessionRateGraph(
                     val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBps } ?: 0L
                     val maxTx = visiblePoints.maxOfOrNull { it.usage.txBps } ?: 0L
                     maxSpeed = if (visiblePoints.isEmpty()) 1L else max(maxRx, maxTx)
-                    onMaxSpeedUpdate(maxSpeed, maxRx >= maxTx)
                 }
 
                 val animatedMaxSpeed by animateFloatAsState(
@@ -349,21 +332,6 @@ private fun SessionRateGraph(
     }
 }
 
-// CRITICAL FIX: Changed parameters to lambdas to defer reads
-@Composable
-private fun MaxSpeedTag(
-    modifier: Modifier = Modifier,
-    maxSpeedProvider: () -> Long,
-    isDownloadProvider: () -> Boolean,
-    speedUnit: String
-) {
-    val maxSpeed = maxSpeedProvider()
-    if (maxSpeed > 0) {
-        val isDownload = isDownloadProvider()
-        val (v, u) = formatBitsPerSecond(maxSpeed, speedUnit)
-        Tag(text = "MAX ${v}${u}", color = if (isDownload) ColorGraphDownload else ColorGraphUpload, modifier = modifier.padding(end = 16.dp, top = 8.dp))
-    }
-}
 
 @Composable
 fun DataUsageCircle(
