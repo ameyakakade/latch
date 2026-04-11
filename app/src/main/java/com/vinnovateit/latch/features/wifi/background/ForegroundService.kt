@@ -2,72 +2,102 @@ package com.vinnovateit.latch.features.wifi.background
 
 import android.app.*
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
 import com.vinnovateit.latch.domain.model.SessionRepository
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.wifi.detector.CaptivePortalDetector
-import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
 import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import com.vinnovateit.latch.features.wifi.manager.AutoLoginManager
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
 import com.vinnovateit.latch.features.wifi.manager.LoginResult
-import dagger.hilt.android.internal.Contexts.getApplication
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class ForegroundService : Service() {
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private lateinit var connectivityManager: ConnectivityManager
     private var healthCheckJob: Job? = null
+    private val notificationId = 1
+    private val channelId = "WIFI_LOGIN_CHANNEL"
+
+    private var currentWifiNetwork: Network? = null
 
     companion object {
         const val ACTION_TRIGGER_LOGIN_CHECK = "com.vinnovateit.latch.ACTION_TRIGGER_LOGIN_CHECK"
-        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT" // ADD
+        const val ACTION_TRIGGER_LOGOUT = "com.vinnovateit.latch.ACTION_TRIGGER_LOGOUT"
     }
-
 
     override fun onCreate() {
         super.onCreate()
+
         Log.d("ForegroundService", "Service created")
         connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        startForeground(1, createNotification())
+        SettingsManager.initialize(applicationContext)
+
+        try {
+            val notification = createNotificationBuilder("Latch is Running", getString(R.string.notification_text)).build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    notificationId,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                )
+            } else {
+                startForeground(notificationId, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("ForegroundService", "Foreground service start not allowed. System time limit exhausted.", e)
+            stopSelf()
+            return
+        }
+
+        serviceScope.launch {
+            delay(5L * 60L * 60L * 1000L + 45L * 60L * 1000L) // 5 hours 45 mins
+            Log.w("ForegroundService", "Proactively stopping service to avoid OS FGS time limit.")
+            stopSelf()
+        }
+
         registerNetworkCallback()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        if (intent == null) return START_STICKY
+
+        when (intent.action) {
             ACTION_TRIGGER_LOGIN_CHECK -> {
                 Log.d("ForegroundService", "Manual login check triggered via intent.")
-                ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_initializing)))
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Companion.Connecting(getString(R.string.status_initializing))
+                )
 
                 if (!WiFiStateDetector.isWiFiEnabled(this)) {
                     Log.w("ForegroundService", "Wi-Fi is disabled, aborting manual check.")
-                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_wifi_off)))
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_wifi_off)))
                     return START_STICKY
                 }
 
-                if (!WiFiConnectionDetector.isConnectedToWiFi(this)) {
-                    Log.w("ForegroundService", "Wi-Fi is enabled but not connected to a network.")
-                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_not_on_wifi)))
-                    return START_STICKY
-                }
+                val targetWifiNetwork = currentWifiNetwork
 
-                connectivityManager.activeNetwork?.let { activeNetwork ->
-                    val caps = connectivityManager.getNetworkCapabilities(activeNetwork)
-                    if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
-                        checkNetworkAndAct(activeNetwork)
-                    } else {
-                        Log.w("ForegroundService", "Active network is not Wi-Fi. Aborting check.")
-                        ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_disconnected_message)))
-                    }
+                if (targetWifiNetwork != null) {
+                    checkNetworkAndAct(targetWifiNetwork, false)
+                } else {
+                    Log.w("ForegroundService", "Could not find a connected Wi-Fi network. Aborting check.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_not_on_wifi)))
                 }
             }
             ACTION_TRIGGER_LOGOUT -> {
@@ -78,7 +108,6 @@ class ForegroundService : Service() {
         return START_STICKY
     }
 
-
     override fun onDestroy() {
         super.onDestroy()
         Log.d("ForegroundService", "Service destroyed")
@@ -88,72 +117,108 @@ class ForegroundService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun createNotification(): Notification {
-        val notificationChannelId = "WIFI_LOGIN_CHANNEL"
-        val channelName = getApplication(applicationContext).getString(R.string.notification_channel_name)
+    private fun createNotificationBuilder(title: String, text: String): NotificationCompat.Builder {
+        val channelName = getString(R.string.notification_channel_name)
 
         val chan = NotificationChannel(
-            notificationChannelId,
+            channelId,
             channelName,
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_DEFAULT
         )
         val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(chan)
 
-        return NotificationCompat.Builder(this, notificationChannelId)
-            .setContentTitle(getApplication(applicationContext).getString(R.string.notification_title))
-            .setContentText(getApplication(applicationContext).getString(R.string.notification_text))
+        return NotificationCompat.Builder(this, channelId)
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_latch)
-            .build()
+            .setOnlyAlertOnce(false)
     }
 
-    private fun checkNetworkAndAct(network: Network) {
+    private fun updateNotification(title: String, text: String) {
+        val notification = createNotificationBuilder(title, text).build()
+        val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(notificationId, notification)
+    }
+
+    // Note: I added a default parameter `retryCount: Int = 0` to the function signature
+    private fun checkNetworkAndAct(network: Network, isRevalidating: Boolean, retryCount: Int = 0) {
         serviceScope.launch(Dispatchers.IO) {
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
-                getApplication(applicationContext).getString(R.string.status_checking_internet)
-            ))
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(getString(R.string.status_checking_internet))
+            )
+
+            val bypassPortal = SettingsManager.bypassPortalCheck.value
+
+            if (bypassPortal && !isRevalidating) {
+                Log.d("ForegroundService", "Bypass enabled: Skipping portal validation, proceeding directly to login.")
+                handleCaptivePortal(network)
+                return@launch
+            }
 
             val internetStatus = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
 
             if (internetStatus == 204) {
-                // vit wifi check
-                if (AutoLoginManager.isTargetCaptivePortal(network)) {
-                    Log.d("ForegroundService", "Valid VIT WiFi with internet. Starting session.")
+                // FIX #1: If we just successfully logged in (isRevalidating), we KNOW it's the target network.
+                // No need to check isTargetCaptivePortal again, which fails when the internet is already open!
+                val isTarget = isRevalidating || AutoLoginManager.isTargetCaptivePortal(network)
+
+                if (isTarget) {
+                    Log.d("ForegroundService", "Valid WiFi with internet. Starting session.")
                     connectivityManager.reportNetworkConnectivity(network, true)
                     ConnectionStatusManager.postStatus(ConnectionStatus.Success)
                     SessionRepository.startSession(network)
+
+                    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+                    val timeString = timeFormat.format(Date())
+                    updateNotification("Latched", "Connected at $timeString")
+
                     startHealthCheck(network)
                 } else {
-                    Log.d("ForegroundService", "Non-VIT WiFi with internet. Ignoring.")
+                    Log.d("ForegroundService", "Non-target WiFi with internet. Ignoring.")
                     ConnectionStatusManager.postStatus(
-                        ConnectionStatus.Failed(getApplication(applicationContext).getString(
-                            R.string.status_unsupported_network
-                        ))
+                        ConnectionStatus.Failed(getString(R.string.status_unsupported_network))
                     )
                 }
                 return@launch
             }
 
-            // Fallback: captive portal flow
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(
-                getApplication(applicationContext).getString(R.string.status_verifying_network)
-            ))
+            // --- IF INTERNET IS NOT 204 YET ---
+
+            // FIX #2: If we just logged in, give the portal 2 seconds to open the gates instead of infinite looping.
+            if (isRevalidating) {
+                if (retryCount < 3) {
+                    Log.d("ForegroundService", "Waiting for network gates to open... (Attempt ${retryCount + 1})")
+                    delay(2000) // Wait 2 seconds
+                    checkNetworkAndAct(network, true, retryCount + 1)
+                } else {
+                    Log.w("ForegroundService", "Network never granted internet after successful login.")
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed("Network timeout after login"))
+                }
+                return@launch
+            }
+
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(getString(R.string.status_verifying_network))
+            )
+
             if (AutoLoginManager.isTargetCaptivePortal(network)) {
-                Log.d("ForegroundService", "Target captive portal confirmed (VIT).")
+                Log.d("ForegroundService", "Target captive portal confirmed via HTTP ping.")
                 handleCaptivePortal(network)
             } else {
-                Log.d("ForegroundService", "Non-VIT captive portal. Ignoring.")
+                Log.d("ForegroundService", "Non-target captive portal. Ignoring.")
                 ConnectionStatusManager.postStatus(ConnectionStatus.Failed(
-                    getApplication(applicationContext).getString(R.string.status_unsupported_network)
+                    getString(R.string.status_unsupported_network)
                 ))
             }
         }
     }
 
-
     private fun handleCaptivePortal(network: Network) {
         serviceScope.launch(Dispatchers.IO) {
-            ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_authenticating)))
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Companion.Connecting(getString(R.string.status_authenticating))
+            )
             connectivityManager.bindProcessToNetwork(network)
             try {
                 val user = StoredCredentials.getUserId(applicationContext)
@@ -162,17 +227,17 @@ class ForegroundService : Service() {
                     when (AutoLoginManager.attemptLogin(user, pass, network)) {
                         is LoginResult.Success -> {
                             Log.d("ForegroundService", "Login successful, re-validating network.")
-                            checkNetworkAndAct(network)
+                            checkNetworkAndAct(network, true)
                         }
                         is LoginResult.UnsupportedNetwork -> {
-                            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_unsupported_network)))
+                            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_unsupported_network)))
                         }
                         is LoginResult.Failure -> {
-                            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_login_failed)))
+                            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_login_failed)))
                         }
                     }
                 } else {
-                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_login_failed)))
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_login_failed)))
                 }
             } finally {
                 connectivityManager.bindProcessToNetwork(null)
@@ -181,23 +246,24 @@ class ForegroundService : Service() {
     }
 
     private fun logoutAndStop() {
-        ConnectionStatusManager.postStatus(ConnectionStatus.Connecting(getApplication(applicationContext).getString(R.string.status_logging_out)))
+        ConnectionStatusManager.postStatus(
+            ConnectionStatus.Companion.Connecting(getString(R.string.status_logging_out))
+        )
         healthCheckJob?.cancel()
 
-        val network = connectivityManager.activeNetwork
-        if (network != null) {
+        val network = currentWifiNetwork ?: connectivityManager.activeNetwork
 
+        if (network != null) {
             connectivityManager.bindProcessToNetwork(network)
             try {
                 val ok = AutoLoginManager.attemptLogout()
                 if (ok) {
                     Log.d("ForegroundService", "Logout success.")
-
                     SessionRepository.stopSession()
-                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_disconnected_message)))
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_disconnected_message)))
                 } else {
                     Log.w("ForegroundService", "Logout failed.")
-                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_logout_failed)))
+                    ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_logout_failed)))
                 }
             } finally {
                 connectivityManager.bindProcessToNetwork(null)
@@ -205,13 +271,11 @@ class ForegroundService : Service() {
         } else {
             Log.w("ForegroundService", "No active network during logout.")
             SessionRepository.stopSession()
-            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getApplication(applicationContext).getString(R.string.status_disconnected_message)))
+            ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_disconnected_message)))
         }
 
-        // kill service
         stopSelf()
     }
-
 
     private fun startHealthCheck(network: Network) {
         healthCheckJob?.cancel()
@@ -222,7 +286,7 @@ class ForegroundService : Service() {
                 val status = CaptivePortalDetector.checkPortalStatus(applicationContext, network)
                 if (status != 204) {
                     Log.w("ForegroundService", "Health check failed (status: $status). Session may have expired. Triggering re-login.")
-                    checkNetworkAndAct(network)
+                    checkNetworkAndAct(network, false)
                 } else {
                     Log.d("ForegroundService", "Health check passed.")
                 }
@@ -238,14 +302,20 @@ class ForegroundService : Service() {
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 super.onAvailable(network)
+                currentWifiNetwork = network
+
                 if (!WiFiStateDetector.isWiFiEnabled(this@ForegroundService)) {
                     return
                 }
-                checkNetworkAndAct(network)
+                checkNetworkAndAct(network, false)
             }
 
             override fun onLost(network: Network) {
                 super.onLost(network)
+                if (currentWifiNetwork == network) {
+                    currentWifiNetwork = null
+                }
+
                 Log.d("ForegroundService", "Network lost: $network")
                 healthCheckJob?.cancel()
                 SessionRepository.stopSession()
