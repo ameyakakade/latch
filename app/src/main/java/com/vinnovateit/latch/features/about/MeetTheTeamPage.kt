@@ -201,7 +201,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     }
                 }
                 ContributingSection()
-                // Added extra space at the end
                 Spacer(modifier = Modifier.height(100.dp))
             }
 
@@ -224,7 +223,6 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                     )
             )
 
-            // Fixed Back Button overlaid on top of everything
             TooltipHint(tooltipText = "Back") {
                 FilledIconButton(
                     modifier = Modifier

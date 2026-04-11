@@ -362,17 +362,15 @@ private fun Bar(
             }
         }
 
-        // Increased padding between bar and text
         Spacer(Modifier.height(12.dp))
 
-        // Filled Circle Background for Letter
         val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
         val textColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
 
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp) // Fixed size circle
+                .size(36.dp)
                 .clip(CircleShape)
                 .background(backgroundColor)
         ) {
