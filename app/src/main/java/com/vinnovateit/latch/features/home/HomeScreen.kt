@@ -107,8 +107,6 @@ fun HomeScreen(
         }
     }
 
-    // CRITICAL FIX: The button action is now based purely on the `isConnected` state
-    // rather than the `autoLoginEnabled` setting.
     val smartOnConnectClick = {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         statusTimerTrigger = System.currentTimeMillis()

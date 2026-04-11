@@ -52,7 +52,6 @@ fun StatsList(
   speedUnits: String,
   showAllSessions: Boolean,
   onToggleShowAll: () -> Unit,
-  // REMOVED: onDownloadReport parameter as it's now in the TopAppBar
   addSpacer: Boolean = false,
   contentPadding: PaddingValues = PaddingValues(0.dp),
   statsViewModel: StatsViewModel
@@ -136,7 +135,6 @@ fun StatsList(
           )
         }
       }
-      // Added key for stable list animations
       itemsIndexed(itemsToDisplay, key = { _, session -> session.startTimestamp }) { index, session ->
         val cornerRadius = 24.dp
         val listSize = itemsToDisplay.size

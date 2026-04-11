@@ -65,7 +65,6 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             return
         }
 
-        // REMOVED: UiNotifier.showToast calls to keep the UI clean as requested.
 
         Log.d("WiFiStatusViewModel", "Delegating network check to ForegroundService.")
         val serviceIntent = Intent(getApplication(), ForegroundService::class.java).apply {
