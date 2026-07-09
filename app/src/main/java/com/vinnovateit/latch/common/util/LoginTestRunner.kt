@@ -42,11 +42,11 @@ object LoginTestRunner {
     }
 
     // Bind the process to ensure the login request goes over the correct network
-
+    cm.bindProcessToNetwork(activeNetwork)
     val success = try {
       AutoLoginManager.attemptLogin(userId, password, activeNetwork)
     } finally {
-
+      cm.bindProcessToNetwork(null) // Always unbind
     }
 
     if (success == LoginResult.Success) {
