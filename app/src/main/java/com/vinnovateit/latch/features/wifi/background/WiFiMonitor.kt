@@ -27,7 +27,7 @@ object WiFiMonitor {
                     val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
                     // Bind process to WiFi
-                    cm.bindProcessToNetwork(network)
+
                     Log.d("WiFiMonitor", "🔗 Bound process to VIT WiFi network for captive portal login.")
 
                     try {
@@ -39,7 +39,7 @@ object WiFiMonitor {
                         }
                     } finally {
                         // Unbind AFTER login attempt
-                        cm.bindProcessToNetwork(null)
+
                         Log.d("WiFiMonitor", "🔗 Unbound process from WiFi network.")
                     }
                 }
