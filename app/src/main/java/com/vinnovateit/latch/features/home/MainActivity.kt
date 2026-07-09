@@ -10,16 +10,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
-import com.vinnovateit.latch.common.util.formatBitsPerSecond
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
-import com.vinnovateit.latch.features.stats.StatsViewModel
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import com.vinnovateit.latch.features.wifi.manager.WiFiStatusViewModel
 import com.vinnovateit.latch.ui.theme.LatchTheme
@@ -30,12 +31,15 @@ class MainActivity : ComponentActivity() {
     private lateinit var appUpdateManager: AppUpdateManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         SettingsManager.initialize(this)
 
-        appUpdateManager = AppUpdateManagerFactory.create(this)
-        checkForAppUpdate()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            appUpdateManager = AppUpdateManagerFactory.create(this@MainActivity)
+            checkForAppUpdate()
+        }
 
         if (SettingsManager.autoLogin.value) {
             val serviceIntent = Intent(this, ForegroundService::class.java).apply {
@@ -44,33 +48,24 @@ class MainActivity : ComponentActivity() {
             startService(serviceIntent)
         }
 
+        val prefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        val hasSeenOnboarding = prefs.getBoolean("hasSeenOnboarding", false)
+
+        val startDest = when {
+            !hasSeenOnboarding -> com.vinnovateit.latch.navigation.LatchRoutes.ONBOARDING
+            com.vinnovateit.latch.data.StoredCredentials.credentialsExist(this) -> com.vinnovateit.latch.navigation.LatchRoutes.HOME
+            else -> com.vinnovateit.latch.navigation.LatchRoutes.credentials(editMode = false)
+        }
+
         setContent {
             LatchTheme {
-                val statsViewModel: StatsViewModel = viewModel()
-                val isConnected by wifiStatusViewModel.isConnected.collectAsStateWithLifecycle()
-                val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
-                val connectionStatus by wifiStatusViewModel.connectionStatus.collectAsStateWithLifecycle()
-                val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
-
-                val currentSpeedBytesPerSecond =
-                    liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-                val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond, speedUnits)
-
-                val networkSpeedString = if (isConnected && liveStatus != null) {
-                    "${formattedSpeed.first} ${formattedSpeed.second}"
-                } else ""
-
-                val sessionForHomeScreen = if (isConnected && liveStatus != null) {
-                    statsViewModel.sessionToShow.collectAsStateWithLifecycle().value
-                } else null
-
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    HomeScreen(
-                        isConnected = isConnected,
-                        networkSpeed = networkSpeedString,
-                        session = sessionForHomeScreen,
-                        connectionStatus = connectionStatus,
-                        speedUnits
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.background
+                ) {
+                    com.vinnovateit.latch.navigation.LatchNavGraph(
+                        wifiStatusViewModel = wifiStatusViewModel,
+                        startDestination = startDest
                     )
                 }
             }

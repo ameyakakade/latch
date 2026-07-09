@@ -20,6 +20,7 @@ object SettingsManager {
   private const val KEY_SPEED_UNITS = "speed_units"
   private const val KEY_THEME = "theme"
   private const val KEY_USE_DYNAMIC_COLORS = "use_dynamic_colors"
+  private const val KEY_ACCENT_COLOR = "accent_color"
   private const val ACTION_SETTINGS_CHANGED = "com.vinnovateit.latch.ACTION_SETTINGS_CHANGED"
 
   // Default Values
@@ -28,6 +29,7 @@ object SettingsManager {
   private const val DEFAULT_SPEED_UNITS = "bps"
   private const val DEFAULT_THEME = "System Default"
   private const val DEFAULT_USE_DYNAMIC_COLORS = false
+  private const val DEFAULT_ACCENT_COLOR = "Red"
 
   // StateFlows to observe changes
   private val _autoLogin = MutableStateFlow(DEFAULT_AUTO_LOGIN)
@@ -45,6 +47,9 @@ object SettingsManager {
   private val _useDynamicColors = MutableStateFlow(DEFAULT_USE_DYNAMIC_COLORS)
   val useDynamicColors: StateFlow<Boolean> = _useDynamicColors
 
+  private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
+  val accentColor: StateFlow<String> = _accentColor
+
   fun initialize(context: Context) {
     appContext = context.applicationContext
     sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -57,6 +62,7 @@ object SettingsManager {
     _speedUnits.value = sharedPreferences.getString(KEY_SPEED_UNITS, DEFAULT_SPEED_UNITS) ?: DEFAULT_SPEED_UNITS
     _theme.value = sharedPreferences.getString(KEY_THEME, DEFAULT_THEME) ?: DEFAULT_THEME
     _useDynamicColors.value = sharedPreferences.getBoolean(KEY_USE_DYNAMIC_COLORS, DEFAULT_USE_DYNAMIC_COLORS)
+    _accentColor.value = sharedPreferences.getString(KEY_ACCENT_COLOR, DEFAULT_ACCENT_COLOR) ?: DEFAULT_ACCENT_COLOR
   }
 
   fun setAutoLogin(enabled: Boolean) {
@@ -92,6 +98,12 @@ object SettingsManager {
   fun setUseDynamicColors(enabled: Boolean) {
     _useDynamicColors.value = enabled
     sharedPreferences.edit { putBoolean(KEY_USE_DYNAMIC_COLORS, enabled) }
+    sendSettingsChangedBroadcast()
+  }
+
+  fun setAccentColor(color: String) {
+    _accentColor.value = color
+    sharedPreferences.edit { putString(KEY_ACCENT_COLOR, color) }
     sendSettingsChangedBroadcast()
   }
 

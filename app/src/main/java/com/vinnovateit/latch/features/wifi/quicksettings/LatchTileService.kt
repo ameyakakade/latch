@@ -103,7 +103,7 @@ class LatchTileService : TileService() {
                 when {
                     isConnected && !isProcessing -> {
                         qsTile.state = Tile.STATE_ACTIVE
-                        qsTile.label = "Connected"
+                        qsTile.label = "Latched"
                     }
                     !isConnected && !isProcessing -> {
                         qsTile.state = Tile.STATE_INACTIVE
@@ -115,7 +115,7 @@ class LatchTileService : TileService() {
                     }
                     isProcessing && !isConnected -> {
                         qsTile.state = Tile.STATE_INACTIVE
-                        qsTile.label = "Connecting..."
+                        qsTile.label = "Latching..."
                     }
                 }
 

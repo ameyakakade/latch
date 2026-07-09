@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import com.vinnovateit.latch.data.LatchDatabase
 import com.vinnovateit.latch.data.Session
 import com.vinnovateit.latch.features.wifi.manager.TrafficStatsLogger
-import com.vinnovateit.latch.features.wifi.manager.UiNotifier
 import com.vinnovateit.latch.features.wifi.quicksettings.LatchTileService
 import com.vinnovateit.latch.features.wifi.widget.LatchWidgetUpdater
 import kotlinx.coroutines.flow.map
@@ -127,8 +126,6 @@ object SessionRepository {
     connectivityManager.bindProcessToNetwork(null)
     _liveStatus.value = null
 
-    UiNotifier.showToast(applicationContext!!, "Disconnected")
-
     val totalRxBytes = sessionToFinalize.liveData.sumOf { it.usage.rxBytes }
     val totalTxBytes = sessionToFinalize.liveData.sumOf { it.usage.txBytes }
     val totalDataUsed = totalRxBytes + totalTxBytes
@@ -163,7 +160,6 @@ object SessionRepository {
   fun clearHistory() {
     repoScope.launch {
       statsDao.clearAllSessions()
-      UiNotifier.showToast(applicationContext!!, "Stats Cleared!")
     }
   }
 
@@ -209,7 +205,6 @@ object SessionRepository {
       }
 
       sessions.forEach { addSessionToDb(it) }
-      applicationContext?.let { UiNotifier.showToast(it, "Added dummy data for past 7 days") }
     }
   }
 

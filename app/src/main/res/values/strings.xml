@@ -20,7 +20,7 @@
     <string name="home_initial_status">Press the button to run auto-login test.</string>
     <string name="home_background_pattern_content_description">Background Pattern</string>
     <string name="home_change_credentials">Change Credentials</string>
-    <string name="home_status_connected">CONNECTED</string>
+    <string name="home_status_connected">LATCHED</string>
     <string name="home_status_disconnected">DISCONNECTED</string>
     <string name="home_network_statistics">STATS</string>
     <string name="home_go_to_statistics">Go to Statistics</string>
@@ -59,11 +59,11 @@
     <string name="widget_disconnect">Disconnect</string>
     <string name="widget_login_required">Login Required</string>
     <string name="widget_loading">Loading…</string>
-    <string name="widget_status_connected">Connected</string>
+    <string name="widget_status_connected">Latched</string>
     <string name="widget_duration_just_now">Just Now</string>
 
-    <string name="status_not_connected">Not Connected</string>
-    <string name="status_connected">Connected</string>
+    <string name="status_not_connected">Not Latched</string>
+    <string name="status_connected">Latched</string>
     <string name="status_wifi_off">Wi-Fi is turned off.</string>
     <string name="status_not_on_wifi">Not connected to a Wi-Fi network.</string>
     <string name="status_revalidating">Re-validating connection…</string>

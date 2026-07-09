@@ -12,10 +12,12 @@ import androidx.core.util.size
 enum class DisplayMode { TOTAL, DOWNLOAD, UPLOAD }
 
 data class GraphData(
-    val downloadPath: Path,
-    val uploadPath: Path,
-    val lineDownloadPath: Path,
-    val lineUploadPath: Path,
+    val totalPath: Path,
+    val lineTotalPath: Path,
+    val rxPath: Path = Path(),
+    val lineRxPath: Path = Path(),
+    val txPath: Path = Path(),
+    val lineTxPath: Path = Path(),
     val labels: List<Pair<String, Float>>,
     private val startTime: Long,
     private val duration: Long,
@@ -87,7 +89,7 @@ fun createGraphPaths(
     graphHeightScale: Float = 0.6f
 ): GraphData {
     if (history.size < 2) {
-        return GraphData(Path(), Path(), Path(), Path(), emptyList(), 0, 0, 0f, 0f, 0f, 0f)
+        return GraphData(Path(), Path(), Path(), Path(), Path(), Path(), emptyList(), 0, 0, 0f, 0f, 0f, 0f)
     }
 
     val effectiveMaxRate = maxRate.coerceAtLeast(1f)
@@ -99,44 +101,56 @@ fun createGraphPaths(
         return height - (usageFraction * height * graphHeightScale)
     }
 
-    val fillDL = Path().apply { moveTo(0f, height) }
-    val fillUL = Path().apply { moveTo(0f, height) }
-    val lineDL = Path()
-    val lineUL = Path()
+    val fillTotal = Path().apply { moveTo(0f, height) }
+    val lineTotal = Path()
+    val fillRx = Path().apply { moveTo(0f, height) }
+    val lineRx = Path()
+    val fillTx = Path().apply { moveTo(0f, height) }
+    val lineTx = Path()
     val sparseHistory = SparseArray<LiveDataPoint>(history.size)
     history.forEachIndexed { i, p -> sparseHistory.put(i, p) }
     for (i in 0 until sparseHistory.size) {
         val p = sparseHistory.get(i)
         val xp = x(p.timestamp)
-        val yDL = y(p.usage.rxBps)
-        val yUL = y(p.usage.txBps)
+        val yTotal = y(p.usage.rxBps + p.usage.txBps)
+        val yRx = y(p.usage.rxBps)
+        val yTx = y(p.usage.txBps)
 
         if (i == 0) {
-            lineDL.moveTo(xp, yDL)
-            fillDL.lineTo(xp, yDL)
-            lineUL.moveTo(xp, yUL)
-            fillUL.lineTo(xp, yUL)
+            lineTotal.moveTo(xp, yTotal)
+            fillTotal.lineTo(xp, yTotal)
+            lineRx.moveTo(xp, yRx)
+            fillRx.lineTo(xp, yRx)
+            lineTx.moveTo(xp, yTx)
+            fillTx.lineTo(xp, yTx)
         } else {
             val prevPoint = sparseHistory.get(i - 1)
             val prevX = x(prevPoint.timestamp)
-            val prevYDL = y(prevPoint.usage.rxBps)
-            val prevYUL = y(prevPoint.usage.txBps)
+            val prevYTotal = y(prevPoint.usage.rxBps + prevPoint.usage.txBps)
+            val prevYRx = y(prevPoint.usage.rxBps)
+            val prevYTx = y(prevPoint.usage.txBps)
             val cx = (prevX + xp) / 2f
 
-            lineDL.cubicTo(cx, prevYDL, cx, yDL, xp, yDL)
-            fillDL.cubicTo(cx, prevYDL, cx, yDL, xp, yDL)
-
-            lineUL.cubicTo(cx, prevYUL, cx, yUL, xp, yUL)
-            fillUL.cubicTo(cx, prevYUL, cx, yUL, xp, yUL)
+            lineTotal.cubicTo(cx, prevYTotal, cx, yTotal, xp, yTotal)
+            fillTotal.cubicTo(cx, prevYTotal, cx, yTotal, xp, yTotal)
+            
+            lineRx.cubicTo(cx, prevYRx, cx, yRx, xp, yRx)
+            fillRx.cubicTo(cx, prevYRx, cx, yRx, xp, yRx)
+            
+            lineTx.cubicTo(cx, prevYTx, cx, yTx, xp, yTx)
+            fillTx.cubicTo(cx, prevYTx, cx, yTx, xp, yTx)
         }
     }
 
     val lastX = x(history.last().timestamp)
-    fillDL.lineTo(lastX, height)
-    fillDL.close()
-
-    fillUL.lineTo(lastX, height)
-    fillUL.close()
+    fillTotal.lineTo(lastX, height)
+    fillTotal.close()
+    
+    fillRx.lineTo(lastX, height)
+    fillRx.close()
+    
+    fillTx.lineTo(lastX, height)
+    fillTx.close()
 
     val labels = if (history.size > 1) {
         (0..5).map { i ->
@@ -147,5 +161,5 @@ fun createGraphPaths(
         emptyList()
     }
 
-    return GraphData(fillDL, fillUL, lineDL, lineUL, labels, startTime, duration, width, height, effectiveMaxRate, graphHeightScale)
+    return GraphData(fillTotal, lineTotal, fillRx, lineRx, fillTx, lineTx, labels, startTime, duration, width, height, effectiveMaxRate, graphHeightScale)
 }

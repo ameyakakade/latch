@@ -61,6 +61,7 @@ class LatchWidgetUpdater(
     val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
     val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
     val useDynamic = SettingsManager.useDynamicColors.first()
+    val accentColorVal = SettingsManager.accentColor.first()
 
     val liveSession = SessionRepository.liveStatus.firstOrNull()
     val detailedStatus = ConnectionStatusManager.status.firstOrNull()
@@ -71,14 +72,16 @@ class LatchWidgetUpdater(
         connectedDuration = "...",
         isConnected = false,
         isLightTheme = !isDarkMode,
-        useDynamicColors = useDynamic
+        useDynamicColors = useDynamic,
+        accentColor = accentColorVal
       )
       is ConnectionStatus.Failed -> LatchWidgetState(
         status = detailedStatus.message,
         connectedDuration = "-",
         isConnected = false,
         isLightTheme = !isDarkMode,
-        useDynamicColors = useDynamic
+        useDynamicColors = useDynamic,
+        accentColor = accentColorVal
       )
       else -> {
         if (liveSession != null) {
@@ -95,7 +98,8 @@ class LatchWidgetUpdater(
             connectedDuration = durationString,
             isConnected = true,
             isLightTheme = !isDarkMode,
-            useDynamicColors = useDynamic
+            useDynamicColors = useDynamic,
+            accentColor = accentColorVal
           )
         } else {
           LatchWidgetState(
@@ -103,7 +107,8 @@ class LatchWidgetUpdater(
             connectedDuration = "-",
             isConnected = false,
             isLightTheme = !isDarkMode,
-            useDynamicColors = useDynamic
+            useDynamicColors = useDynamic,
+            accentColor = accentColorVal
           )
         }
       }

@@ -76,6 +76,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 
 @Immutable
 sealed class HistoryChartItem {
@@ -142,6 +144,8 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
             ?.coerceAtLeast(1L) ?: 1L
     }
 
+
+
     LaunchedEffect(lazyListState) {
         snapshotFlow { lazyListState.layoutInfo }
             .map { layoutInfo ->
@@ -202,16 +206,16 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
                 }) { idx, item ->
                     when (item) {
                         is HistoryChartItem.BarData -> {
-                            Bar(
-                                modifier = Modifier
-                                    .width(barWidth)
-                                    .fillMaxHeight(),
-                                usage = item.usage,
-                                maxUsage = maxDailyUsage,
-                                dayLabel = item.label,
-                                isSelected = (idx == selectedIndex),
-                                barAreaHeight = barAreaHeight,
-                                onTap = {
+                                Bar(
+                                    modifier = Modifier
+                                        .width(barWidth)
+                                        .fillMaxHeight(),
+                                    usage = item.usage,
+                                    maxUsage = maxDailyUsage,
+                                    dayLabel = item.label,
+                                    isSelected = (idx == selectedIndex),
+                                    barAreaHeight = barAreaHeight,
+                                    onTap = {
                                     if (selectedIndex != idx) {
                                         // 1. Set flag to prevent intermediate snaps
                                         isAutoScrolling = true
@@ -247,13 +251,7 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
 
         Spacer(Modifier.height(16.dp))
 
-        AnimatedContent(
-            targetState = displayedData,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
-            label = "UsageDetails"
-        ) { data ->
-            StatDetailRow(data = data)
-        }
+        StatDetailRow(data = displayedData)
     }
 }
 
@@ -321,6 +319,9 @@ private fun Bar(
                 .height(barAreaHeight),
             contentAlignment = Alignment.BottomCenter
         ) {
+            val dlColor = ColorGraphDownload
+            val ulColor = ColorGraphUpload
+
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -335,22 +336,14 @@ private fun Bar(
 
                     if (dlH > 0) {
                         drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(ColorGraphDownload, ColorGraphDownload.copy(alpha = 0.6f)),
-                                startY = 0f,
-                                endY = dlH
-                            ),
+                            color = dlColor,
                             topLeft = Offset(0f, 0f),
                             size = Size(w, dlH)
                         )
                     }
                     if (ulH > 0) {
                         drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(ColorGraphUpload, ColorGraphUpload.copy(alpha = 0.6f)),
-                                startY = dlH,
-                                endY = h
-                            ),
+                            color = ulColor,
                             topLeft = Offset(0f, dlH),
                             size = Size(w, ulH)
                         )

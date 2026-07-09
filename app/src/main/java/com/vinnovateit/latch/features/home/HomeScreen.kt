@@ -11,7 +11,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,15 +55,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.os.Build
+import android.provider.Settings
+import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.ui.LeafOverlay
 import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.domain.model.SessionSummary
-import com.vinnovateit.latch.features.about.MeetTheTeamActivity
 import com.vinnovateit.latch.features.home.components.SpectrumCard
-import com.vinnovateit.latch.features.onboarding.OnboardingActivity
-import com.vinnovateit.latch.features.settings.SettingsActivity
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
@@ -79,7 +78,10 @@ fun HomeScreen(
     networkSpeed: String,
     session: SessionSummary?,
     connectionStatus: ConnectionStatus,
-    speedUnit: String
+    speedUnit: String,
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToStats: () -> Unit = {},
+    onNavigateToMeetTheTeam: () -> Unit = {}
 ) {
     val historyForHomeScreen = session?.history?.takeLast(150) ?: emptyList()
     val context = LocalContext.current
@@ -113,7 +115,14 @@ fun HomeScreen(
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         statusTimerTrigger = System.currentTimeMillis()
 
-        if (isConnected) {
+        if (!isConnected && !WiFiStateDetector.isWiFiEnabled(context)) {
+            val panelIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Intent(Settings.Panel.ACTION_WIFI)
+            } else {
+                Intent(Settings.ACTION_WIFI_SETTINGS)
+            }
+            context.startActivity(panelIntent)
+        } else if (isConnected) {
             val intent = Intent(context, ForegroundService::class.java).apply {
                 action = ForegroundService.ACTION_TRIGGER_LOGOUT
             }
@@ -145,7 +154,10 @@ fun HomeScreen(
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
                 onHowItWorksClick = { showHowItWorksDialog = true },
-                showStatusText = showStatusText
+                showStatusText = showStatusText,
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToStats = onNavigateToStats,
+                onNavigateToMeetTheTeam = onNavigateToMeetTheTeam
             )
         } else {
             LandscapeHomeScreen(
@@ -157,7 +169,10 @@ fun HomeScreen(
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
                 onHowItWorksClick = { showHowItWorksDialog = true },
-                showStatusText = showStatusText
+                showStatusText = showStatusText,
+                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToStats = onNavigateToStats,
+                onNavigateToMeetTheTeam = onNavigateToMeetTheTeam
             )
         }
 
@@ -177,7 +192,10 @@ fun PortraitHomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String,
     onHowItWorksClick: () -> Unit,
-    showStatusText: Boolean
+    showStatusText: Boolean,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToStats: () -> Unit,
+    onNavigateToMeetTheTeam: () -> Unit
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -201,9 +219,9 @@ fun PortraitHomeScreen(
                     .statusBarsPadding()
             ) {
                 TopBarSection(
-                    onPreferencesClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) },
+                    onPreferencesClick = onNavigateToSettings,
                     onHowItWorksClick = onHowItWorksClick,
-                    onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) }
+                    onMeetTheTeamClick = onNavigateToMeetTheTeam
                 )
 
                 StaggeredStatusText(
@@ -213,7 +231,6 @@ fun PortraitHomeScreen(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                NetworkStatusRow(networkSpeed = networkSpeed)
                 Spacer(modifier = Modifier.height(60.dp))
             }
 
@@ -237,7 +254,15 @@ fun PortraitHomeScreen(
                     .navigationBarsPadding(),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                SpectrumCard(session, historyForHomeScreen, connectionStatus, speedUnit, false)
+                SpectrumCard(
+                    session = session,
+                    historyForHomeScreen = historyForHomeScreen,
+                    connectionStatus = connectionStatus,
+                    speedUnit = speedUnit,
+                    isLandscape = false,
+                    networkSpeed = networkSpeed,
+                    onNavigateToStats = onNavigateToStats
+                )
             }
         }
         PowerButtonOverlay(
@@ -258,7 +283,10 @@ fun LandscapeHomeScreen(
     connectionStatus: ConnectionStatus,
     speedUnit: String,
     onHowItWorksClick: () -> Unit,
-    showStatusText: Boolean
+    showStatusText: Boolean,
+    onNavigateToSettings: () -> Unit,
+    onNavigateToStats: () -> Unit,
+    onNavigateToMeetTheTeam: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -285,9 +313,9 @@ fun LandscapeHomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 TopBarSection(
-                    onPreferencesClick = { context.startActivity(Intent(context, SettingsActivity::class.java)) },
+                    onPreferencesClick = onNavigateToSettings,
                     onHowItWorksClick = onHowItWorksClick,
-                    onMeetTheTeamClick = { context.startActivity(Intent(context, MeetTheTeamActivity::class.java)) },
+                    onMeetTheTeamClick = onNavigateToMeetTheTeam
                 )
 
                 StaggeredStatusText(
@@ -298,7 +326,6 @@ fun LandscapeHomeScreen(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Box(modifier = Modifier.fillMaxWidth().weight(0.3f), contentAlignment = Alignment.Center) {
-                        NetworkStatusRow(networkSpeed = networkSpeed)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(modifier = Modifier.fillMaxWidth().weight(0.7f).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
@@ -320,10 +347,12 @@ fun LandscapeHomeScreen(
         ) {
             SpectrumCard(
                 session = session,
-                historyForHomeScreen,
+                historyForHomeScreen = historyForHomeScreen,
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
                 isLandscape = true,
+                networkSpeed = networkSpeed,
+                onNavigateToStats = onNavigateToStats
             )
         }
     }
@@ -335,7 +364,7 @@ fun StaggeredStatusText(
     isConnected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val text = if (isConnected) "CONNECTED" else "DISCONNECTED"
+    val text = if (isConnected) "LATCHED" else "DISCONNECTED"
     val containerColor = MaterialTheme.colorScheme.primaryContainer
     val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
@@ -507,12 +536,12 @@ fun TopBarSection(
             Text(modifier = Modifier.padding(top = 0.dp), text = stringResource(R.string.app_name_uppercase), color = MaterialTheme.colorScheme.primary, fontSize = 23.sp, fontFamily = ModernizFontFamily, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
         },
         navigationIcon = {
-            Icon(painter = if (isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(id = R.drawable.ic_latch_light), contentDescription = "LATCH Logo", tint = Color.Unspecified, modifier = Modifier.size(48.dp).padding(start = 12.dp))
+            Icon(painter = if (isDark) painterResource(id = R.drawable.ic_latch_dark) else painterResource(id = R.drawable.ic_latch_light), contentDescription = "LATCH Logo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp).size(36.dp))
         },
         actions = {
             TooltipHint(tooltipText = "More options") {
-                IconButton(onClick = { menuExpanded = true }) {
-                    Icon(imageVector = Icons.Rounded.Menu, contentDescription = "More options", tint = MaterialTheme.colorScheme.primary)
+                IconButton(onClick = { menuExpanded = true }, modifier = Modifier.padding(end = 12.dp).size(52.dp)) {
+                    Icon(imageVector = Icons.Rounded.Menu, contentDescription = "More options", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
                 }
             }
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }, shape = RoundedCornerShape(12.dp), containerColor = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.width(200.dp)) {

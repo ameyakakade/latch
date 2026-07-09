@@ -8,14 +8,13 @@ plugins {
 
 android {
     namespace = "com.vinnovateit.latch"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.vinnovateit.latch"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 3
-        versionName = "1.0"
+        versionCode = 5
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

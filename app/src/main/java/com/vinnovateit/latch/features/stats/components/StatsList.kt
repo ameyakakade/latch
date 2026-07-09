@@ -18,8 +18,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,32 +93,14 @@ fun StatsList(
           Spacer(modifier = Modifier.height(15.dp))
         }
       }
-      item {
-        val liveDownloadBps = liveStatus?.liveData?.lastOrNull()?.usage?.rxBps ?: 0L
-        val liveUploadBps = liveStatus?.liveData?.lastOrNull()?.usage?.txBps ?: 0L
-        LiveSpeedSection(
-          isLive = true,
-          downloadBps = liveDownloadBps,
-          uploadBps = liveUploadBps,
-          speedUnit = speedUnits,
-        )
-      }
+
       item {
         val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
         HistoryBarChart(history = chartItems)
         Spacer(modifier = Modifier.height(15.dp))
       }
     } else {
-      item {
-        val allTimeMaxDownloadBps = historyToShow.maxOfOrNull { it.maxRxBps } ?: 0L
-        val allTimeMaxUploadBps = historyToShow.maxOfOrNull { it.maxTxBps } ?: 0L
-        LiveSpeedSection(
-          isLive = false,
-          downloadBps = allTimeMaxDownloadBps,
-          uploadBps = allTimeMaxUploadBps,
-          speedUnit = speedUnits,
-        )
-      }
+
       item {
         val chartItems by statsViewModel.chartItems.collectAsStateWithLifecycle()
         HistoryBarChart(history = chartItems)
@@ -167,11 +155,18 @@ fun StatsList(
       }
       if (historyToShow.size > 5 && !showAllSessions) {
         item {
-          TextButton(
+          Button(
             onClick = onToggleShowAll,
-            modifier = Modifier.fillMaxWidth().padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+              containerColor = MaterialTheme.colorScheme.secondaryContainer,
+              contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            ),
+            shape = RoundedCornerShape(24.dp)
           ) {
-            Text(stringResource(R.string.stats_view_more))
+            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.stats_view_more), fontWeight = FontWeight.SemiBold)
           }
         }
       }

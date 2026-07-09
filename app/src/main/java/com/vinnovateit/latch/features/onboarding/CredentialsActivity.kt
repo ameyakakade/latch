@@ -3,7 +3,6 @@ package com.vinnovateit.latch.features.onboarding
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -43,32 +42,7 @@ import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import com.vinnovateit.latch.ui.theme.SatoshiFontFamily
 
-class SecondPageActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        val editMode = intent.getBooleanExtra("editMode", false)
-        val fromOnboarding = intent.getBooleanExtra("fromOnboarding", false)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        setContent {
-            LatchTheme {
-                CredentialsScreen(
-                    editMode = editMode,
-                    onCredentialsSaved = {
-                        if (fromOnboarding) {
-                            setResult(RESULT_OK)
-                            finish()
-                        } else {
-                            startActivity(Intent(this, MainActivity::class.java))
-                            finish()
-                        }
-                    }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
@@ -76,8 +50,9 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
     val scope = rememberCoroutineScope()
     var regNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var regNoError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -126,8 +101,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = stringResource(id = R.string.credentials_subtitle),
-                        fontSize = 20.sp,
+                        text = if (editMode) "Update your Wi-Fi details to stay connected" else stringResource(id = R.string.credentials_subtitle),
+                        fontSize = if (editMode) 14.sp else 20.sp,
                         fontFamily = SatoshiFontFamily,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
@@ -146,24 +121,35 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 ) {
                     CredentialFormInputs(
                         regNo = regNo,
-                        onRegNoChange = { regNo = it.uppercase() },
+                        onRegNoChange = { regNo = it.uppercase(); regNoError = null },
                         password = password,
-                        onPasswordChange = { password = it },
+                        onPasswordChange = { password = it; passwordError = null },
                         passwordVisible = passwordVisible,
-                        onPasswordVisibilityChange = { passwordVisible = !passwordVisible }
+                        onPasswordVisibilityChange = { passwordVisible = !passwordVisible },
+                        regNoError = regNoError,
+                        passwordError = passwordError
                     )
-
-                    Spacer(modifier = Modifier.height(32.dp))
 
                     Button(
                         onClick = {
                             if (regNo.isNotBlank() && password.isNotBlank()) {
-                                scope.launch {
-                                    StoredCredentials.saveCredentials(context, regNo, password)
-                                    onCredentialsSaved()
+                                val regNoRegex = Regex("^[0-9]{2}[A-Za-z]{3}[0-9]{4}$")
+                                if (!regNoRegex.matches(regNo)) {
+                                    regNoError = "Invalid format (e.g. 23BCE1234)"
+                                } else {
+                                    val year = regNo.substring(0, 2).toIntOrNull() ?: 99
+                                    if (year <= 22) {
+                                        regNoError = "Your college life is over... go find a job! 🎓"
+                                    }
+                                    scope.launch {
+                                        StoredCredentials.saveCredentials(context, regNo, password)
+                                        if (year <= 22) kotlinx.coroutines.delay(2000)
+                                        onCredentialsSaved()
+                                    }
                                 }
                             } else {
-                                message = context.getString(R.string.credentials_error_message)
+                                if (regNo.isBlank()) regNoError = context.getString(R.string.credentials_error_message)
+                                if (password.isBlank()) passwordError = context.getString(R.string.credentials_error_message)
                             }
                         },
                         modifier = Modifier
@@ -181,11 +167,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp)
                         )
-                    }
-
-                    if (message.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = message, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                     }
                 }
             }
@@ -213,8 +194,8 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = stringResource(id = R.string.credentials_subtitle),
-                    fontSize = 20.sp,
+                    text = if (editMode) "Update your Wi-Fi details to stay connected" else stringResource(id = R.string.credentials_subtitle),
+                    fontSize = if (editMode) 14.sp else 20.sp,
                     fontFamily = SatoshiFontFamily,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium,
@@ -225,11 +206,13 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
 
                 CredentialFormInputs(
                     regNo = regNo,
-                    onRegNoChange = { regNo = it.uppercase() },
+                    onRegNoChange = { regNo = it.uppercase(); regNoError = null },
                     password = password,
-                    onPasswordChange = { password = it },
+                    onPasswordChange = { password = it; passwordError = null },
                     passwordVisible = passwordVisible,
-                    onPasswordVisibilityChange = { passwordVisible = !passwordVisible }
+                    onPasswordVisibilityChange = { passwordVisible = !passwordVisible },
+                    regNoError = regNoError,
+                    passwordError = passwordError
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -237,13 +220,23 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                 Button(
                     onClick = {
                         if (regNo.isNotBlank() && password.isNotBlank()) {
-                            scope.launch {
-                                StoredCredentials.saveCredentials(context, regNo, password)
-                                Toast.makeText(context, context.getString(R.string.credentials_saved_toast), Toast.LENGTH_SHORT).show()
-                                onCredentialsSaved()
+                            val regNoRegex = Regex("^[0-9]{2}[A-Za-z]{3}[0-9]{4}$")
+                            if (!regNoRegex.matches(regNo)) {
+                                regNoError = "Invalid format (e.g. 23BCE1234)"
+                            } else {
+                                val year = regNo.substring(0, 2).toIntOrNull() ?: 99
+                                if (year <= 22) {
+                                    regNoError = "Your college life is over... go find a job! 🎓"
+                                }
+                                scope.launch {
+                                    StoredCredentials.saveCredentials(context, regNo, password)
+                                    if (year <= 22) kotlinx.coroutines.delay(2000)
+                                    onCredentialsSaved()
+                                }
                             }
                         } else {
-                            message = context.getString(R.string.credentials_error_message)
+                            if (regNo.isBlank()) regNoError = context.getString(R.string.credentials_error_message)
+                            if (password.isBlank()) passwordError = context.getString(R.string.credentials_error_message)
                         }
                     },
                     modifier = Modifier
@@ -262,11 +255,6 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
-
-                if (message.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    Text(text = message, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
-                }
             }
         }
     }
@@ -279,20 +267,18 @@ private fun CredentialFormInputs(
     password: String,
     onPasswordChange: (String) -> Unit,
     passwordVisible: Boolean,
-    onPasswordVisibilityChange: () -> Unit
+    onPasswordVisibilityChange: () -> Unit,
+    regNoError: String?,
+    passwordError: String?
 ) {
     OutlinedTextField(
         value = regNo,
         onValueChange = onRegNoChange,
         label = { Text(stringResource(id = R.string.registration_number)) },
         singleLine = true,
-        trailingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Person,
-                contentDescription = stringResource(R.string.username_icon_content_description),
-            )
-        },
-        modifier = Modifier.fillMaxWidth(),
+        isError = regNoError != null,
+        supportingText = { if (regNoError != null) Text(regNoError) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
         textStyle = TextStyle(
             fontSize = 16.sp,
             fontFamily = SatoshiFontFamily
@@ -305,28 +291,35 @@ private fun CredentialFormInputs(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    OutlinedTextField(
-        value = password,
-        onValueChange = onPasswordChange,
-        label = { Text(stringResource(id = R.string.password)) },
-        singleLine = true,
-        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-        trailingIcon = {
-            IconButton(onClick = onPasswordVisibilityChange) {
-                Icon(
-                    imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
-                    contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                )
-            }
-        },
-        modifier = Modifier.fillMaxWidth(),
-        textStyle = TextStyle(
-            fontSize = 16.sp,
-            fontFamily = SatoshiFontFamily
-        ),
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done
-        ),
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = password,
+            onValueChange = onPasswordChange,
+            label = { Text(stringResource(id = R.string.password)) },
+            singleLine = true,
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            isError = passwordError != null,
+            supportingText = { if (passwordError != null) Text(passwordError) },
+            modifier = Modifier.weight(1f),
+            textStyle = TextStyle(
+                fontSize = 16.sp,
+                fontFamily = SatoshiFontFamily
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done
+            ),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onPasswordVisibilityChange) {
+            Icon(
+                imageVector = if (passwordVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
 }
