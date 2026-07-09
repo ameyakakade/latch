@@ -219,7 +219,7 @@ class ForegroundService : Service() {
             ConnectionStatusManager.postStatus(
                 ConnectionStatus.Companion.Connecting(getString(R.string.status_authenticating))
             )
-
+            connectivityManager.bindProcessToNetwork(network)
             try {
                 val user = StoredCredentials.getUserId(applicationContext)
                 val pass = StoredCredentials.getPassword(applicationContext)
@@ -240,7 +240,7 @@ class ForegroundService : Service() {
                     ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_login_failed)))
                 }
             } finally {
-
+                connectivityManager.bindProcessToNetwork(null)
             }
         }
     }
@@ -254,7 +254,7 @@ class ForegroundService : Service() {
         val network = currentWifiNetwork ?: connectivityManager.activeNetwork
 
         if (network != null) {
-
+            connectivityManager.bindProcessToNetwork(network)
             try {
                 val ok = AutoLoginManager.attemptLogout()
                 if (ok) {
@@ -266,7 +266,7 @@ class ForegroundService : Service() {
                     ConnectionStatusManager.postStatus(ConnectionStatus.Failed(getString(R.string.status_logout_failed)))
                 }
             } finally {
-
+                connectivityManager.bindProcessToNetwork(null)
             }
         } else {
             Log.w("ForegroundService", "No active network during logout.")

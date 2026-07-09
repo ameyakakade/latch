@@ -78,7 +78,7 @@ object SessionRepository {
     notificationSent = false
 
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-
+    connectivityManager.bindProcessToNetwork(network)
 
     val startTime = System.currentTimeMillis()
     val initialStatus =
@@ -124,7 +124,7 @@ object SessionRepository {
     TrafficStatsLogger.stop()
 
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-
+    connectivityManager.bindProcessToNetwork(null)
     _liveStatus.value = null
 
     UiNotifier.showToast(applicationContext!!, "Disconnected")
