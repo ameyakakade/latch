@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -33,9 +34,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Autorenew
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ColorLens
 import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.FastForward
+import androidx.compose.material.icons.rounded.FormatPaint
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Password
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
@@ -81,25 +84,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.domain.model.SessionRepository
-import com.vinnovateit.latch.features.onboarding.SecondPageActivity
 import com.vinnovateit.latch.common.ui.components.ExpressiveTopBarContent
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.ui.theme.LatchTheme
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
-
-@OptIn(ExperimentalMaterial3Api::class)
-class SettingsActivity : ComponentActivity() {
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    SettingsManager.initialize(applicationContext)
-    setContent {
-      LatchTheme {
-        SettingsScreen(onBackClick = { finish() })
-      }
-    }
-  }
-}
 
 @Composable
 private fun SettingsTopBar(
@@ -147,7 +136,7 @@ private fun SettingsTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBackClick: () -> Unit) {
+fun SettingsScreen(onBackClick: () -> Unit, onNavigateToCredentials: () -> Unit) {
   val context = LocalContext.current
   val haptic = LocalHapticFeedback.current
   val autoLogin by SettingsManager.autoLogin.collectAsStateWithLifecycle()
@@ -158,6 +147,9 @@ fun SettingsScreen(onBackClick: () -> Unit) {
   var showSpeedUnitsSheet by remember { mutableStateOf(false) }
   var showThemeSheet by remember { mutableStateOf(false) }
   var showClearStatsSheet by remember { mutableStateOf(false) }
+
+  val useDynamicColors by SettingsManager.useDynamicColors.collectAsStateWithLifecycle()
+  val accentColor by SettingsManager.accentColor.collectAsStateWithLifecycle()
 
   val density = LocalDensity.current
   val coroutineScope = rememberCoroutineScope()
@@ -259,7 +251,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
               subtitle = "Skip network checks and send login request immediately",
               leadingIcon = {
                 Icon(
-                  Icons.Rounded.FlashOn,
+                  Icons.Rounded.FastForward,
                   contentDescription = null,
                   tint = MaterialTheme.colorScheme.primary
                 )
@@ -285,13 +277,7 @@ fun SettingsScreen(onBackClick: () -> Unit) {
                   tint = MaterialTheme.colorScheme.primary
                 )
               },
-              onClick = {
-                context.startActivity(
-                  Intent(
-                    context,
-                    SecondPageActivity::class.java
-                  ).apply { putExtra("editMode", true) })
-              }
+              onClick = { onNavigateToCredentials() }
             )
           }
         }
@@ -303,19 +289,6 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       item {
         SettingsSection(title = "Display") {
           Column(modifier = Modifier.clip(shape = RoundedCornerShape(24.dp))) {
-            SettingsItem(
-              title = "Speed Units",
-              subtitle = speedUnits,
-              leadingIcon = {
-                Icon(
-                  Icons.Rounded.Speed,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.primary
-                )
-              },
-              onClick = { showSpeedUnitsSheet = true }
-            )
-            Spacer(modifier = Modifier.height(3.dp))
             SettingsItem(
               title = "Theme",
               subtitle = theme,
@@ -331,7 +304,20 @@ fun SettingsScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(3.dp))
 
-            val useDynamicColors by SettingsManager.useDynamicColors.collectAsStateWithLifecycle()
+            androidx.compose.animation.AnimatedVisibility(
+              visible = !useDynamicColors,
+              enter = androidx.compose.animation.expandVertically(animationSpec = androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(150)),
+              exit = androidx.compose.animation.shrinkVertically(animationSpec = androidx.compose.animation.core.tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing)) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+            ) {
+              Column {
+                AccentColorPickerItem(
+                  selectedColorName = accentColor,
+                  onColorSelected = { SettingsManager.setAccentColor(it) }
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+              }
+            }
+
             SettingsItem(
               title = "Dynamic Colors",
               subtitle = "Adapt with your system's Material You theming",
@@ -362,6 +348,19 @@ fun SettingsScreen(onBackClick: () -> Unit) {
       item {
         SettingsSection(title = "Data Management") {
           Column(modifier = Modifier.clip(shape = RoundedCornerShape(24.dp))) {
+            SettingsItem(
+              title = "Speed Units",
+              subtitle = speedUnits,
+              leadingIcon = {
+                Icon(
+                  Icons.Rounded.Speed,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary
+                )
+              },
+              onClick = { showSpeedUnitsSheet = true }
+            )
+            Spacer(modifier = Modifier.height(3.dp))
             SettingsItem(
               title = "Clear Stats",
               subtitle = "Reset usage history",
@@ -462,6 +461,78 @@ fun SettingsSection(
       )
     }
     content()
+  }
+}
+
+@Composable
+fun AccentColorPickerItem(
+  selectedColorName: String,
+  onColorSelected: (String) -> Unit
+) {
+  Surface(
+    color = MaterialTheme.colorScheme.surfaceVariant,
+    modifier = Modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(10.dp))
+  ) {
+    Column(modifier = Modifier.padding(16.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+          modifier = Modifier
+            .padding(end = 16.dp)
+            .size(24.dp),
+          contentAlignment = Alignment.Center
+        ) {
+          Icon(androidx.compose.material.icons.Icons.Rounded.FormatPaint, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+        }
+        Column {
+          Text(
+            text = "Accent Color",
+            style = MaterialTheme.typography.titleMedium,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+          )
+          Text(
+            text = selectedColorName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+      }
+      Spacer(Modifier.height(16.dp))
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+      ) {
+        val colors = listOf(
+          "Red" to androidx.compose.ui.graphics.Color(0xFFC01221),
+          "Blue" to androidx.compose.ui.graphics.Color(0xFF005AC1),
+          "Green" to androidx.compose.ui.graphics.Color(0xFF0F5223),
+          "Purple" to androidx.compose.ui.graphics.Color(0xFF7D00B8),
+          "Pink" to androidx.compose.ui.graphics.Color(0xFFD81B60)
+        )
+        val haptic = LocalHapticFeedback.current
+        colors.forEach { (name, color) ->
+          val isSelected = name == selectedColorName
+          Box(
+            modifier = Modifier
+              .size(44.dp)
+              .clip(androidx.compose.foundation.shape.CircleShape)
+              .background(color)
+              .clickable { 
+                  haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                  onColorSelected(name) 
+              },
+            contentAlignment = Alignment.Center
+          ) {
+            if (isSelected) {
+              Icon(Icons.Rounded.Check, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White)
+            }
+          }
+        }
+      }
+    }
   }
 }
 

@@ -59,8 +59,14 @@ fun StatsItemCard(
       horizontalArrangement = Arrangement.SpaceBetween
     ) {
       Column(modifier = Modifier.weight(1f)) {
+        val now = System.currentTimeMillis()
+        val timeString = if (now - session.startTimestamp < 24 * 60 * 60 * 1000) {
+            android.text.format.DateUtils.getRelativeTimeSpanString(session.startTimestamp, now, android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
+        } else {
+            SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(session.startTimestamp))
+        }
         Text(
-          text = SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(session.startTimestamp)),
+          text = timeString,
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.Bold,
           color = MaterialTheme.colorScheme.onSurface

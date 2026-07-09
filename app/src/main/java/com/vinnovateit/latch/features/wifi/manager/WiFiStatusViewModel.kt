@@ -36,7 +36,7 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             initialValue = SessionRepository.liveStatus.value != null
         )
 
-    private val _ssid = MutableStateFlow("Not Connected")
+    private val _ssid = MutableStateFlow("Not Latched")
 
     init {
         refreshStatus()
@@ -47,7 +47,7 @@ class WiFiStatusViewModel(application: Application) : AndroidViewModel(applicati
             val isSessionActive = SessionRepository.liveStatus.value != null
 
             withContext(Dispatchers.Main) {
-                _ssid.value = if (isSessionActive) "Connected" else ("Not Connected")
+                _ssid.value = if (isSessionActive) "Latched" else ("Not Latched")
             }
 
             Log.d("WiFiStatusViewModel", "UI Refreshed: SSID is ${_ssid.value}, IsSessionActive is $isSessionActive")

@@ -1,0 +1,55 @@
+name: Build and Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: android-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        run: ./gradlew clean assembleRelease
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.2
+          name: Version 1.2
+          body: |
+            ```
+            Changelog:
+            - Migrated to single-activity Navigation Compose architecture
+            - Optimized theme transition performance to prevent dropped frames
+            - Refined stats card UI and background gradient boundaries
+            - Increased hitbox size for accessibility on navigation components
+            - General performance and stability improvements
+            ```
+            
+            Download from Google Play: [Auto Net Connector on Google Play](https://play.google.com/store/apps/details?id=com.vinnovateit.latch)
+          files: app/build/outputs/apk/release/app-release-unsigned.apk

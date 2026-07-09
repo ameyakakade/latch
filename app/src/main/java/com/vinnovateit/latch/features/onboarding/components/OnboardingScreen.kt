@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.data.StoredCredentials
-import com.vinnovateit.latch.features.onboarding.SecondPageActivity
 import com.vinnovateit.latch.features.onboarding.pages.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -42,7 +41,8 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun OnboardingScreen(
-    onComplete: () -> Unit
+    onComplete: () -> Unit,
+    onNavigateToCredentials: () -> Unit
 ) {
     val context = LocalContext.current
     var credentialsHandled by remember { mutableStateOf(false) }
@@ -140,10 +140,10 @@ fun OnboardingScreen(
         }
     }
 
-    val credentialsLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
+    // credentialsHandled state should be checked if we return from credentials
+    LaunchedEffect(Unit) {
+        if (StoredCredentials.credentialsExist(context)) {
             credentialsHandled = true
-            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
         }
     }
 
@@ -184,11 +184,7 @@ fun OnboardingScreen(
                             0 -> WelcomeToLatchPageLandscape()
                             2 -> NotificationPermissionPageLandscape(slides[pageIndex], onPermissionGranted = { permissionGranted = true })
                             3 -> SetUpAccountPageLandscape(slides[pageIndex], onCredentialsClick = {
-                                credentialsLauncher.launch(
-                                    Intent(context, SecondPageActivity::class.java).apply {
-                                        putExtra("fromOnboarding", true)
-                                    }
-                                )
+                                onNavigateToCredentials()
                             })
                             else -> StandardSlidePageLandscape(slides[pageIndex])
                         }
@@ -266,11 +262,7 @@ fun OnboardingScreen(
                         0 -> WelcomeToLatchPage()
                         2 -> NotificationPermissionPage(slides[pageIndex], onPermissionGranted = { permissionGranted = true })
                         3 -> SetUpAccountPage(slides[pageIndex], onCredentialsClick = {
-                            credentialsLauncher.launch(
-                                Intent(context, SecondPageActivity::class.java).apply {
-                                    putExtra("fromOnboarding", true)
-                                }
-                            )
+                            onNavigateToCredentials()
                         })
                         else -> StandardSlidePage(slides[pageIndex])
                     }

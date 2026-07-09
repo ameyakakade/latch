@@ -47,6 +47,7 @@ object StoredCredentials {
             ?.putString(KEY_USER_ID, userId)
             ?.putString(KEY_PASSWORD, password)
             ?.apply()
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().putBoolean("has_credentials", true).apply()
     }
 
     fun getUserId(context: Context): String? {
@@ -60,11 +61,18 @@ object StoredCredentials {
     }
 
     fun credentialsExist(context: Context): Boolean {
-        return getUserId(context) != null
+        val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        if (prefs.contains("has_credentials")) {
+            return prefs.getBoolean("has_credentials", false)
+        }
+        val exists = getUserId(context) != null
+        prefs.edit().putBoolean("has_credentials", exists).apply()
+        return exists
     }
 
     fun clearCredentials(context: Context) {
         val prefs = getEncryptedPrefs(context)
         prefs?.edit()?.clear()?.apply()
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE).edit().putBoolean("has_credentials", false).apply()
     }
 }

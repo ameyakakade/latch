@@ -4,10 +4,10 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,53 +45,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class StatsActivity : ComponentActivity() {
-  private val viewModel: StatsViewModel by viewModels()
 
-  // Activity Result Launcher for saving the report to a user-selected location
-  private val createDocumentLauncher =
-    registerForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri ->
-      uri?.let { saveReportToUri(it) }
-    }
-
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    WindowCompat.setDecorFitsSystemWindows(window, false)
-    setContent {
-      LatchTheme {
-        StatsScreen(
-          onSaveReport = {
-            val epoch = System.currentTimeMillis()
-            val appVersion = com.vinnovateit.latch.BuildConfig.VERSION_NAME
-            val fileName = "latch_report_${appVersion}_${epoch}.html"
-            createDocumentLauncher.launch(fileName)
-          }
-        )
-      }
-    }
-  }
-
-  private fun saveReportToUri(uri: Uri) {
-    lifecycleScope.launch(Dispatchers.IO) {
-      try {
-        contentResolver.openOutputStream(uri)?.use { outputStream ->
-          generateHtmlReport(
-            sessions = viewModel.historyToShow.value,
-            outputStream = outputStream,
-            appVersion = com.vinnovateit.latch.BuildConfig.VERSION_NAME
-          )
-        }
-        withContext(Dispatchers.Main) {
-          Toast.makeText(this@StatsActivity, "Report saved successfully", Toast.LENGTH_SHORT).show()
-        }
-      } catch (e: Exception) {
-        withContext(Dispatchers.Main) {
-          Toast.makeText(this@StatsActivity, "Failed to save report: $e", Toast.LENGTH_SHORT).show()
-        }
-      }
-    }
-  }
-}
 
 @Composable
 private fun StatsTopBar(
@@ -166,10 +120,10 @@ private fun StatsTopBar(
 @Composable
 fun StatsScreen(
   modifier: Modifier = Modifier,
-  onSaveReport: () -> Unit
+  onSaveReport: () -> Unit,
+  onBackPressed: () -> Unit = {},
+  statsViewModel: StatsViewModel = viewModel()
 ) {
-  val context = LocalContext.current as Activity
-  val statsViewModel: StatsViewModel by (context as ComponentActivity).viewModels()
   val sessionToShow by statsViewModel.sessionToShow.collectAsStateWithLifecycle()
   val historyToShow by statsViewModel.historyToShow.collectAsStateWithLifecycle()
   val liveStatus by statsViewModel.liveStatus.collectAsStateWithLifecycle()
@@ -225,7 +179,7 @@ fun StatsScreen(
           StatsTopBar(
             collapseFraction = 0f,
             headerHeight = maxTopBarHeight,
-            onBackPressed = { context.finish() },
+            onBackPressed = onBackPressed,
             onSaveReport = onSaveReport
           )
         }
@@ -244,7 +198,7 @@ fun StatsScreen(
             StatsTopBar(
               collapseFraction = 1f,
               headerHeight = minTopBarHeight,
-              onBackPressed = { context.finish() },
+              onBackPressed = onBackPressed,
               onSaveReport = onSaveReport
             )
             Box(
@@ -294,7 +248,7 @@ fun StatsScreen(
           StatsTopBar(
             collapseFraction = collapseFraction,
             headerHeight = currentTopBarHeightDp,
-            onBackPressed = { context.finish() },
+            onBackPressed = onBackPressed,
             onSaveReport = onSaveReport
           )
         }

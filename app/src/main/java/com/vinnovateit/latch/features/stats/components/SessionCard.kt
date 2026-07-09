@@ -89,6 +89,7 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
             SessionDetailsOverlay(
                 modifier = Modifier.graphicsLayer { alpha = overlayAlpha },
                 session = session,
+                speedUnit = speedUnit
             )
         }
     }
@@ -98,6 +99,7 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
 private fun SessionDetailsOverlay(
     modifier: Modifier = Modifier,
     session: SessionSummary,
+    speedUnit: String
 ) {
     val overlayColor = MaterialTheme.colorScheme.surface
 
@@ -115,7 +117,7 @@ private fun SessionDetailsOverlay(
             .padding(24.dp)
     ) {
         Column {
-            SessionHeader(session)
+            SessionHeader(session, speedUnit)
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -127,7 +129,7 @@ private fun SessionDetailsOverlay(
 }
 
 @Composable
-private fun SessionHeader(session: SessionSummary) {
+private fun SessionHeader(session: SessionSummary, speedUnit: String) {
     var duration by remember(session.startTimestamp) {
         mutableLongStateOf(System.currentTimeMillis() - session.startTimestamp)
     }
@@ -137,16 +139,57 @@ private fun SessionHeader(session: SessionSummary) {
             delay(1000)
         }
     }
+    
+    val latestUsage = session.history.lastOrNull()?.usage
+    val (downloadBps, uploadBps) = if (latestUsage != null) {
+        latestUsage.rxBps to latestUsage.txBps
+    } else {
+        0L to 0L
+    }
+    
+    val isDownloadDominant = downloadBps >= uploadBps
+    val dominatingBps = if (isDownloadDominant) downloadBps else uploadBps
+    val icon = if (isDownloadDominant) Icons.Rounded.ArrowDownward else Icons.Rounded.ArrowUpward
+    val iconColor = if (isDownloadDominant) ColorGraphDownload else ColorGraphUpload
+    val (value, unit) = formatBitsPerSecond(dominatingBps, speedUnit)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = formatDurationDynamic(duration),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
+        
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Row(verticalAlignment = Alignment.Bottom) {
+                RollingNumberText(
+                    value = value,
+                    textStyle = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+                Text(
+                    text = " $unit",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 1.dp)
+                )
+            }
+        }
     }
 }
 
@@ -170,6 +213,7 @@ private fun SessionRateGraph(
         val idleDuration = System.currentTimeMillis() - lastInteractionTime
         if (lastInteractionTime == 0L || idleDuration > 5000L) {
             isAutoScrolling = true
+            delay(50L)
             scrollState.animateScrollTo(
                 scrollState.maxValue,
                 animationSpec = tween(durationMillis = 300, easing = LinearEasing)
@@ -242,9 +286,8 @@ private fun SessionRateGraph(
                         it.timestamp in visibleStartTime..visibleEndTime
                     }
 
-                    val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBps } ?: 0L
-                    val maxTx = visiblePoints.maxOfOrNull { it.usage.txBps } ?: 0L
-                    maxSpeed = if (visiblePoints.isEmpty()) 1L else max(maxRx, maxTx)
+                    val maxSpeedCombined = visiblePoints.maxOfOrNull { it.usage.rxBps + it.usage.txBps } ?: 0L
+                    maxSpeed = if (visiblePoints.isEmpty()) 1L else maxSpeedCombined.coerceAtLeast(1L)
                 }
 
                 val animatedMaxSpeed by animateFloatAsState(
@@ -274,19 +317,17 @@ private fun SessionRateGraph(
                         modifier = Modifier.horizontalScroll(scrollState),
                         contentAlignment = Alignment.CenterEnd
                     ) {
+                        val primaryColor = MaterialTheme.colorScheme.primary
                         Canvas(
                             modifier = Modifier
                                 .width(canvasWidthDp)
                                 .fillMaxHeight()
                         ) {
-                            val downloadBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(alpha = 0.4f), Color.Transparent))
-                            val uploadBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(alpha = 0.4f), Color.Transparent))
+                            val totalBrush = Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.4f), Color.Transparent))
 
-                            drawPath(graphData.downloadPath, brush = downloadBrush)
-                            drawPath(graphData.uploadPath, brush = uploadBrush)
+                            drawPath(graphData.totalPath, brush = totalBrush)
 
-                            drawPath(graphData.lineDownloadPath, color = ColorGraphDownload, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
-                            drawPath(graphData.lineUploadPath, color = ColorGraphUpload, style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+                            drawPath(graphData.lineTotalPath, color = primaryColor, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
 
                             val xAxisY = graphDrawHeight
                             drawLine(
@@ -476,4 +517,16 @@ private fun DataUsageValueBlock(
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+@Composable
+fun RollingNumberText(
+  value: String,
+  textStyle: androidx.compose.ui.text.TextStyle
+) {
+  Text(
+    text = value,
+    style = textStyle,
+    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+  )
 }

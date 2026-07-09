@@ -35,43 +35,14 @@
             android:exported="true">
         </receiver>
         <activity
-            android:name=".features.onboarding.LandingPageActivity"
+            android:name=".features.home.MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
             android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".features.onboarding.OnboardingActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".features.onboarding.SecondPageActivity"
-            android:exported="true"
-            android:theme="@style/Theme.Latch" />
-
-        <activity
-            android:name=".features.home.MainActivity"
-            android:exported="true"
-            android:configChanges="orientation|screenSize|uiMode|keyboardHidden"
-            android:theme="@style/Theme.Latch" />
-
-        <activity android:name=".features.settings.SettingsActivity" android:exported="false" />
-
-        <activity
-            android:name=".features.stats.StatsActivity"
-            android:exported="true"
-            android:label="Stats"
-            android:theme="@style/Theme.Latch" />
-
-        <activity
-            android:name=".features.about.MeetTheTeamActivity"
-            android:exported="true"
-            android:label="Meet The Team"
-            android:theme="@style/Theme.Latch">
         </activity>
 
         <receiver

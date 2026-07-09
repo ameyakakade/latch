@@ -88,7 +88,7 @@ fun HomeScreenGraph(
   var scale by remember { mutableStateOf(initialScale) }
   val scrollState = rememberScrollState()
   var lastInteraction by remember { mutableLongStateOf(0L) }
-  var yAxisVisible by remember { mutableStateOf(true) }
+
   var isAutoScrolling by remember { mutableStateOf(false) }
 
   LaunchedEffect(rateHistory.size) {
@@ -106,10 +106,7 @@ fun HomeScreenGraph(
   LaunchedEffect(lastInteraction) {
     if (lastInteraction == 0L) return@LaunchedEffect
 
-    yAxisVisible = true
-    delay(5000L)
     if (System.currentTimeMillis() - lastInteraction >= 5000L) {
-      yAxisVisible = false
       if (scale != initialScale) {
         animate(initialValue = scale, targetValue = initialScale) { value, _ ->
           scale = value
@@ -128,7 +125,7 @@ fun HomeScreenGraph(
         }
       }
   ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(bottom = 16.dp)) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
       val containerWidthPx = constraints.maxWidth
       val containerHeightPx = constraints.maxHeight
 
@@ -160,9 +157,8 @@ fun HomeScreenGraph(
           maxSpeed = if (visiblePoints.isEmpty()) {
             1L
           } else {
-            val maxRx = visiblePoints.maxOfOrNull { it.usage.rxBytes } ?: 0L
-            val maxTx = visiblePoints.maxOfOrNull { it.usage.txBytes } ?: 0L
-            max(maxRx, maxTx)
+            val maxSpeedCombined = visiblePoints.maxOfOrNull { it.usage.rxBytes + it.usage.txBytes } ?: 0L
+            maxSpeedCombined.coerceAtLeast(1L)
           }
         }
 
@@ -200,82 +196,20 @@ fun HomeScreenGraph(
               .horizontalScroll(scrollState),
             contentAlignment = Alignment.CenterEnd
           ) {
+            val primaryColor = MaterialTheme.colorScheme.primary
             Canvas(
               modifier = Modifier
                 .width(canvasWidthDp)
                 .fillMaxHeight()
             ) {
-              val dlBrush = Brush.verticalGradient(listOf(ColorGraphDownload.copy(0.4f), ColorTransparent))
-              val ulBrush = Brush.verticalGradient(listOf(ColorGraphUpload.copy(0.4f), ColorTransparent))
+              val totalBrush = Brush.verticalGradient(listOf(primaryColor.copy(0.4f), ColorTransparent))
 
-              drawPath(graphData.downloadPath, brush = dlBrush)
-              drawPath(graphData.uploadPath, brush = ulBrush)
-              drawPath(graphData.lineDownloadPath, ColorGraphDownload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
-              drawPath(graphData.lineUploadPath, ColorGraphUpload, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+              drawPath(graphData.totalPath, brush = totalBrush)
+              drawPath(graphData.lineTotalPath, primaryColor, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
             }
           }
 
-          // Layer 2: The Y-Axis with Faded Background and Timed Visibility
-          AnimatedVisibility(
-            visible = yAxisVisible,
-            enter = fadeIn(animationSpec = tween(300)),
-            exit = fadeOut(animationSpec = tween(1000))
-          ) {
-            Box(
-              modifier = Modifier
-                .fillMaxHeight()
-                .width(Y_AXIS_WIDTH)
-                .background(
-                  brush = Brush.horizontalGradient(
-                    colors = listOf(
-                      backgroundColor,
-                      backgroundColor.copy(alpha = 0.8f),
-                      backgroundColor.copy(alpha = 0.5f),
-                      ColorTransparent
-                    )
-                  )
-                )
-            ) {
-              val animatedFontWeight by animateFloatAsState(
-                targetValue = if (yAxisVisible) 700f else 400f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-              )
-              Canvas(modifier = Modifier.fillMaxSize()) {
-                val axisPaint = Paint().apply {
-                  color = onBackgroundColor.copy(alpha = 0.7f).toArgb()
-                  textAlign = Paint.Align.LEFT
-                  textSize = 12.sp.toPx()
-                  typeface = Typeface.create(Typeface.DEFAULT, animatedFontWeight.toInt())
-                }
-                val rulerTopValue = calculateNiceMaxSpeed(animatedMaxSpeed / 2)
-                val numLines = 4
 
-                for (i in 0..numLines) {
-                  val fraction = i.toFloat() / numLines
-                  val yValue = rulerTopValue * fraction
-                  val yPos = size.height - ((yValue / rulerTopValue) * (size.height * GRAPH_HEIGHT_SCALE))
-                  val (value, unit) = formatBitsPerSecond(yValue.toLong(), speedUnit)
-                  val markingEnd = (4 + i * 2).dp.toPx()
-
-                  if (i > 0) {
-                    drawContext.canvas.nativeCanvas.drawText(
-                      "$value $unit",
-                      markingEnd + 4.dp.toPx(),
-                      yPos + 4.dp.toPx(),
-                      axisPaint
-                    )
-                  }
-
-                  drawLine(
-                    color = onBackgroundColor.copy(alpha = 0.5f),
-                    start = Offset(0f, yPos),
-                    end = Offset(markingEnd, yPos),
-                    strokeWidth = 2.dp.toPx()
-                  )
-                }
-              }
-            }
-          }
         }
       }
     }

@@ -41,8 +41,6 @@ import androidx.glance.text.TextStyle
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
-import com.vinnovateit.latch.ui.theme.DarkColorScheme
-import com.vinnovateit.latch.ui.theme.LightColorScheme
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -54,6 +52,8 @@ import androidx.compose.runtime.remember
 import androidx.glance.ColorFilter
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
+import androidx.compose.ui.graphics.Color
+import com.materialkolor.dynamicColorScheme
 
 // Configurable constants for easy customization
 private const val WIDGET_CORNER_RADIUS = 28
@@ -67,7 +67,8 @@ data class LatchWidgetState(
   val connectedDuration: String = "-",
   val isConnected: Boolean = false,
   val isLightTheme: Boolean = true,  // Flag for theme mode
-  val useDynamicColors: Boolean = true
+  val useDynamicColors: Boolean = true,
+  val accentColor: String = "Red"
 )
 
 class LatchWidget : GlanceAppWidget() {
@@ -92,6 +93,14 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
   val context = LocalContext.current
   val useDynamicColors = state.useDynamicColors && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
+  val seedColor = when (state.accentColor) {
+    "Blue" -> Color(0xFF005AC1)
+    "Green" -> Color(0xFF0F5223)
+    "Purple" -> Color(0xFF7D00B8)
+    "Pink" -> Color(0xFFD81B60)
+    else -> Color(0xFFC01221) // Red
+  }
+
   val colors = if (useDynamicColors) {
     ColorProviders(
       light = dynamicLightColorScheme(context),
@@ -99,8 +108,8 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
     )
   } else {
     ColorProviders(
-      light = LightColorScheme,
-      dark = DarkColorScheme
+      light = dynamicColorScheme(seedColor = seedColor, isDark = false),
+      dark = dynamicColorScheme(seedColor = seedColor, isDark = true)
     )
   }
 
