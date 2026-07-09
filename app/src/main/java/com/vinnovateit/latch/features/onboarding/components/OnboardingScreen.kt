@@ -180,32 +180,18 @@ fun OnboardingScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) { pageIndex ->
-                    AnimatedContent(
-                        targetState = pageIndex,
-                        transitionSpec = {
-                            if (targetState > initialState) {
-                                (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                    slideOutHorizontally { width -> -width } + fadeOut())
-                            } else {
-                                (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                                    slideOutHorizontally { width -> width } + fadeOut())
-                            }.using(SizeTransform(clip = false))
-                        },
-                        label = "OnboardingPageAnimationLandscape"
-                    ) { targetPage ->
-                        when (targetPage) {
+                        when (pageIndex) {
                             0 -> WelcomeToLatchPageLandscape()
-                            2 -> NotificationPermissionPageLandscape(slides[targetPage], onPermissionGranted = { permissionGranted = true })
-                            3 -> SetUpAccountPageLandscape(slides[targetPage], onCredentialsClick = {
+                            2 -> NotificationPermissionPageLandscape(slides[pageIndex], onPermissionGranted = { permissionGranted = true })
+                            3 -> SetUpAccountPageLandscape(slides[pageIndex], onCredentialsClick = {
                                 credentialsLauncher.launch(
                                     Intent(context, SecondPageActivity::class.java).apply {
                                         putExtra("fromOnboarding", true)
                                     }
                                 )
                             })
-                            else -> StandardSlidePageLandscape(slides[targetPage])
+                            else -> StandardSlidePageLandscape(slides[pageIndex])
                         }
-                    }
                 }
 
                 LandscapeFloatingNavControls(
@@ -276,32 +262,18 @@ fun OnboardingScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) { pageIndex ->
-                AnimatedContent(
-                    targetState = pageIndex,
-                    transitionSpec = {
-                        if (targetState > initialState) {
-                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> -width } + fadeOut())
-                        } else {
-                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> width } + fadeOut())
-                        }.using(SizeTransform(clip = false))
-                    },
-                    label = "OnboardingPageAnimation"
-                ) { targetPage ->
-                    when (targetPage) {
+                    when (pageIndex) {
                         0 -> WelcomeToLatchPage()
-                        2 -> NotificationPermissionPage(slides[targetPage], onPermissionGranted = { permissionGranted = true })
-                        3 -> SetUpAccountPage(slides[targetPage], onCredentialsClick = {
+                        2 -> NotificationPermissionPage(slides[pageIndex], onPermissionGranted = { permissionGranted = true })
+                        3 -> SetUpAccountPage(slides[pageIndex], onCredentialsClick = {
                             credentialsLauncher.launch(
                                 Intent(context, SecondPageActivity::class.java).apply {
                                     putExtra("fromOnboarding", true)
                                 }
                             )
                         })
-                        else -> StandardSlidePage(slides[targetPage])
+                        else -> StandardSlidePage(slides[pageIndex])
                     }
-                }
             }
         }
     }

@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -334,75 +336,37 @@ fun StaggeredStatusText(
     modifier: Modifier = Modifier
 ) {
     val text = if (isConnected) "CONNECTED" else "DISCONNECTED"
-    val color = if (isConnected) ColorStatusConnected else ColorStatusDisconnected
+    val containerColor = MaterialTheme.colorScheme.primaryContainer
+    val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
 
-    val containerHeight by animateDpAsState(
-        targetValue = if (visible) 28.dp else 0.dp,
-        animationSpec = if (visible) {
-            spring(stiffness = Spring.StiffnessMediumLow)
-        } else {
-            tween(durationMillis = 300, delayMillis = 400, easing = FastOutSlowInEasing)
-        },
-        label = "containerHeight"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(containerHeight)
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.2f to Color.Black,
-                        1f to Color.Black
-                    ),
-                    blendMode = BlendMode.DstIn
-                )
-            }
-            .clipToBounds(),
-        contentAlignment = Alignment.TopCenter
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        modifier = modifier.fillMaxWidth(),
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(expandFrom = Alignment.Top),
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top)
     ) {
-        if (containerHeight > 0.dp) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(top = 4.dp)
+        Box(contentAlignment = Alignment.Center) {
+            Surface(
+                shape = androidx.compose.foundation.shape.CircleShape,
+                color = containerColor,
+                modifier = Modifier.wrapContentSize()
             ) {
-                text.forEachIndexed { index, char ->
-                    key(index, char) {
-                        val offsetY = remember { Animatable(-20f) }
-
-                        LaunchedEffect(visible) {
-                            if (visible) {
-                                delay(index * 30L)
-                                offsetY.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.55f,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                )
-                            } else {
-                                delay(index * 20L)
-                                offsetY.animateTo(
-                                    targetValue = -20f,
-                                    animationSpec = tween(300)
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = char.toString(),
-                            color = color,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = SatoshiFontFamily,
-                            modifier = Modifier.offset(y = offsetY.value.dp)
-                        )
-                    }
+                androidx.compose.animation.AnimatedContent(
+                    targetState = text,
+                    transitionSpec = {
+                        (androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300)) + androidx.compose.animation.scaleIn(initialScale = 0.95f))
+                            .togetherWith(androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300)) + androidx.compose.animation.scaleOut(targetScale = 0.95f))
+                            .using(androidx.compose.animation.SizeTransform(clip = false))
+                    },
+                    label = "StatusTextAnimation"
+                ) { targetText ->
+                    Text(
+                        text = targetText,
+                        color = contentColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
                 }
             }
         }

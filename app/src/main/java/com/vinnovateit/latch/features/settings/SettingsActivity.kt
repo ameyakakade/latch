@@ -255,8 +255,8 @@ fun SettingsScreen(onBackClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(3.dp))
             SettingsItem(
-              title = "Direct Login",
-              subtitle = "Immediately send login request without validating wifi when connected",
+              title = "Bypass Validation",
+              subtitle = "Skip network checks and send login request immediately",
               leadingIcon = {
                 Icon(
                   Icons.Rounded.FlashOn,
@@ -616,9 +616,9 @@ fun SettingsActionBottomSheet(
           .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold))
+        Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(8.dp))
-        Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface))
+        Text(description, style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface), modifier = Modifier.padding(horizontal = 24.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(24.dp))
         Row(
           modifier = Modifier
@@ -626,7 +626,7 @@ fun SettingsActionBottomSheet(
             .padding(horizontal = 16.dp),
           horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-          OutlinedButton(
+          Button(
             onClick = {
               haptic.performHapticFeedback(HapticFeedbackType.LongPress)
               onDismiss()
@@ -635,12 +635,13 @@ fun SettingsActionBottomSheet(
           ) {
             Text(cancelText, fontWeight = FontWeight.Bold)
           }
-          Button(
+          OutlinedButton(
             onClick = {
               haptic.performHapticFeedback(HapticFeedbackType.LongPress)
               onConfirm()
             },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
           ) {
             Text(confirmText, fontWeight = FontWeight.Bold)
           }
