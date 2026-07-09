@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
 
     private val wifiStatusViewModel: WiFiStatusViewModel by viewModels()
     private lateinit var appUpdateManager: AppUpdateManager
+    private var updateDownloaded = androidx.compose.runtime.mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -36,10 +37,8 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         SettingsManager.initialize(this)
 
-        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            appUpdateManager = AppUpdateManagerFactory.create(this@MainActivity)
-            checkForAppUpdate()
-        }
+        appUpdateManager = AppUpdateManagerFactory.create(this)
+        checkForAppUpdate()
 
         if (SettingsManager.autoLogin.value) {
             val serviceIntent = Intent(this, ForegroundService::class.java).apply {
@@ -63,6 +62,28 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
+                    if (updateDownloaded.value) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { /* Force user to decide */ },
+                            title = { androidx.compose.material3.Text("Update Ready") },
+                            text = { androidx.compose.material3.Text("An update has been downloaded and is ready to be installed. Restart the app to apply the update.") },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(onClick = { 
+                                    appUpdateManager.completeUpdate() 
+                                }) {
+                                    androidx.compose.material3.Text("Restart")
+                                }
+                            },
+                            dismissButton = {
+                                androidx.compose.material3.TextButton(onClick = { 
+                                    updateDownloaded.value = false 
+                                }) {
+                                    androidx.compose.material3.Text("Later")
+                                }
+                            }
+                        )
+                    }
+
                     com.vinnovateit.latch.navigation.LatchNavGraph(
                         wifiStatusViewModel = wifiStatusViewModel,
                         startDestination = startDest
@@ -97,7 +118,7 @@ class MainActivity : ComponentActivity() {
 
             appUpdateManager.registerListener { state ->
                 if (state.installStatus() == InstallStatus.DOWNLOADED) {
-                    appUpdateManager.completeUpdate()
+                    updateDownloaded.value = true
                 }
             }
         }
@@ -110,14 +131,10 @@ class MainActivity : ComponentActivity() {
         appUpdateManager
             .appUpdateInfo
             .addOnSuccessListener { appUpdateInfo ->
-                if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                    @Suppress("DEPRECATION")
-                    appUpdateManager.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        AppUpdateType.FLEXIBLE,
-                        this,
-                        UPDATE_REQUEST_CODE
-                    )
+                // For flexible updates, if the update is downloaded but not installed,
+                // notify the user to complete the update.
+                if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                    updateDownloaded.value = true
                 }
             }
     }
