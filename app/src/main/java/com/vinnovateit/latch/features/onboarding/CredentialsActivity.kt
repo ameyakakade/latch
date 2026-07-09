@@ -129,7 +129,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                         text = stringResource(id = R.string.credentials_subtitle),
                         fontSize = 20.sp,
                         fontFamily = SatoshiFontFamily,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -216,7 +216,7 @@ fun CredentialsScreen(editMode: Boolean, onCredentialsSaved: () -> Unit) {
                     text = stringResource(id = R.string.credentials_subtitle),
                     fontSize = 20.sp,
                     fontFamily = SatoshiFontFamily,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center
                 )
