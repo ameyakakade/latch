@@ -1,5 +1,6 @@
 package com.vinnovateit.latch.features.wifi.quicksettings
 
+import android.content.Context
 import android.content.Intent
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -45,6 +46,21 @@ class LatchTileService : TileService() {
 
         if (isProcessing) {
             Log.d(TAG, "Already processing, ignoring click")
+            return
+        }
+
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        val connectivityManager = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        val isWifiConnected = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+
+        if (!wifiManager.isWifiEnabled || !isWifiConnected) {
+            Log.d(TAG, "WiFi is off or disconnected. Opening settings.")
+            val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivityAndCollapse(intent)
             return
         }
 
@@ -100,22 +116,35 @@ class LatchTileService : TileService() {
                 val qsTile = qsTile ?: return@launch
                 val isConnected = SessionRepository.liveStatus.value != null
 
-                when {
-                    isConnected && !isProcessing -> {
-                        qsTile.state = Tile.STATE_ACTIVE
-                        qsTile.label = "Latched"
-                    }
-                    !isConnected && !isProcessing -> {
-                        qsTile.state = Tile.STATE_INACTIVE
-                        qsTile.label = "Latch"
-                    }
-                    isProcessing && isConnected -> {
-                        qsTile.state = Tile.STATE_ACTIVE
-                        qsTile.label = "Disconnecting..."
-                    }
-                    isProcessing && !isConnected -> {
-                        qsTile.state = Tile.STATE_INACTIVE
-                        qsTile.label = "Latching..."
+                val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                val connectivityManager = applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+                val activeNetwork = connectivityManager.activeNetwork
+                val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+                val isWifiConnected = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+
+                val isWifiReady = wifiManager.isWifiEnabled && isWifiConnected
+
+                if (!isWifiReady) {
+                    qsTile.state = Tile.STATE_UNAVAILABLE
+                    qsTile.label = "Latch"
+                } else {
+                    when {
+                        isConnected && !isProcessing -> {
+                            qsTile.state = Tile.STATE_ACTIVE
+                            qsTile.label = "Latched"
+                        }
+                        !isConnected && !isProcessing -> {
+                            qsTile.state = Tile.STATE_INACTIVE
+                            qsTile.label = "Latch"
+                        }
+                        isProcessing && isConnected -> {
+                            qsTile.state = Tile.STATE_ACTIVE
+                            qsTile.label = "Disconnecting..."
+                        }
+                        isProcessing && !isConnected -> {
+                            qsTile.state = Tile.STATE_INACTIVE
+                            qsTile.label = "Latching..."
+                        }
                     }
                 }
 

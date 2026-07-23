@@ -16,27 +16,30 @@ object SettingsManager {
 
   // Keys
   private const val KEY_AUTO_LOGIN = "auto_login"
-  private const val KEY_BYPASS_PORTAL_CHECK = "bypass_portal_check"
+
   private const val KEY_SPEED_UNITS = "speed_units"
   private const val KEY_THEME = "theme"
   private const val KEY_USE_DYNAMIC_COLORS = "use_dynamic_colors"
+  private const val KEY_USE_PURE_BLACK = "use_pure_black"
   private const val KEY_ACCENT_COLOR = "accent_color"
+  private const val KEY_USE_MONOCHROME = "use_monochrome"
   private const val ACTION_SETTINGS_CHANGED = "com.vinnovateit.latch.ACTION_SETTINGS_CHANGED"
 
   // Default Values
   private const val DEFAULT_AUTO_LOGIN = true
-  private const val DEFAULT_BYPASS_PORTAL_CHECK = true // Enabled by default as requested
+
   private const val DEFAULT_SPEED_UNITS = "bps"
   private const val DEFAULT_THEME = "System Default"
   private const val DEFAULT_USE_DYNAMIC_COLORS = false
+  private const val DEFAULT_USE_PURE_BLACK = false
+  private const val DEFAULT_USE_MONOCHROME = false
   private const val DEFAULT_ACCENT_COLOR = "Red"
 
   // StateFlows to observe changes
   private val _autoLogin = MutableStateFlow(DEFAULT_AUTO_LOGIN)
   val autoLogin: StateFlow<Boolean> = _autoLogin
 
-  private val _bypassPortalCheck = MutableStateFlow(DEFAULT_BYPASS_PORTAL_CHECK)
-  val bypassPortalCheck: StateFlow<Boolean> = _bypassPortalCheck
+
 
   private val _speedUnits = MutableStateFlow(DEFAULT_SPEED_UNITS)
   val speedUnits: StateFlow<String> = _speedUnits
@@ -46,6 +49,12 @@ object SettingsManager {
 
   private val _useDynamicColors = MutableStateFlow(DEFAULT_USE_DYNAMIC_COLORS)
   val useDynamicColors: StateFlow<Boolean> = _useDynamicColors
+
+  private val _usePureBlack = MutableStateFlow(DEFAULT_USE_PURE_BLACK)
+  val usePureBlack: StateFlow<Boolean> = _usePureBlack
+
+  private val _useMonochrome = MutableStateFlow(DEFAULT_USE_MONOCHROME)
+  val useMonochrome: StateFlow<Boolean> = _useMonochrome
 
   private val _accentColor = MutableStateFlow(DEFAULT_ACCENT_COLOR)
   val accentColor: StateFlow<String> = _accentColor
@@ -58,10 +67,12 @@ object SettingsManager {
 
   private fun loadSettings() {
     _autoLogin.value = sharedPreferences.getBoolean(KEY_AUTO_LOGIN, DEFAULT_AUTO_LOGIN)
-    _bypassPortalCheck.value = sharedPreferences.getBoolean(KEY_BYPASS_PORTAL_CHECK, DEFAULT_BYPASS_PORTAL_CHECK)
+
     _speedUnits.value = sharedPreferences.getString(KEY_SPEED_UNITS, DEFAULT_SPEED_UNITS) ?: DEFAULT_SPEED_UNITS
     _theme.value = sharedPreferences.getString(KEY_THEME, DEFAULT_THEME) ?: DEFAULT_THEME
     _useDynamicColors.value = sharedPreferences.getBoolean(KEY_USE_DYNAMIC_COLORS, DEFAULT_USE_DYNAMIC_COLORS)
+    _usePureBlack.value = sharedPreferences.getBoolean(KEY_USE_PURE_BLACK, DEFAULT_USE_PURE_BLACK)
+    _useMonochrome.value = sharedPreferences.getBoolean(KEY_USE_MONOCHROME, DEFAULT_USE_MONOCHROME)
     _accentColor.value = sharedPreferences.getString(KEY_ACCENT_COLOR, DEFAULT_ACCENT_COLOR) ?: DEFAULT_ACCENT_COLOR
   }
 
@@ -79,10 +90,7 @@ object SettingsManager {
     }
   }
 
-  fun setBypassPortalCheck(enabled: Boolean) {
-    _bypassPortalCheck.value = enabled
-    sharedPreferences.edit { putBoolean(KEY_BYPASS_PORTAL_CHECK, enabled) }
-  }
+
 
   fun setSpeedUnits(units: String) {
     _speedUnits.value = units
@@ -98,6 +106,18 @@ object SettingsManager {
   fun setUseDynamicColors(enabled: Boolean) {
     _useDynamicColors.value = enabled
     sharedPreferences.edit { putBoolean(KEY_USE_DYNAMIC_COLORS, enabled) }
+    sendSettingsChangedBroadcast()
+  }
+
+  fun setUsePureBlack(enabled: Boolean) {
+    _usePureBlack.value = enabled
+    sharedPreferences.edit { putBoolean(KEY_USE_PURE_BLACK, enabled) }
+    sendSettingsChangedBroadcast()
+  }
+
+  fun setUseMonochrome(enabled: Boolean) {
+    _useMonochrome.value = enabled
+    sharedPreferences.edit { putBoolean(KEY_USE_MONOCHROME, enabled) }
     sendSettingsChangedBroadcast()
   }
 

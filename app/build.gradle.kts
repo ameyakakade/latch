@@ -13,19 +13,24 @@ android {
     defaultConfig {
         applicationId = "com.vinnovateit.latch"
         minSdk = 26
-        versionCode = 5
-        versionName = "1.2"
+        versionCode = 7
+        targetSdk = 36
+        versionName = "1.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
         }
     }
 
@@ -77,7 +82,6 @@ dependencies {
 
     // Data
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.androidx.security.crypto)
 
     // Compose Core UI modules

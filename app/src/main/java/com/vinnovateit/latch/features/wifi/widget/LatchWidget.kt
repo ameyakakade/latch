@@ -133,7 +133,6 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
       ) {
         Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
           Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(text = "Status:", style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = 16.sp, fontFamily = FontFamily.Monospace))
             Text(text = state.status, style = TextStyle(color = GlanceTheme.colors.onBackground, fontSize = statusFontSize, fontWeight = FontWeight.Bold))
           }
           Image(
@@ -191,6 +190,22 @@ class ConnectAction : ActionCallback {
         Json.decodeFromString<LatchWidgetState>(stateJson)
       } catch (e: Exception) {
         LatchWidgetState()
+      }
+
+      val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+      val connectivityManager = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+      
+      val isWifiEnabled = wifiManager.isWifiEnabled
+      val activeNetwork = connectivityManager.activeNetwork
+      val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+      val isWifiConnected = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+
+      if (!state.isConnected && (!isWifiEnabled || !isWifiConnected)) {
+          val wifiIntent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
+              flags = Intent.FLAG_ACTIVITY_NEW_TASK
+          }
+          context.startActivity(wifiIntent)
+          return
       }
 
       val intent = Intent(context, ForegroundService::class.java).apply {
