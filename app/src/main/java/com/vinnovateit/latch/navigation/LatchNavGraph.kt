@@ -140,13 +140,7 @@ fun LatchNavGraph(
             val connectionStatus by wifiStatusViewModel.connectionStatus.collectAsStateWithLifecycle()
             val speedUnits by SettingsManager.speedUnits.collectAsStateWithLifecycle()
 
-            val currentSpeedBytesPerSecond =
-                liveStatus?.liveData?.lastOrNull()?.usage?.rxBytes ?: 0L
-            val formattedSpeed = formatBitsPerSecond(currentSpeedBytesPerSecond, speedUnits)
 
-            val networkSpeedString = if (isConnected && liveStatus != null) {
-                "${formattedSpeed.first} ${formattedSpeed.second}"
-            } else ""
 
             val sessionForHomeScreen = if (isConnected && liveStatus != null) {
                 statsViewModel.sessionToShow.collectAsStateWithLifecycle().value
@@ -155,7 +149,6 @@ fun LatchNavGraph(
             Surface(modifier = Modifier.fillMaxSize()) {
                 HomeScreen(
                     isConnected = isConnected,
-                    networkSpeed = networkSpeedString,
                     session = sessionForHomeScreen,
                     connectionStatus = connectionStatus,
                     speedUnit = speedUnits,

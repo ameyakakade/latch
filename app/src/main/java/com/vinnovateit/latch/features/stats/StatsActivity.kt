@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.vinnovateit.latch.common.ui.components.ExpressiveTopBarContent
 import com.vinnovateit.latch.common.util.generateHtmlReport
+import com.vinnovateit.latch.common.util.TooltipHint
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.stats.components.SessionCard
 import com.vinnovateit.latch.features.stats.components.StatsList
@@ -92,7 +93,7 @@ private fun StatsTopBar(
         Icon(
           imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
           contentDescription = "Back",
-          tint = MaterialTheme.colorScheme.onSurface
+          tint = MaterialTheme.colorScheme.primary
         )
       }
 
@@ -101,15 +102,19 @@ private fun StatsTopBar(
           .align(Alignment.TopEnd)
           .padding(end = 12.dp, top = 4.dp)
       ) {
-        IconButton(onClick = {
-          haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-          onSaveReport()
-        }) {
-          Icon(
-            imageVector = Icons.Default.Save,
-            contentDescription = "Save Report",
-            tint = MaterialTheme.colorScheme.primary
-          )
+        TooltipHint(tooltipText = "Export Report") {
+          IconButton(
+            onClick = {
+              haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+              onSaveReport()
+            }
+          ) {
+            Icon(
+              imageVector = com.vinnovateit.latch.ui.icons.ExportNotes,
+              contentDescription = "Save Report",
+              tint = MaterialTheme.colorScheme.primary
+            )
+          }
         }
       }
     }
