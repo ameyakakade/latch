@@ -13,6 +13,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
+        android:name=".LatchApplication"
         android:allowBackup="true"
         android:networkSecurityConfig="@xml/network_security_config"
         android:dataExtractionRules="@xml/data_extraction_rules"

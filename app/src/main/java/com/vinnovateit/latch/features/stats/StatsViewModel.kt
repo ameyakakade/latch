@@ -135,10 +135,7 @@ class StatsViewModel(application: Application) : AndroidViewModel(application) {
       .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
 
-  init {
-    // Ensure the repository is initialized.
-    SessionRepository.initialize(application)
-  }
+
 
   fun onClearHistory() {
     SessionRepository.clearHistory()
