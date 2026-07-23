@@ -50,6 +50,8 @@ import com.vinnovateit.latch.features.home.components.GRAPH_HEIGHT_SCALE
 import com.vinnovateit.latch.features.home.components.POINTS_IN_30_SECONDS
 import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import kotlinx.coroutines.delay
 import java.util.*
 import kotlin.math.atan2
@@ -69,11 +71,15 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
 
     val overlayAlpha by animateFloatAsState(targetValue = if (showOverlay) 1f else 0f, animationSpec = tween(durationMillis = 300))
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+    val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp),
         shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        border = if (isAmoled) androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             SessionRateGraph(
@@ -89,7 +95,8 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
             SessionDetailsOverlay(
                 modifier = Modifier.graphicsLayer { alpha = overlayAlpha },
                 session = session,
-                speedUnit = speedUnit
+                speedUnit = speedUnit,
+                isAmoled = isAmoled
             )
         }
     }
@@ -99,7 +106,8 @@ fun SessionCard(session: SessionSummary, speedUnit: String) {
 private fun SessionDetailsOverlay(
     modifier: Modifier = Modifier,
     session: SessionSummary,
-    speedUnit: String
+    speedUnit: String,
+    isAmoled: Boolean = false
 ) {
     val overlayColor = MaterialTheme.colorScheme.surface
 
@@ -122,7 +130,7 @@ private fun SessionDetailsOverlay(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                DataUsageCircle(modifier = Modifier.size(100.dp), data = session.totalData)
+                DataUsageCircle(modifier = Modifier.size(100.dp), data = session.totalData, isAmoled = isAmoled)
             }
         }
     }
@@ -204,6 +212,8 @@ private fun SessionRateGraph(
         rateHistory.size.toFloat() / POINTS_IN_30_SECONDS
     } else 1f
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+
     var scale by remember { mutableStateOf(initialScale) }
     val scrollState = rememberScrollState()
     var lastInteractionTime by remember { mutableLongStateOf(0L) }
@@ -237,6 +247,9 @@ private fun SessionRateGraph(
     val timeFormat = remember(context) {
         DateFormat.getTimeFormat(context)
     }
+    val satoshiTypeface = remember(context) {
+        androidx.core.content.res.ResourcesCompat.getFont(context, com.vinnovateit.latch.R.font.satoshi_regular) ?: Typeface.DEFAULT
+    }
 
     Box(
         modifier = modifier
@@ -266,7 +279,7 @@ private fun SessionRateGraph(
 
             if (containerWidth > 0 && rateHistory.size > 1) {
                 var maxSpeed by remember { mutableStateOf(1L) }
-                val xAxisSpace = with(density) { 30.dp.toPx() }
+                val xAxisSpace = with(density) { 40.dp.toPx() }
                 val graphDrawHeight = containerHeight - xAxisSpace
 
                 LaunchedEffect(rateHistory, scrollState.value, scale) {
@@ -325,7 +338,9 @@ private fun SessionRateGraph(
                         ) {
                             val totalBrush = Brush.verticalGradient(listOf(primaryColor.copy(alpha = 0.4f), Color.Transparent))
 
-                            drawPath(graphData.totalPath, brush = totalBrush)
+                            if (!usePureBlack) {
+                                drawPath(graphData.totalPath, brush = totalBrush)
+                            }
 
                             drawPath(graphData.lineTotalPath, color = primaryColor, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round))
 
@@ -341,7 +356,7 @@ private fun SessionRateGraph(
                                 color = onSurfaceColor.copy(alpha = 0.7f).toArgb()
                                 textAlign = Paint.Align.CENTER
                                 textSize = 10.sp.toPx()
-                                typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+                                typeface = satoshiTypeface
                             }
                             val startTimestamp = rateHistory.first().timestamp
                             val totalDuration = max(rateHistory.last().timestamp - startTimestamp, 1L)
@@ -351,9 +366,9 @@ private fun SessionRateGraph(
                                 val x = size.width * fraction
                                 val time = startTimestamp + (totalDuration * fraction).toLong()
                                 drawContext.canvas.nativeCanvas.drawText(
-                                    timeFormat.format(Date(time)),
+                                    timeFormat.format(Date(time)).uppercase(),
                                     x,
-                                    xAxisY + 18.dp.toPx(),
+                                    xAxisY + 22.dp.toPx(),
                                     axisPaint
                                 )
                             }
@@ -377,7 +392,8 @@ private fun SessionRateGraph(
 @Composable
 fun DataUsageCircle(
     modifier: Modifier = Modifier,
-    data: DataUsage
+    data: DataUsage,
+    isAmoled: Boolean = false
 ) {
     var mode by remember { mutableStateOf(DisplayMode.TOTAL) }
     LaunchedEffect(mode) {
@@ -414,7 +430,7 @@ fun DataUsageCircle(
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val strokeWidth = 12.dp.toPx()
+            val strokeWidth = if (isAmoled) 4.dp.toPx() else 12.dp.toPx()
             val gapAngle = 4f
             val totalSweep = 360f - gapAngle * 2
 

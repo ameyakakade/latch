@@ -40,12 +40,15 @@ class MainActivity : ComponentActivity() {
         appUpdateManager = AppUpdateManagerFactory.create(this)
         checkForAppUpdate()
 
-        if (SettingsManager.autoLogin.value) {
-            val serviceIntent = Intent(this, ForegroundService::class.java).apply {
-                action = ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+        // Perform a silent check on launch to detect if already authenticated
+        val serviceIntent = Intent(this, ForegroundService::class.java).apply {
+            action = if (SettingsManager.autoLogin.value) {
+                ForegroundService.ACTION_TRIGGER_LOGIN_CHECK
+            } else {
+                ForegroundService.ACTION_SILENT_CHECK
             }
-            startService(serviceIntent)
         }
+        startService(serviceIntent)
 
         val prefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
         val hasSeenOnboarding = prefs.getBoolean("hasSeenOnboarding", false)

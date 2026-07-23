@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
 
 // Removed hardcoded schemes to use dynamic seed generation
@@ -31,6 +32,7 @@ fun LatchTheme(
     val context = LocalContext.current
     val themeSetting by SettingsManager.theme.collectAsStateWithLifecycle()
     val useDynamicColors by SettingsManager.useDynamicColors.collectAsStateWithLifecycle() // Read the new setting
+    val useMonochrome by SettingsManager.useMonochrome.collectAsStateWithLifecycle()
     val accentColor by SettingsManager.accentColor.collectAsStateWithLifecycle()
     val systemIsDark = isSystemInDarkTheme()
     val supportsDynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -47,11 +49,20 @@ fun LatchTheme(
         "Green" -> Color(0xFF0F5223)
         "Purple" -> Color(0xFF7D00B8)
         "Pink" -> Color(0xFFD81B60)
+        "Yellow" -> Color(0xFFF5B300)
         else -> Color(0xFFC01221) // Red
     }
 
     val baseColorScheme = when {
-        // Highest priority: Dynamic colors if toggled on and supported
+        // Monochrome takes highest priority if enabled
+        useMonochrome -> {
+            dynamicColorScheme(
+                seedColor = Color.Black, // Seed doesn't matter much for monochrome
+                isDark = darkTheme,
+                style = PaletteStyle.Monochrome
+            )
+        }
+        // Then Dynamic colors if toggled on and supported
         useDynamicColors && supportsDynamic -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
@@ -64,7 +75,23 @@ fun LatchTheme(
         }
     }
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+
     var colorScheme = baseColorScheme
+
+    if (darkTheme && usePureBlack) {
+        colorScheme = colorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceContainer = Color.Black,
+            surfaceContainerLow = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceVariant = Color(0xFF121212),
+            surfaceContainerHigh = Color(0xFF121212),
+            surfaceContainerHighest = Color(0xFF1A1A1A),
+            surfaceDim = Color.Black
+        )
+    }
 
     CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
         MaterialExpressiveTheme(

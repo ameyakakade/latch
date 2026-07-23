@@ -118,6 +118,10 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
         return
     }
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+    val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+
+
     val todayIdx = chartItems.indexOfLast { it is HistoryChartItem.BarData }
     var selectedIndex by remember { mutableIntStateOf(todayIdx) }
 
@@ -214,6 +218,7 @@ private fun HistoryBarChartContent(chartItems: List<HistoryChartItem>) {
                                     maxUsage = maxDailyUsage,
                                     dayLabel = item.label,
                                     isSelected = (idx == selectedIndex),
+                                    isAmoled = isAmoled,
                                     barAreaHeight = barAreaHeight,
                                     onTap = {
                                     if (selectedIndex != idx) {
@@ -281,6 +286,7 @@ private fun Bar(
     maxUsage: Long,
     dayLabel: String,
     isSelected: Boolean,
+    isAmoled: Boolean = false,
     barAreaHeight: Dp,
     onTap: () -> Unit
 ) {
@@ -326,30 +332,77 @@ private fun Bar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(barHeightInDp)
-                    .clip(CircleShape)
             ) {
+                val strokeWidth = 4.dp.toPx()
+                val cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2, size.width / 2)
+                
+                // Inset the drawing rect by half the stroke width when outlined so it doesn't get clipped by Canvas bounds.
+                val inset = if (isAmoled) strokeWidth / 2 else 0f
+                val drawSize = Size(size.width - inset * 2, size.height - inset * 2)
+                val topLeftOffset = Offset(inset, inset)
+
                 if (total > 0) {
-                    val w = size.width
-                    val h = size.height
-                    val dlH = h * downloadFrac
-                    val ulH = h * uploadFrac
+                    val gapPx = if (downloadFrac > 0f && uploadFrac > 0f) 4.dp.toPx() else 0f
+                    val availableHeight = drawSize.height - gapPx
+                    val ulH = availableHeight * uploadFrac
+                    val dlH = availableHeight * downloadFrac
+
+                    if (ulH > 0) {
+                        if (isAmoled) {
+                            drawRoundRect(
+                                color = ulColor,
+                                topLeft = topLeftOffset,
+                                size = Size(drawSize.width, ulH),
+                                cornerRadius = cornerRadius,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                            )
+                        } else {
+                            drawRoundRect(
+                                color = ulColor,
+                                topLeft = topLeftOffset,
+                                size = Size(drawSize.width, ulH),
+                                cornerRadius = cornerRadius
+                            )
+                        }
+                    }
 
                     if (dlH > 0) {
-                        drawRect(
-                            color = dlColor,
-                            topLeft = Offset(0f, 0f),
-                            size = Size(w, dlH)
-                        )
-                    }
-                    if (ulH > 0) {
-                        drawRect(
-                            color = ulColor,
-                            topLeft = Offset(0f, dlH),
-                            size = Size(w, ulH)
-                        )
+                        val dlTopY = topLeftOffset.y + ulH + gapPx
+                        if (isAmoled) {
+                            drawRoundRect(
+                                color = dlColor,
+                                topLeft = Offset(topLeftOffset.x, dlTopY),
+                                size = Size(drawSize.width, dlH),
+                                cornerRadius = cornerRadius,
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                            )
+                        } else {
+                            drawRoundRect(
+                                color = dlColor,
+                                topLeft = Offset(topLeftOffset.x, dlTopY),
+                                size = Size(drawSize.width, dlH),
+                                cornerRadius = cornerRadius
+                            )
+                        }
                     }
                 } else {
-                    drawRect(color = Color.Gray.copy(alpha = 0.3f))
+                    val emptyColor = Color.Gray.copy(alpha = 0.3f)
+                    if (isAmoled) {
+                        drawRoundRect(
+                            color = emptyColor,
+                            topLeft = topLeftOffset,
+                            size = drawSize,
+                            cornerRadius = cornerRadius,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                        )
+                    } else {
+                        drawRoundRect(
+                            color = emptyColor,
+                            topLeft = topLeftOffset,
+                            size = drawSize,
+                            cornerRadius = cornerRadius
+                        )
+                    }
                 }
             }
         }

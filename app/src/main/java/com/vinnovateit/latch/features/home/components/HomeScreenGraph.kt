@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -55,7 +57,7 @@ import kotlin.math.max
 import kotlin.math.pow
 import kotlinx.coroutines.delay
 
-const val GRAPH_HEIGHT_SCALE = 0.77f
+const val GRAPH_HEIGHT_SCALE = 0.70f
 val Y_AXIS_WIDTH = 70.dp
 const val POINTS_IN_30_SECONDS = 20
 
@@ -80,6 +82,8 @@ fun HomeScreenGraph(
   rateHistory: List<LiveDataPoint>,
   speedUnit: String
 ) {
+  val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+  
   val initialScale = if (rateHistory.size > POINTS_IN_30_SECONDS) {
     rateHistory.size.toFloat() / POINTS_IN_30_SECONDS.toFloat()
   } else {
@@ -204,7 +208,9 @@ fun HomeScreenGraph(
             ) {
               val totalBrush = Brush.verticalGradient(listOf(primaryColor.copy(0.4f), ColorTransparent))
 
-              drawPath(graphData.totalPath, brush = totalBrush)
+              if (!usePureBlack) {
+                  drawPath(graphData.totalPath, brush = totalBrush)
+              }
               drawPath(graphData.lineTotalPath, primaryColor, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
             }
           }

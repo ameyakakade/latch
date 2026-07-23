@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowOutward
+import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Error
@@ -29,6 +31,8 @@ import com.vinnovateit.latch.domain.model.LiveDataPoint
 import com.vinnovateit.latch.domain.model.SessionSummary
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
 import com.vinnovateit.latch.ui.theme.ModernizFontFamily
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun SpectrumCard(
@@ -37,17 +41,22 @@ fun SpectrumCard(
   connectionStatus: ConnectionStatus,
   speedUnit: String,
   isLandscape: Boolean,
-  networkSpeed: String,
   onNavigateToStats: () -> Unit = {},
 ) {
-  val topPadding = if (isLandscape) 0.dp else 105.dp
+  val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+  val isDarkTheme = com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+  val isAmoledTheme = usePureBlack && isDarkTheme
+
+  val topPadding = if (isLandscape) 0.dp else 125.dp
   Card(
     modifier = Modifier
       .padding(top = topPadding)
-      .padding(horizontal = 24.dp, vertical = 24.dp)
+      .padding(horizontal = 24.dp)
+      .padding(bottom = 24.dp)
       .fillMaxSize(),
     shape = RoundedCornerShape(28.dp),
     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+    border = if (isAmoledTheme) androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.primary) else null,
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
       Row(
@@ -58,7 +67,7 @@ fun SpectrumCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.Top) {
           Text(
             text = stringResource(id = R.string.home_network_statistics),
             fontFamily = ModernizFontFamily,
@@ -68,17 +77,55 @@ fun SpectrumCard(
             imageVector = Icons.Rounded.ArrowOutward,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 6.dp)
+            modifier = Modifier.padding(start = 2.dp, top = 1.dp).size(14.dp)
           )
         }
-        Text(
-          text = networkSpeed,
-          color = MaterialTheme.colorScheme.onSurface,
-          fontSize = 16.sp,
-          fontWeight = FontWeight.Bold,
-          fontFamily = com.vinnovateit.latch.ui.theme.SatoshiFontFamily,
-          modifier = Modifier.padding(end = 8.dp)
-        )
+        val latestUsage = session?.history?.lastOrNull()?.usage
+        val (downloadBps, uploadBps) = if (latestUsage != null) {
+            latestUsage.rxBps to latestUsage.txBps
+        } else {
+            0L to 0L
+        }
+
+        val isDownloadDominant = downloadBps >= uploadBps
+        val dominatingBps = if (isDownloadDominant) downloadBps else uploadBps
+        val icon = if (isDownloadDominant) androidx.compose.material.icons.Icons.Rounded.ArrowDownward else androidx.compose.material.icons.Icons.Rounded.ArrowUpward
+        val iconColor = if (isDownloadDominant) com.vinnovateit.latch.ui.theme.ColorGraphDownload else com.vinnovateit.latch.ui.theme.ColorGraphUpload
+        val (value, unit) = com.vinnovateit.latch.common.util.formatBitsPerSecond(dominatingBps, speedUnit)
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = dominatingBps > 0L,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Row(verticalAlignment = Alignment.Bottom) {
+                    com.vinnovateit.latch.features.stats.components.RollingNumberText(
+                        value = value,
+                        textStyle = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                    Text(
+                        text = " $unit",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 1.dp)
+                    )
+                }
+            }
+        }
       }
 
       Box(

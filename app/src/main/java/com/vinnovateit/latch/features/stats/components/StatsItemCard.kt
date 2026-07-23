@@ -21,7 +21,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
@@ -45,11 +48,15 @@ fun StatsItemCard(
   session: SessionSummary,
   shape: Shape = RoundedCornerShape(16.dp),
 ) {
+  val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+  val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+
   Card(
     modifier = Modifier.fillMaxWidth(),
     shape = shape,
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    border = if (isAmoled) androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.primary) else null
   ) {
     Row(
       modifier = Modifier
@@ -60,7 +67,9 @@ fun StatsItemCard(
     ) {
       Column(modifier = Modifier.weight(1f)) {
         val now = System.currentTimeMillis()
-        val timeString = if (now - session.startTimestamp < 24 * 60 * 60 * 1000) {
+        val timeString = if (now - session.startTimestamp < 60 * 1000) {
+            "Just now"
+        } else if (now - session.startTimestamp < 24 * 60 * 60 * 1000) {
             android.text.format.DateUtils.getRelativeTimeSpanString(session.startTimestamp, now, android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
         } else {
             SimpleDateFormat("E, dd MMM", Locale.getDefault()).format(Date(session.startTimestamp))

@@ -54,7 +54,7 @@ fun ExpressiveTopBarContent(
           text = title,
           style = MaterialTheme.typography.headlineMedium,
           fontFamily = ModernizFontFamily,
-          color = MaterialTheme.colorScheme.onSurface,
+          color = MaterialTheme.colorScheme.primary,
           modifier = Modifier.graphicsLayer {
             scaleX = titleScale
             scaleY = titleScale

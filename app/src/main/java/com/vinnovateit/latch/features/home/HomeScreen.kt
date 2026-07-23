@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.features.home
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.core.Animatable
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Wifi
@@ -75,7 +77,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     isConnected: Boolean,
-    networkSpeed: String,
     session: SessionSummary?,
     connectionStatus: ConnectionStatus,
     speedUnit: String,
@@ -115,7 +116,12 @@ fun HomeScreen(
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         statusTimerTrigger = System.currentTimeMillis()
 
-        if (!isConnected && !WiFiStateDetector.isWiFiEnabled(context)) {
+        val connectivityManager = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork
+        val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        val isWifiConnected = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+
+        if (!isConnected && (!WiFiStateDetector.isWiFiEnabled(context) || !isWifiConnected)) {
             val panelIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 Intent(Settings.Panel.ACTION_WIFI)
             } else {
@@ -147,7 +153,6 @@ fun HomeScreen(
         if (isPortrait) {
             PortraitHomeScreen(
                 isConnected = isConnected,
-                networkSpeed = networkSpeed,
                 session = session,
                 onConnectClick = smartOnConnectClick as () -> Unit,
                 historyForHomeScreen = historyForHomeScreen,
@@ -162,7 +167,6 @@ fun HomeScreen(
         } else {
             LandscapeHomeScreen(
                 isConnected = isConnected,
-                networkSpeed = networkSpeed,
                 session = session,
                 onConnectClick = smartOnConnectClick as () -> Unit,
                 historyForHomeScreen = historyForHomeScreen,
@@ -177,7 +181,7 @@ fun HomeScreen(
         }
 
         if (showHowItWorksDialog) {
-            HowItWorksDialog(onDismiss = { showHowItWorksDialog = false })
+            HowItWorksBottomSheet(onDismiss = { showHowItWorksDialog = false })
         }
     }
 }
@@ -185,7 +189,6 @@ fun HomeScreen(
 @Composable
 fun PortraitHomeScreen(
     isConnected: Boolean,
-    networkSpeed: String,
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
@@ -202,6 +205,8 @@ fun PortraitHomeScreen(
     val screenWidthPx = with(density) { LocalResources.current.displayMetrics.widthPixels.toFloat() }
     val buttonDiameterPx = screenWidthPx * 0.6f
     val colorScheme = MaterialTheme.colorScheme
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+    val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         LeafOverlay(
@@ -240,16 +245,18 @@ fun PortraitHomeScreen(
                     .weight(0.5f)
                     .graphicsLayer(alpha = 0.99f)
                     .drawBehind {
-                        drawRect(color = colorScheme.primaryContainer, size = size)
-                        val cutoutRatio = 0.9f
-                        val cutoutDiameter = buttonDiameterPx * cutoutRatio
-                        val cutoutRadius = cutoutDiameter / 2f
-                        val circleTopLeft = Offset(x = (size.width - cutoutDiameter) / 2f, y = -cutoutRadius)
-                        drawArc(
-                            color = Color.Transparent, startAngle = 0f, sweepAngle = 180f,
-                            useCenter = true, topLeft = circleTopLeft, size = Size(cutoutDiameter, cutoutDiameter),
-                            blendMode = BlendMode.Clear
-                        )
+                        if (!isAmoled) {
+                            drawRect(color = colorScheme.primaryContainer, size = size)
+                            val cutoutRatio = 0.9f
+                            val cutoutDiameter = buttonDiameterPx * cutoutRatio
+                            val cutoutRadius = cutoutDiameter / 2f
+                            val circleTopLeft = Offset(x = (size.width - cutoutDiameter) / 2f, y = -cutoutRadius)
+                            drawArc(
+                                color = Color.Transparent, startAngle = 0f, sweepAngle = 180f,
+                                useCenter = true, topLeft = circleTopLeft, size = Size(cutoutDiameter, cutoutDiameter),
+                                blendMode = BlendMode.Clear
+                            )
+                        }
                     }
                     .navigationBarsPadding(),
                 contentAlignment = Alignment.BottomCenter
@@ -260,7 +267,6 @@ fun PortraitHomeScreen(
                     connectionStatus = connectionStatus,
                     speedUnit = speedUnit,
                     isLandscape = false,
-                    networkSpeed = networkSpeed,
                     onNavigateToStats = onNavigateToStats
                 )
             }
@@ -276,7 +282,6 @@ fun PortraitHomeScreen(
 @Composable
 fun LandscapeHomeScreen(
     isConnected: Boolean,
-    networkSpeed: String,
     session: SessionSummary?,
     onConnectClick: () -> Unit,
     historyForHomeScreen: List<LiveDataPoint>,
@@ -351,7 +356,6 @@ fun LandscapeHomeScreen(
                 connectionStatus = connectionStatus,
                 speedUnit = speedUnit,
                 isLandscape = true,
-                networkSpeed = networkSpeed,
                 onNavigateToStats = onNavigateToStats
             )
         }
@@ -402,24 +406,6 @@ fun StaggeredStatusText(
     }
 }
 
-@Composable
-fun NetworkStatusRow(networkSpeed: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = networkSpeed,
-            color = MaterialTheme.colorScheme.onBackground,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            fontFamily = SatoshiFontFamily
-        )
-    }
-}
 
 @Composable
 fun PowerButtonOverlay(
@@ -438,27 +424,29 @@ fun PowerButtonOverlay(
         label = "powerIconRotation"
     )
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+    val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+
+    val containerColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.primaryContainer
+
+    val contentColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "powerBtnContentColor"
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
     Box(
-        modifier = modifier
-            .size(buttonDiameterDp)
-            .drawBehind {
-                val shadowColor = ColorPowerButtonShadow
-                val radius = size.minDimension / 2
-                val paint = Paint().asFrameworkPaint().apply {
-                    isAntiAlias = true
-                    color = shadowColor.toArgb()
-                    maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.NORMAL)
-                }
-                drawContext.canvas.nativeCanvas.drawCircle(center.x, center.y + 20f, radius, paint)
-            },
+        modifier = modifier.size(buttonDiameterDp),
         contentAlignment = Alignment.Center
     ) {
         Button(
             onClick = onConnectClick,
             modifier = Modifier.fillMaxSize().clip(CircleShape),
             shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+            colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+            border = if (isAmoled) androidx.compose.foundation.BorderStroke(4.dp, if (isConnected) primaryColor else MaterialTheme.colorScheme.outline) else null
         ) {
             Icon(
                 imageVector = Icons.Rounded.PowerSettingsNew,
@@ -494,18 +482,32 @@ fun LandscapePowerButton(
         label = "powerIconRotation"
     )
 
+    val usePureBlack by SettingsManager.usePureBlack.collectAsStateWithLifecycle()
+    val isAmoled = usePureBlack && com.vinnovateit.latch.ui.theme.LocalIsDarkTheme.current
+
+    val containerColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.primaryContainer
+
+    val contentColor by androidx.compose.animation.animateColorAsState(
+        targetValue = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "powerBtnContentColor"
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
     Button(
         onClick = onConnectClick,
         interactionSource = interactionSource,
-        modifier = modifier.pointerInput(Unit) {
-            detectTapGestures(onPress = {
-                pressedManual = true
-                try { awaitRelease() } finally { pressedManual = false }
-            })
-        },
+        modifier = modifier
+            .pointerInput(Unit) {
+                detectTapGestures(onPress = {
+                    pressedManual = true
+                    try { awaitRelease() } finally { pressedManual = false }
+                })
+            },
         shape = RoundedCornerShape(cornerRadius),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
-        contentPadding = PaddingValues(0.dp)
+        colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
+        contentPadding = PaddingValues(0.dp),
+        border = if (isAmoled) androidx.compose.foundation.BorderStroke(4.dp, if (isConnected) primaryColor else MaterialTheme.colorScheme.outline) else null
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -554,107 +556,100 @@ fun TopBarSection(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HowItWorksDialog(onDismiss: () -> Unit) {
-    AlertDialog(
+fun HowItWorksBottomSheet(onDismiss: () -> Unit) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 24.dp, end = 24.dp, bottom = 48.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = "How it Works",
                 style = MaterialTheme.typography.headlineMedium,
                 fontFamily = ModernizFontFamily,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 32.dp)
             )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Rounded.Wifi,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp).padding(top=2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "If any VIT Wi-Fi is auto-connected, Latch retrieves your encrypted credentials and attempts to connect.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = SatoshiFontFamily,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Rounded.BarChart,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp).padding(top=2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "Once connected, you can watch your real-time stats and data usage.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = SatoshiFontFamily,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(
-                        imageVector = Icons.Rounded.PowerSettingsNew,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp).padding(top=2.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "If you do not wish this to work, disable auto-connect from settings or press the disconnect button (which also disables auto-connect).",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = SatoshiFontFamily,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                HowItWorksRow(
+                    icon = Icons.Rounded.Wifi,
+                    text = "If any VIT Wi-Fi is auto-connected, Latch retrieves your encrypted credentials and attempts to connect."
+                )
+                HowItWorksRow(
+                    icon = Icons.Rounded.BarChart,
+                    text = "Once connected, you can watch your real-time stats and data usage."
+                )
+                HowItWorksRow(
+                    icon = Icons.Rounded.Speed,
+                    text = "The 10 mbps cap will not be bypassable."
+                )
+                HowItWorksRow(
+                    icon = Icons.Rounded.PowerSettingsNew,
+                    text = "If you do not wish this to work, disable auto-connect from settings or press the disconnect button (which also disables auto-connect)."
+                )
             }
-        },
-        confirmButton = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                contentAlignment = Alignment.Center
+            
+            Spacer(modifier = Modifier.height(40.dp))
+            Button(
+                onClick = {
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onDismiss()
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(100),
+                modifier = Modifier.fillMaxWidth(0.7f).height(56.dp)
             ) {
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    shape = RoundedCornerShape(50),
-                    contentPadding = PaddingValues(horizontal = 48.dp, vertical = 16.dp)
-                ) {
-                    Text(
-                        text = "Got It",
-                        fontSize = 18.sp,
-                        fontFamily = SatoshiFontFamily,
-                    )
-                }
+                Text(
+                    text = "GOT IT",
+                    fontSize = 18.sp,
+                    fontFamily = SatoshiFontFamily,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(28.dp)
-    )
+        }
+    }
+}
+
+@Composable
+private fun HowItWorksRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(28.dp).padding(top = 2.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontFamily = SatoshiFontFamily,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 0.dp)
+        )
+    }
 }
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun HomeScreenPortraitPreview() {
     LatchTheme {
-        HomeScreen(isConnected = false, networkSpeed = "6 mbps", session = null, connectionStatus = ConnectionStatus.Idle, "B/s")
+        HomeScreen(isConnected = false, session = null, connectionStatus = ConnectionStatus.Idle, speedUnit = "B/s")
     }
 }
 
@@ -662,6 +657,6 @@ fun HomeScreenPortraitPreview() {
 @Composable
 fun HomeScreenLandscapePreview() {
     LatchTheme {
-        HomeScreen(isConnected = true, networkSpeed = "12 mbps", session = null, connectionStatus = ConnectionStatus.Idle, speedUnit = "B/s")
+        HomeScreen(isConnected = true, session = null, connectionStatus = ConnectionStatus.Idle, speedUnit = "B/s")
     }
 }
