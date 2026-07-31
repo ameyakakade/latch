@@ -36,7 +36,7 @@ fun main(args: Array<String>) {
 
         Tray(
             state = trayState,
-            icon = remember(isLatched) { LatchTrayIcon(latched = isLatched) },
+            icon = remember(isLatched) { LatchIcon.forTray(latched = isLatched) },
             tooltip = tooltip,
             onAction = { windowVisible = true },
             menu = {

@@ -92,6 +92,9 @@ internal fun LatchWindow(
         state = state,
         resizable = false,
         title = "Latch",
+        // Title bar, taskbar and Alt-Tab. Stays brand red regardless of
+        // connection state -- only the tray icon tracks that.
+        icon = remember { LatchIcon.brand() },
     ) {
         CompositionLocalProvider(
             LocalDensity provides Density(density = fit.target, fontScale = 1f)
