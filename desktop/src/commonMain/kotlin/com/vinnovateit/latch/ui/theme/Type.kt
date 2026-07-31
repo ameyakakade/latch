@@ -10,7 +10,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.desktop.resources.Res
 import com.vinnovateit.latch.desktop.resources.moderniz
-import com.vinnovateit.latch.desktop.resources.outfit_variable
 import com.vinnovateit.latch.desktop.resources.satoshi_bold
 import com.vinnovateit.latch.desktop.resources.satoshi_light
 import com.vinnovateit.latch.desktop.resources.satoshi_medium
@@ -46,16 +45,6 @@ internal fun satoshiFontFamily(): FontFamily {
 internal fun modernizFontFamily(): FontFamily {
     val moderniz = Font(Res.font.moderniz, FontWeight.Normal)
     return remember(moderniz) { FontFamily(moderniz) }
-}
-
-/**
- * Used only by the Meet-the-Team screen, which built this inline twice in the
- * Android app. Hoisted so the font is resolved once.
- */
-@Composable
-internal fun outfitFontFamily(): FontFamily {
-    val outfit = Font(Res.font.outfit_variable, FontWeight.Normal)
-    return remember(outfit) { FontFamily(outfit) }
 }
 
 /**
