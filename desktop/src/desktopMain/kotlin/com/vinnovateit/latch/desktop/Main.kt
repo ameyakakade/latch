@@ -89,10 +89,13 @@ fun main(args: Array<String>) {
                     platform = app.platform,
                     updateState = updateState,
                     onCheckForUpdates = { scope.launch { app.updater.check(force = true) } },
-                    onDownloadUpdate = { app.installUpdate(onExiting = { exitApplication() }) },
+                    onDownloadUpdate = { app.downloadUpdate() },
+                    onCancelDownload = { app.cancelUpdateDownload() },
+                    // Leave only if the installer really started; on a failure
+                    // installAndExit has an error for the user to read, which
+                    // exiting unconditionally would take down with the process.
                     onInstallUpdate = { path ->
-                        app.updater.installAndExit(path)
-                        exitApplication()
+                        if (app.updater.installAndExit(path)) exitApplication()
                     },
                     onDismissUpdate = { app.updater.dismissUpdate() },
                 )
