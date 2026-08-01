@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -288,8 +290,13 @@ internal fun AccentColorPicker(
     var showCustomDialog by remember { mutableStateOf(false) }
     val customColor = AccentSeeds.parseHexOrNull(selectedColorName)
 
+    // Scrollable rather than wrapping: 6 presets + the custom swatch (308dp+ of
+    // circles alone, before gaps) is wider than the dialog on the compact window
+    // this app opens at, and AlertDialog clips content that overflows its Surface
+    // rather than letting it spill -- without this, the last swatch or two were
+    // simply invisible with no way to reach them.
     Row(
-        modifier = modifier,
+        modifier = modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -350,16 +357,19 @@ private fun AccentSwatchButton(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
+    // The border is always present (transparent when unselected) rather than
+    // conditionally null -- a border that only appears on the selected swatch
+    // nudged just that circle's rendered size/position relative to its plain
+    // neighbours, which read as the row being unevenly spaced.
     Surface(
         onClick = onClick,
         modifier = Modifier.size(44.dp),
         shape = CircleShape,
         color = color,
-        border = if (isSelected) {
-            BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
-        } else {
-            null
-        },
+        border = BorderStroke(
+            3.dp,
+            if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+        ),
     ) {
         if (isSelected) {
             Box(contentAlignment = Alignment.Center) {

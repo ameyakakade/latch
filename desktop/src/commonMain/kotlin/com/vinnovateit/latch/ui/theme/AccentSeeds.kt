@@ -19,14 +19,17 @@ internal object AccentSeeds {
     val Pink = Color(0xFFD81B60)
     val Yellow = Color(0xFFF5B300)
 
-    /** Display name -> seed, in the order the settings picker shows them. */
+    /**
+     * Display name -> seed, in the order the settings picker shows them.
+     *
+     * Only three presets plus the custom swatch -- Purple/Pink/Yellow are still
+     * valid values [forName] resolves (so a setting saved before this change
+     * still applies correctly), just not offered as swatches here.
+     */
     val ordered: List<Pair<String, Color>> = listOf(
         "Red" to Red,
         "Blue" to Blue,
         "Green" to Green,
-        "Purple" to Purple,
-        "Pink" to Pink,
-        "Yellow" to Yellow,
     )
 
     /**
