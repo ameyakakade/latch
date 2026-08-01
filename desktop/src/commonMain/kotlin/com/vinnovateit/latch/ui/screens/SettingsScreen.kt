@@ -120,7 +120,7 @@ fun SettingsScreen(
                 SettingsSection(title = "Account") {
                     SettingsItem(
                         title = "Auto-login",
-                        subtitle = "Log in automatically when a Latch network is detected",
+                        subtitle = "Login automatically when a VIT WIFI is available nearby",
                         leadingIcon = LatchIcons.Login,
                         trailingContent = {
                             Switch(
