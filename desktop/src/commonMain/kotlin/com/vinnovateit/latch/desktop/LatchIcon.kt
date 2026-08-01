@@ -5,11 +5,14 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.unit.dp
 import com.vinnovateit.latch.ui.theme.AppTitleColor
 import kotlin.math.min
 
@@ -37,7 +40,7 @@ import kotlin.math.min
  */
 
 /** Source viewport of ic_latch.xml is 191x140; the mark is wider than it is tall. */
-private val MARK_PATH_DATA = listOf(
+internal val MARK_PATH_DATA = listOf(
     "M69.54,92.49L88.83,110.95L69.07,129.18C62.04,135.36 53.07,135.48 45.07,132.96C42.3,132.09 39.88,130.39 37.78,128.38C26.66,117.72 21.93,112.41 12.83,101.92C9.57,98.15 6.42,94.21 4.26,89.71C-0.43,79.92 -1.02,70.66 1.37,56.2C2.31,50.52 4.14,44.99 7.26,40.16C12.92,31.39 21.31,22.15 36.22,7.06C37.88,5.38 39.76,3.9 41.89,2.88C51.42,-1.67 57.69,-0.61 68.13,4.53L112.1,46.9C113.12,47.88 113.96,49.05 114.51,50.36C120.19,63.79 118.22,70.78 113.64,81.9C97.53,66.53 72.25,43.68 72.25,43.68C69.62,42.1 54.96,37.46 47.2,45.92C39.44,54.38 32.58,77.36 49.2,90.49C55.53,95.45 60.1,95.56 69.54,92.49Z",
     "M58.21,106.54C68.43,112.86 74.92,113.48 86.55,108.66L78.2,100.6C73.39,95.96 69.57,92.3 69.49,92.51C62.88,94.73 59.83,94.73 54.45,93.13C50.2,91.42 48.22,89.89 45.27,86.31L41.98,82.08L44.1,86.67C47.64,95.16 50.56,99.56 58.21,106.54Z",
     "M60.09,41.16C50.8,42.3 46.96,44.31 42.33,53.63C44.24,47.69 45.87,44.39 49.98,38.57C57.74,27.9 62.19,24.44 70.32,23.87C80.86,22.61 86.64,24.58 96.78,31.99L113.24,47.98C119.36,59.31 119.96,67.8 113.63,81.95L80.43,51.15C72.72,43.74 68.2,41.31 60.09,41.16Z",
@@ -71,6 +74,32 @@ private const val ICON_SIZE = 64f
 
 /** Neutral grey for the not-latched tray icon. */
 private val MutedGrey = Color(0xFF9E9E9E)
+
+/**
+ * The Latch mark as an [ImageVector], built from the same path geometry as the
+ * [Painter] above. Compose Desktop's Icon composable recolours it via tint, which
+ * is what lets the rail header, credentials screen and top bar all show the mark
+ * in the theme primary colour without duplicating any geometry.
+ *
+ * Each subpath is added individually for the same winding reason as the Painter:
+ * merging them would turn the overlapping hook areas into transparent holes.
+ */
+internal val LatchMark: ImageVector by lazy {
+    val builder = ImageVector.Builder(
+        name = "LatchMark",
+        defaultWidth = 191.dp,
+        defaultHeight = 140.dp,
+        viewportWidth = 191f,
+        viewportHeight = 140f,
+    )
+    MARK_PATH_DATA.forEach { data ->
+        builder.addPath(
+            pathData = PathParser().parsePathString(data).toNodes(),
+            fill = SolidColor(Color.Black),
+        )
+    }
+    builder.build()
+}
 
 internal class LatchIcon(private val tint: Color) : Painter() {
 

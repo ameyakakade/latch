@@ -3,6 +3,13 @@ package com.vinnovateit.latch.core.updater
 sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
+
+    /**
+     * Checked, and this build is current. Distinct from [Idle] ("never checked"),
+     * which is what lets Settings show "You are up to date" instead of appearing
+     * to have done nothing.
+     */
+    data object UpToDate : UpdateState
     data class UpdateAvailable(
         val version: String,
         val downloadUrl: String,
