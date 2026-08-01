@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Latch"
 include(":app")
+include(":desktop")

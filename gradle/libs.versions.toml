@@ -36,10 +36,31 @@ room = "2.7.2"
 foundation = "1.9.3"
 animationCore = "1.9.3"
 
+# --- :desktop (Compose Multiplatform / JVM) ---
+# Kept separate from the Android versions above: the desktop module resolves the
+# multiplatform artifact variants, which are versioned independently.
+composeMultiplatform = "1.9.3"
+# Explicitly NOT compose.material3 (which tracks composeMultiplatform). The
+# desktop UI uses expressive APIs -- LoadingIndicator, ExperimentalMaterial3-
+# ExpressiveApi -- that only exist in the alpha line.
+composeMaterial3Mp = "1.10.0-alpha05"
+ksp = "2.2.10-2.0.2"
+lifecycleMp = "2.9.4"
+kotlinxCoroutines = "1.10.2"
+roomKmp = "2.8.4"
+sqliteBundled = "2.7.0"
+oshi = "6.12.0"
+jna = "5.18.1"
+slf4jSimple = "2.0.16"
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 
 [libraries]
 # Core
@@ -110,3 +131,22 @@ foundation = { group = "androidx.compose.foundation", name = "foundation", versi
 androidx-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 androidx-compose-animation-core = { group = "androidx.compose.animation", name = "animation-core", version.ref = "animationCore" }
+
+# --- :desktop (Compose Multiplatform / JVM) ---
+# These resolve the -jvm / -desktop variants of each module. The androidx
+# lifecycle and room artifacts are the same coordinates the Android app uses;
+# Gradle picks the JVM variant from the multiplatform metadata.
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "composeMaterial3Mp" }
+lifecycle-viewmodel-mp = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycleMp" }
+lifecycle-viewmodel-compose-mp = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleMp" }
+lifecycle-runtime-compose-mp = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycleMp" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+# Required: Compose Desktop dispatches on the AWT event thread.
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutines" }
+room-runtime-desktop = { module = "androidx.room:room-runtime", version.ref = "roomKmp" }
+room-compiler-desktop = { module = "androidx.room:room-compiler", version.ref = "roomKmp" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqliteBundled" }
+oshi-core = { module = "com.github.oshi:oshi-core", version.ref = "oshi" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4jSimple" }

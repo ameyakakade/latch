@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">Latch</string>
+    <string name="app_name_uppercase">LATCH</string>
+    <string name="menu">Menu</string>
+
+    <string name="get_started">Get Started</string>
+    <string name="landing_latch_logo_content_description">Latch Logo</string>
+    <string name="landing_vinnovateit_logo_content_description">VinnovateIT Logo</string>
+    <string name="credentials_title">Credentials</string>
+    <string name="credentials_subtitle">Enter WiFi login credentials</string>
+    <string name="registration_number">Registration Number</string>
+    <string name="password">Password</string>
+    <string name="save_credentials">Save Credentials</string>
+    <string name="update_credentials">Update Credentials</string>
+    <string name="credentials_saved_toast">Credentials saved!</string>
+    <string name="credentials_error_message">Please enter User ID and your password</string>
+    <string name="username_icon_content_description">Username Icon</string>
+    <string name="password_icon_content_description">Password Icon</string>
+
+    <string name="home_initial_status">Press the button to run auto-login test.</string>
+    <string name="home_background_pattern_content_description">Background Pattern</string>
+    <string name="home_change_credentials">Change Credentials</string>
+    <string name="home_status_connected">LATCHED</string>
+    <string name="home_status_disconnected">DISCONNECTED</string>
+    <string name="home_network_statistics">STATS</string>
+    <string name="home_go_to_statistics">Go to Statistics</string>
+    <string name="home_no_data_for_graph">Connect for curves!</string>
+
+    <string name="stats_title">Stats</string>
+    <string name="stats_go_back">Back</string>
+    <string name="stats_reset_stats">Reset Stats</string>
+    <string name="stats_report_saved_toast">Report saved successfully</string>
+    <string name="stats_report_failed_toast">Failed to save report: %s</string>
+    <string name="stats_report_filename">session_report.csv</string>
+    <string name="stats_empty_message">No stats to show yet. Connect to a network to get started!</string>
+    <string name="stats_reset_dialog_title">Reset Stats</string>
+    <string name="stats_reset_dialog_message">Are you sure you want to delete all session history? This action cannot be undone.</string>
+    <string name="stats_reset_dialog_confirm">Reset</string>
+    <string name="stats_reset_dialog_cancel">Cancel</string>
+    <string name="stats_daily_usage">Daily Usage</string>
+    <string name="stats_no_session_history">No session history available.</string>
+    <string name="stats_no_history_data">No history data yet.</string>
+    <string name="stats_total_data_usage">Total Data Usage</string>
+    <string name="stats_sessions">Sessions</string>
+    <string name="stats_download_report_tooltip">Download a CSV report of the session</string>
+    <string name="stats_download_report_button">Download report</string>
+    <string name="stats_live_download">Download</string>
+    <string name="stats_live_upload">Upload</string>
+    <string name="stats_max_download">Max Download</string>
+    <string name="stats_max_upload">Max Upload</string>
+    <string name="stats_view_more">View More</string>
+
+    <string name="widget_status">Status:</string>
+    <string name="widget_app_logo">App Logo</string>
+    <string name="widget_status_disconnected">Disconnected</string>
+    <string name="widget_description">Quick status and control for Latch.</string>
+    <string name="widget_duration_fallback">-</string>
+    <string name="widget_connect">Connect</string>
+    <string name="widget_disconnect">Disconnect</string>
+    <string name="widget_login_required">Login Required</string>
+    <string name="widget_loading">Loading…</string>
+    <string name="widget_status_connected">Latched</string>
+    <string name="widget_duration_just_now">Just Now</string>
+
+    <string name="status_not_connected">Not Latched</string>
+    <string name="status_connected">Latched</string>
+    <string name="status_wifi_off">Wi-Fi is turned off.</string>
+    <string name="status_not_on_wifi">Not connected to a Wi-Fi network.</string>
+    <string name="status_revalidating">Re-validating connection…</string>
+    <string name="status_checking_network">Checking network…</string>
+    <string name="status_unsupported_network">Unsupported Network</string>
+    <string name="status_login_failed">Login Failed</string>
+    <string name="status_credentials_not_set">Credentials not set</string>
+    <string name="status_disconnected_message">Disconnected</string>
+    <string name="status_logging_out">Logging out…</string>
+    <string name="status_logout_failed">Logout failed</string>
+    <string name="status_initializing">Initializing…</string>
+    <string name="status_checking_internet">Checking internet…</string>
+    <string name="status_verifying_network">Verifying network…</string>
+    <string name="status_authenticating">Authenticating…</string>
+    <string name="status_not_on_wifi_long">Active network is not Wi-Fi. Aborting check.</string>
+
+    <string name="notification_channel_name">Latch Service</string>
+    <string name="notification_title">Latch Running</string>
+    <string name="notification_text">Monitoring Wi-Fi connection…</string>
+</resources>
