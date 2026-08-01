@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,8 +44,11 @@ private val CloseHoverRed = Color(0xFFE81123)
 /** Height of the custom title bar replacing the OS one. */
 private val TitleBarHeight = 32.dp
 
+/** Corner radius of the window itself -- requires [Window]'s transparent flag. */
+private val WindowCornerRadius = 14.dp
+
 /** What the window opens at when there is room for it. */
-private const val PREFERRED_W = 460f
+private const val PREFERRED_W = 400f
 private const val PREFERRED_H = 1000f
 
 /**
@@ -53,7 +57,7 @@ private const val PREFERRED_H = 1000f
  * arrangement needs roughly this much height for the panel and the power button
  * not to overlap.
  */
-private const val MIN_W = 420
+private const val MIN_W = 380
 private const val MIN_H = 600
 
 /**
@@ -131,7 +135,10 @@ internal fun LatchWindow(
         // The OS chrome is replaced entirely by [LatchTitleBar] below -- title,
         // taskbar and Alt-Tab icon still use the brand mark, but the window itself
         // draws its own bar and a themed 1px edge instead of the native frame.
+        // `transparent` is what lets the corners outside the rounded Surface below
+        // actually show the desktop through rather than square OS window pixels.
         undecorated = true,
+        transparent = true,
         title = "Latch",
         icon = remember { LatchIcon.brand() },
     ) {
@@ -139,7 +146,8 @@ internal fun LatchWindow(
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(WindowCornerRadius)),
+                shape = RoundedCornerShape(WindowCornerRadius),
                 color = MaterialTheme.colorScheme.background,
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
