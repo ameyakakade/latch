@@ -1,6 +1,10 @@
 package com.vinnovateit.latch.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -16,17 +21,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.vinnovateit.latch.ui.theme.AccentSeeds
+import kotlin.math.abs
 
 // ---------------------------------------------------------------------------
 // Section wrapper
@@ -268,40 +285,240 @@ internal fun AccentColorPicker(
     onColorSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showCustomDialog by remember { mutableStateOf(false) }
+    val customColor = AccentSeeds.parseHexOrNull(selectedColorName)
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        com.vinnovateit.latch.ui.theme.AccentSeeds.ordered.forEach { (name, color) ->
-            val isSelected = name == selectedColorName
-            Surface(
+        AccentSeeds.ordered.forEach { (name, color) ->
+            AccentSwatchButton(
+                color = color,
+                isSelected = name == selectedColorName,
                 onClick = { onColorSelected(name) },
+            )
+        }
+
+        // Custom swatch: shows the last-picked colour once one is active, or a
+        // rainbow "add" affordance beforehand. There is deliberately no separate
+        // "last custom colour" setting -- switching to a preset and back starts
+        // the picker fresh from that preset, which is a fine trade for not
+        // persisting a second value alongside accentColor.
+        if (customColor != null) {
+            AccentSwatchButton(
+                color = customColor,
+                isSelected = true,
+                onClick = { showCustomDialog = true },
+            )
+        } else {
+            Surface(
+                onClick = { showCustomDialog = true },
                 modifier = Modifier.size(44.dp),
                 shape = CircleShape,
-                color = color,
-                border = if (isSelected) {
-                    androidx.compose.foundation.BorderStroke(
-                        3.dp,
-                        MaterialTheme.colorScheme.onSurface,
-                    )
-                } else {
-                    null
-                },
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(2.dp, Brush.sweepGradient(RainbowSweep)),
             ) {
-                if (isSelected) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = LatchIcons.Check,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = LatchIcons.Add,
+                        contentDescription = "Custom colour",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
             }
         }
     }
+
+    if (showCustomDialog) {
+        CustomColorDialog(
+            initialColor = customColor ?: AccentSeeds.forName(selectedColorName),
+            onConfirm = { picked ->
+                with(AccentSeeds) { onColorSelected(picked.toHexString()) }
+                showCustomDialog = false
+            },
+            onDismiss = { showCustomDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun AccentSwatchButton(
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp),
+        shape = CircleShape,
+        color = color,
+        border = if (isSelected) {
+            BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface)
+        } else {
+            null
+        },
+    ) {
+        if (isSelected) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = LatchIcons.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Sampled every 30deg of hue at the picker's fixed saturation/lightness. */
+private val RainbowSweep: List<Color> =
+    (0..360 step 30).map { hslToColor(it.toFloat(), CustomColorSaturation, CustomColorLightness) }
+
+// ---------------------------------------------------------------------------
+// Custom colour picker dialog
+// ---------------------------------------------------------------------------
+
+/** Fixed saturation/lightness for the hue slider -- matches the presets' depth. */
+private const val CustomColorSaturation = 0.75f
+private const val CustomColorLightness = 0.42f
+
+@Composable
+internal fun CustomColorDialog(
+    initialColor: Color,
+    onConfirm: (Color) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var hue by remember { mutableFloatStateOf(colorToHue(initialColor)) }
+    var hexText by remember { mutableStateOf(with(AccentSeeds) { initialColor.toHexString() }) }
+    var previewColor by remember { mutableStateOf(initialColor) }
+    var trackWidthPx by remember { mutableFloatStateOf(1f) }
+
+    fun applyHue(fraction: Float) {
+        hue = (fraction * 360f).coerceIn(0f, 360f)
+        previewColor = hslToColor(hue, CustomColorSaturation, CustomColorLightness)
+        hexText = with(AccentSeeds) { previewColor.toHexString() }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Custom colour") },
+        text = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Surface(
+                        modifier = Modifier.size(40.dp),
+                        shape = CircleShape,
+                        color = previewColor,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    ) {}
+                    OutlinedTextField(
+                        value = hexText,
+                        onValueChange = { typed ->
+                            hexText = typed
+                            AccentSeeds.parseHexOrNull(typed)?.let { parsed ->
+                                previewColor = parsed
+                                hue = colorToHue(parsed)
+                            }
+                        },
+                        label = { Text("Hex") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.horizontalGradient(FullHueGradient))
+                        .onSizeChanged { trackWidthPx = it.width.toFloat().coerceAtLeast(1f) }
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset -> applyHue(offset.x / trackWidthPx) }
+                        }
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, _ ->
+                                applyHue(change.position.x / trackWidthPx)
+                            }
+                        },
+                ) {
+                    // Thumb: a white ring at the current hue position.
+                    val thumbFraction = (hue / 360f).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .offset {
+                                    IntOffset(
+                                        (thumbFraction * (trackWidthPx - 28.dp.toPx())).toInt(),
+                                        0,
+                                    )
+                                },
+                            shape = CircleShape,
+                            color = Color.Transparent,
+                            border = BorderStroke(3.dp, Color.White),
+                        ) {}
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(previewColor) },
+                enabled = AccentSeeds.parseHexOrNull(hexText) != null,
+            ) { Text("Apply") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+private val FullHueGradient: List<Color> =
+    (0..360 step 15).map { hslToColor(it.toFloat(), CustomColorSaturation, CustomColorLightness) }
+
+/** Standard HSL -> RGB, hue in [0, 360), saturation/lightness in [0, 1]. */
+private fun hslToColor(hue: Float, saturation: Float, lightness: Float): Color {
+    val c = (1f - abs(2f * lightness - 1f)) * saturation
+    val x = c * (1f - abs((hue / 60f) % 2f - 1f))
+    val m = lightness - c / 2f
+    val (r1, g1, b1) = when {
+        hue < 60f -> Triple(c, x, 0f)
+        hue < 120f -> Triple(x, c, 0f)
+        hue < 180f -> Triple(0f, c, x)
+        hue < 240f -> Triple(0f, x, c)
+        hue < 300f -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(r1 + m, g1 + m, b1 + m)
+}
+
+/** Approximate hue (0-360) of an arbitrary RGB colour, for seeding the slider. */
+private fun colorToHue(color: Color): Float {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val delta = max - min
+    if (delta == 0f) return 0f
+    val hue = when (max) {
+        r -> 60f * (((g - b) / delta) % 6f)
+        g -> 60f * (((b - r) / delta) + 2f)
+        else -> 60f * (((r - g) / delta) + 4f)
+    }
+    return if (hue < 0f) hue + 360f else hue
 }
 
 /**

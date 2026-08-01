@@ -155,7 +155,11 @@ fun SettingsScreen(
                     SettingsRowGap()
                     SettingsItem(
                         title = "Accent colour",
-                        subtitle = if (useMonochrome) "Monochrome" else accentColor,
+                        subtitle = when {
+                            useMonochrome -> "Monochrome"
+                            AccentSeeds.parseHexOrNull(accentColor) != null -> "Custom ($accentColor)"
+                            else -> accentColor
+                        },
                         leadingIcon = LatchIcons.InvertColors,
                         onClick = { showAccentDialog = true },
                         trailingContent = {
