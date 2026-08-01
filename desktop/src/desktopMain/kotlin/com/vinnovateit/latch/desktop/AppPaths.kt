@@ -32,6 +32,14 @@ internal object AppPaths {
 
     val logsDir: File by lazy { File(dataDir, "logs").apply { mkdirs() } }
 
+    /**
+     * Downloaded update MSIs. Deliberately not a temp file: the JVM exits
+     * moments after handing the path to msiexec, so anything cleaned up on JVM
+     * shutdown would be racing the installer that still needs to read it.
+     * Swept on startup instead -- see GithubUpdater.cleanStaleDownloads.
+     */
+    val updatesDir: File by lazy { File(dataDir, "updates").apply { mkdirs() } }
+
     /** DPAPI-encrypted credential blob. */
     val credentialsFile: File get() = File(dataDir, "credentials.bin")
 

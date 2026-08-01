@@ -79,6 +79,7 @@ fun SettingsScreen(
     onClearStats: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
+    onCancelDownload: () -> Unit,
     onInstallUpdate: (String) -> Unit,
     onDismissUpdate: () -> Unit,
 ) {
@@ -233,6 +234,7 @@ fun SettingsScreen(
                         state = updateState,
                         onCheckForUpdates = onCheckForUpdates,
                         onDownloadUpdate = onDownloadUpdate,
+                        onCancelDownload = onCancelDownload,
                         onInstallUpdate = onInstallUpdate,
                         onDismissUpdate = onDismissUpdate,
                     )
@@ -376,6 +378,7 @@ private fun UpdatePanel(
     state: UpdateState,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
+    onCancelDownload: () -> Unit,
     onInstallUpdate: (String) -> Unit,
     onDismissUpdate: () -> Unit,
 ) {
@@ -385,7 +388,8 @@ private fun UpdatePanel(
         is UpdateState.UpToDate -> "You are up to date"
         is UpdateState.UpdateAvailable -> "Version ${state.version} is available"
         is UpdateState.Downloading -> "Downloading… ${(state.progress * 100).toInt()}%"
-        is UpdateState.Downloaded -> "Ready to install"
+        is UpdateState.Downloaded -> "Version ${state.version} is ready to install"
+        is UpdateState.Dismissed -> "Version ${state.version} available — postponed"
         is UpdateState.Error -> "Update check failed"
     }
 
@@ -436,6 +440,10 @@ private fun UpdatePanel(
                         progress = { state.progress },
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    Spacer(Modifier.height(8.dp))
+                    // The check button is hidden while downloading, so without
+                    // this a stalled 50 MB transfer would have no way out.
+                    TextButton(onClick = onCancelDownload) { Text("Cancel") }
                 }
             }
 

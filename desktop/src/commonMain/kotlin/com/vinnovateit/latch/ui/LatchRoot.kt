@@ -61,6 +61,7 @@ fun LatchRoot(
     updateState: UpdateState,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
+    onCancelDownload: () -> Unit,
     onInstallUpdate: (String) -> Unit,
     onDismissUpdate: () -> Unit,
 ) {
@@ -154,6 +155,7 @@ fun LatchRoot(
                                 onClearStats = { sessions.clearHistory() },
                                 onCheckForUpdates = onCheckForUpdates,
                                 onDownloadUpdate = onDownloadUpdate,
+                                onCancelDownload = onCancelDownload,
                                 onInstallUpdate = onInstallUpdate,
                                 onDismissUpdate = onDismissUpdate,
                             )

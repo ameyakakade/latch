@@ -3,6 +3,7 @@ package com.vinnovateit.latch.desktop.updater
 import com.vinnovateit.latch.core.platform.BuildInfo
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.updater.UpdateState
+import com.vinnovateit.latch.desktop.AppPaths
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,13 +12,22 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.io.RandomAccessFile
+import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
 private const val GITHUB_API = "https://api.github.com/repos/vinnovateit/auto-net-connector/releases/latest"
 private const val MSI_PATTERN = "Latch-"
 private const val PIPE = 32 * 1024
+
+// HttpURLConnection defaults to *no* timeout. On a captive-portal network a
+// half-open socket would otherwise park the UI on "Downloading... 0%" forever,
+// with no way out but killing the app.
+private const val CONNECT_TIMEOUT_MS = 15_000
+private const val READ_TIMEOUT_MS = 30_000
+
+private const val USER_AGENT = "Latch-Updater"
 
 @Serializable
 private data class GithubRelease(
@@ -48,6 +58,9 @@ class GithubUpdater(
 
     private var lastCheckMs: Long = 0
     private val cooldownMs = 3600_000L
+
+    @Volatile
+    private var cancelRequested = false
 
     /**
      * @param force Bypasses the 1h cooldown. The manual "Check for Updates"
@@ -87,57 +100,126 @@ class GithubUpdater(
         }
     }
 
+    /**
+     * Fetches the MSI and stops. Installing is deliberately a separate, explicit
+     * step: downloading 50-odd MB must not also decide on the user's behalf that
+     * now is a good moment to close the app.
+     */
     suspend fun download() = withContext(Dispatchers.IO) {
         val current = _state.value
         if (current !is UpdateState.UpdateAvailable) return@withContext
+        cancelRequested = false
         _state.value = UpdateState.Downloading(0f)
+
+        val dest = File(AppPaths.updatesDir, "Latch-${current.version}.msi")
         try {
-            val dest = File.createTempFile("latch-update-", ".msi").apply { deleteOnExit() }
-            val conn = URL(current.downloadUrl).openConnection() as HttpURLConnection
-            conn.connect()
+            val conn = open(URL(current.downloadUrl))
+            if (conn.responseCode !in 200..299) {
+                throw IOException("Download returned HTTP ${conn.responseCode}")
+            }
             val total = conn.contentLengthLong
-            val input = conn.inputStream
-            val raf = RandomAccessFile(dest, "rw")
-            raf.setLength(total.coerceAtLeast(0))
-            val buf = ByteArray(PIPE)
             var written = 0L
-            while (true) {
-                val n = input.read(buf)
-                if (n <= 0) break
-                raf.write(buf, 0, n)
-                written += n
-                if (total > 0) {
-                    _state.value = UpdateState.Downloading((written.toFloat() / total).coerceIn(0f, 1f))
+            var cancelled = false
+
+            conn.inputStream.use { input ->
+                FileOutputStream(dest).use { output ->
+                    val buf = ByteArray(PIPE)
+                    while (true) {
+                        if (cancelRequested) {
+                            cancelled = true
+                            break
+                        }
+                        val n = input.read(buf)
+                        if (n <= 0) break
+                        output.write(buf, 0, n)
+                        written += n
+                        if (total > 0) {
+                            _state.value =
+                                UpdateState.Downloading((written.toFloat() / total).coerceIn(0f, 1f))
+                        }
+                    }
                 }
             }
-            raf.close()
-            input.close()
-            _state.value = UpdateState.Downloaded(dest.absolutePath)
+
+            // Deleted only after both streams are closed -- Windows refuses to
+            // unlink a file that is still open.
+            if (cancelled) {
+                dest.delete()
+                _state.value = current
+                logger.d("GithubUpdater", "Download cancelled")
+                return@withContext
+            }
+
+            // A connection dropped mid-transfer ends the read loop normally, so
+            // without this a truncated MSI would be offered up as installable.
+            if (total > 0 && written != total) {
+                throw IOException("Incomplete download: got $written of $total bytes")
+            }
+
+            _state.value = UpdateState.Downloaded(current.version, dest.absolutePath)
             logger.d("GithubUpdater", "Downloaded update to ${dest.absolutePath}")
         } catch (e: Exception) {
+            dest.delete()
             logger.e("GithubUpdater", "Download failed", e)
             _state.value = UpdateState.Error("Download failed: ${e.message ?: "Unknown error"}")
         }
     }
 
-    fun installAndExit(msiPath: String) {
-        try {
-            ProcessBuilder("msiexec", "/i", msiPath, "/qn").inheritIO().start()
-        } catch (e: Exception) {
-            logger.e("GithubUpdater", "Failed to launch installer", e)
-            _state.value = UpdateState.Error("Failed to launch installer: ${e.message ?: "Unknown error"}")
+    fun cancelDownload() {
+        cancelRequested = true
+    }
+
+    /**
+     * @return true if msiexec actually started, and therefore whether the caller
+     * should exit. Quitting regardless would discard the [UpdateState.Error] set
+     * here along with the process that was going to display it.
+     */
+    fun installAndExit(msiPath: String): Boolean = try {
+        ProcessBuilder("msiexec", "/i", msiPath, "/qn").inheritIO().start()
+        true
+    } catch (e: Exception) {
+        logger.e("GithubUpdater", "Failed to launch installer", e)
+        _state.value = UpdateState.Error("Failed to launch installer: ${e.message ?: "Unknown error"}")
+        false
+    }
+
+    /**
+     * Removes MSIs left by an earlier run -- a postponed install, or a download
+     * whose install never happened. Startup is the only safe moment to do this:
+     * at any other point a file here may be one msiexec is mid-way through
+     * reading. Each one is ~50 MB, so leaving them to accumulate is not an option.
+     */
+    fun cleanStaleDownloads() {
+        runCatching {
+            AppPaths.updatesDir.listFiles()?.forEach { file ->
+                if (file.isFile && file.delete()) {
+                    logger.d("GithubUpdater", "Removed stale download ${file.name}")
+                }
+            }
         }
     }
 
     fun dismissUpdate() {
-        _state.value = UpdateState.Idle
+        _state.value = when (val current = _state.value) {
+            is UpdateState.UpdateAvailable -> UpdateState.Dismissed(current.version)
+            // The MSI stays on disk and is swept on next launch; re-checking
+            // offers it again, at the cost of downloading it a second time.
+            is UpdateState.Downloaded -> UpdateState.Dismissed(current.version)
+            else -> UpdateState.Idle
+        }
     }
 
+    private fun open(url: URL): HttpURLConnection =
+        (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            setRequestProperty("User-Agent", USER_AGENT)
+        }
+
     private fun fetchLatestRelease(): GithubRelease {
-        val conn = URL(GITHUB_API).openConnection() as HttpURLConnection
+        val conn = open(URL(GITHUB_API))
         conn.requestMethod = "GET"
         conn.setRequestProperty("Accept", "application/vnd.github+json")
-        conn.connect()
         val code = conn.responseCode
         if (code != 200) {
             val body = conn.errorStream?.bufferedReader()?.readText() ?: ""

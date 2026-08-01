@@ -18,9 +18,14 @@ import com.vinnovateit.latch.desktop.updater.GithubUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val APP_DISPLAY_NAME = "LATCH by VinnovateIT"
+
+/** How long the startup update check waits to get past the captive portal. */
+private const val LATCH_WAIT_BEFORE_UPDATE_CHECK_MS = 60_000L
 
 /**
  * Composition root. Everything is constructed once here, in dependency order,
@@ -129,7 +134,17 @@ class LatchApp private constructor(
         // (`gradle run`) build would otherwise nag a developer and burn the
         // unauthenticated API budget; the manual button still works.
         if (platform.buildInfo.isInstalled) {
+            updater.cleanStaleDownloads()
             scope.launch {
+                // Wait for the portal before asking GitHub anything. Un-latched,
+                // the request is answered by VIT's captive portal with HTML, the
+                // JSON parse throws, and Settings is left reading "Update check
+                // failed" -- with no retry, since this check only fires once per
+                // launch. If we never latch (already on a normal network, Wi-Fi
+                // down) the check still runs; the wait is a delay, not a gate.
+                withTimeoutOrNull(LATCH_WAIT_BEFORE_UPDATE_CHECK_MS) {
+                    engine.isLatched.first { it }
+                }
                 updater.check()
             }
         }
@@ -165,14 +180,13 @@ class LatchApp private constructor(
         runCatching { database.close() }
     }
 
-    fun installUpdate(onExiting: () -> Unit) {
-        scope.launch(Dispatchers.IO) {
-            updater.download()
-            val state = updater.state.value
-            if (state is com.vinnovateit.latch.core.updater.UpdateState.Downloaded) {
-                updater.installAndExit(state.filePath)
-                onExiting()
-            }
-        }
+    /**
+     * Fetches the update and leaves it at "ready to install". Installing is the
+     * user's next, separate decision -- see the "Install and restart" button.
+     */
+    fun downloadUpdate() {
+        scope.launch { updater.download() }
     }
+
+    fun cancelUpdateDownload() = updater.cancelDownload()
 }
