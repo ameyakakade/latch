@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.ui.components
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
@@ -118,6 +119,37 @@ internal object LatchIcons {
         )
     }
 
+    val InfoOutline: ImageVector by lazy {
+        icon(
+            "InfoOutline",
+            "M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10" +
+                " 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8" +
+                "s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-12h2V7h-2v1zm0 2h2" +
+                "c1.1 0 2 .9 2 2v6h-2v-6h-2v-2z",
+        )
+    }
+
+    val HelpOutline: ImageVector by lazy {
+        icon(
+            "HelpOutline",
+            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-3h2v2h-2v-2zm1.71-9.71c-.38-.38-.88-.59-1.42-.59-1.12 0-2 .88-2 2H8c0-2.21 1.79-4 4-4 1.06 0 2.08.42 2.83 1.17.75.75 1.17 1.77 1.17 2.83 0 1.44-.8 2.2-1.49 2.86-.59.57-1.01.98-1.01 1.84V15h-2v-.89c0-1.75.9-2.6 1.65-3.3.52-.5.85-.84.85-1.48 0-.54-.21-1.04-.59-1.42z",
+        )
+    }
+
+    val SystemUpdateAlt: ImageVector by lazy {
+        icon(
+            "SystemUpdateAlt",
+            "M5 20h14v-2H5v2zm7-18L5.33 8h3.84V14h4.66V8h3.84L12 2z",
+        )
+    }
+
+    val VersionTag: ImageVector by lazy {
+        icon(
+            "VersionTag",
+            "M7 4h10l3 4v12H4V4h3zm0 2v12h12V8.73L16.05 6H7zm2 2h2v2H9V8zm0 4h6v2H9v-2zm0 4h4v2H9v-2z",
+        )
+    }
+
     val BarChart: ImageVector by lazy {
         icon("BarChart", "M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z")
     }
@@ -140,17 +172,53 @@ internal object LatchIcons {
         )
     }
 
-    val MoreVert: ImageVector by lazy {
-        icon(
-            "MoreVert",
-            "M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z" +
-                "m0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" +
-                "m0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z",
-        )
+    val Menu: ImageVector by lazy {
+        icon("Menu", "M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z")
     }
 
     val Check: ImageVector by lazy {
         icon("Check", "M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z")
+    }
+
+    val Add: ImageVector by lazy {
+        icon("Add", "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z")
+    }
+
+    val Lightbulb: ImageVector by lazy {
+        icon(
+            "Lightbulb",
+            "M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zM12 2C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z",
+        )
+    }
+
+    // Org-level social links on the About screen, vendored from the Android app's
+    // github.xml / linkedin.xml / instagram.xml -- same 35x35 source viewport,
+    // ported at that size rather than rescaled to the usual 24x24. Each pathData
+    // string is kept unbroken (no manual line-wrapping) since the source strings
+    // use commas rather than spaces between numbers -- a wrapped concatenation
+    // that lands between two numbers with no separator silently corrupts the path.
+
+    val GitHub: ImageVector by lazy {
+        socialIcon(
+            "GitHub",
+            "M17.506,0C27.171,0 35.006,8.032 35.006,17.943C35.006,25.868 29.997,32.592 23.048,34.967C22.161,35.143 21.846,34.583 21.846,34.105C21.846,33.514 21.867,31.582 21.867,29.181C21.867,27.508 21.307,26.416 20.679,25.86C24.576,25.415 28.671,23.898 28.671,17.006C28.671,15.046 27.992,13.447 26.868,12.19C27.05,11.737 27.651,9.912 26.697,7.441C26.697,7.441 25.23,6.96 21.89,9.281C20.491,8.883 18.993,8.684 17.506,8.677C16.018,8.684 14.522,8.883 13.126,9.281C9.781,6.96 8.311,7.441 8.311,7.441C7.361,9.912 7.961,11.737 8.142,12.19C7.023,13.447 6.339,15.046 6.339,17.006C6.339,23.88 10.425,25.421 14.312,25.874C13.812,26.322 13.358,27.112 13.201,28.273C12.203,28.731 9.669,29.525 8.108,26.782C8.108,26.782 7.183,25.058 5.426,24.932C5.426,24.932 3.719,24.91 5.307,26.023C5.307,26.023 6.453,26.574 7.249,28.648C7.249,28.648 8.276,31.85 13.145,30.765C13.154,32.265 13.169,33.678 13.169,34.105C13.169,34.58 12.847,35.135 11.974,34.968C5.02,32.597 0.006,25.87 0.006,17.943C0.006,8.032 7.842,0 17.506,0Z" to PathFillType.EvenOdd,
+        )
+    }
+
+    val LinkedIn: ImageVector by lazy {
+        socialIcon(
+            "LinkedIn",
+            "M32.266,0H2.734C1.224,0 0,1.224 0,2.734V32.266C0,33.776 1.224,35 2.734,35H32.266C33.776,35 35,33.776 35,32.266V2.734C35,1.224 33.776,0 32.266,0ZM12.606,24.821H9.194V13.904H12.606V24.821ZM10.808,12.537H10.78C9.543,12.537 8.743,11.703 8.743,10.644C8.743,9.563 9.57,8.75 10.828,8.75C12.086,8.75 12.858,9.563 12.886,10.644C12.893,11.696 12.093,12.537 10.808,12.537ZM26.25,24.821H22.381V19.175C22.381,17.698 21.779,16.687 20.446,16.687C19.428,16.687 18.86,17.37 18.601,18.026C18.505,18.259 18.519,18.587 18.519,18.922V24.821H14.684C14.684,24.821 14.731,14.814 14.684,13.904H18.519V15.62C18.744,14.868 19.968,13.802 21.923,13.802C24.35,13.802 26.25,15.374 26.25,18.751V24.821Z" to PathFillType.NonZero,
+        )
+    }
+
+    val Instagram: ImageVector by lazy {
+        socialIcon(
+            "Instagram",
+            "M17.5,26.25C22.333,26.25 26.25,22.333 26.25,17.5C26.25,12.667 22.333,8.75 17.5,8.75C12.667,8.75 8.75,12.667 8.75,17.5C8.75,22.333 12.667,26.25 17.5,26.25ZM17.5,23.333C20.722,23.333 23.333,20.722 23.333,17.5C23.333,14.278 20.722,11.667 17.5,11.667C14.278,11.667 11.667,14.278 11.667,17.5C11.667,20.722 14.278,23.333 17.5,23.333Z" to PathFillType.EvenOdd,
+            "M26.249,7.292C25.444,7.292 24.791,7.945 24.791,8.75C24.791,9.555 25.444,10.208 26.249,10.208C27.055,10.208 27.708,9.555 27.708,8.75C27.708,7.945 27.055,7.292 26.249,7.292Z" to PathFillType.NonZero,
+            "M2.413,6.236C1.459,8.108 1.459,10.558 1.459,15.458V19.542C1.459,24.442 1.459,26.892 2.413,28.764C3.252,30.41 4.59,31.749 6.237,32.588C8.108,33.542 10.559,33.542 15.459,33.542H19.542C24.443,33.542 26.893,33.542 28.765,32.588C30.411,31.749 31.75,30.41 32.589,28.764C33.542,26.892 33.542,24.442 33.542,19.542V15.458C33.542,10.558 33.542,8.108 32.589,6.236C31.75,4.589 30.411,3.251 28.765,2.412C26.893,1.458 24.443,1.458 19.542,1.458H15.459C10.559,1.458 8.108,1.458 6.237,2.412C4.59,3.251 3.252,4.589 2.413,6.236ZM19.542,4.375H15.459C12.961,4.375 11.262,4.377 9.95,4.484C8.671,4.589 8.017,4.778 7.561,5.011C6.463,5.57 5.571,6.462 5.011,7.56C4.779,8.016 4.59,8.67 4.485,9.949C4.378,11.262 4.376,12.96 4.376,15.458V19.542C4.376,22.04 4.378,23.738 4.485,25.051C4.59,26.33 4.779,26.984 5.011,27.44C5.571,28.538 6.463,29.43 7.561,29.989C8.017,30.222 8.671,30.411 9.95,30.515C11.262,30.623 12.961,30.625 15.459,30.625H19.542C22.041,30.625 23.739,30.623 25.052,30.515C26.331,30.411 26.985,30.222 27.441,29.989C28.538,29.43 29.431,28.538 29.99,27.44C30.222,26.984 30.412,26.33 30.516,25.051C30.623,23.738 30.626,22.04 30.626,19.542V15.458C30.626,12.96 30.623,11.262 30.516,9.949C30.412,8.67 30.222,8.016 29.99,7.56C29.431,6.462 28.538,5.57 27.441,5.011C26.985,4.778 26.331,4.589 25.052,4.484C23.739,4.377 22.041,4.375 19.542,4.375Z" to PathFillType.EvenOdd,
+        )
     }
 
     val ArrowBack: ImageVector by lazy {
@@ -162,6 +230,20 @@ internal object LatchIcons {
             "Person",
             "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" +
                 "m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z",
+        )
+    }
+
+    // Custom window title bar controls.
+
+    val Minimize: ImageVector by lazy {
+        icon("Minimize", "M6 11h12v2H6z")
+    }
+
+    val Close: ImageVector by lazy {
+        icon(
+            "Close",
+            "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41" +
+                " 17.59 19 19 17.59 13.41 12z",
         )
     }
 
@@ -213,3 +295,22 @@ private fun icon(name: String, pathData: String): ImageVector =
         pathData = PathParser().parsePathString(pathData).toNodes(),
         fill = SolidColor(Color.Black),
     ).build()
+
+/** Social icons: 35x35 source viewport, one or more (pathData, fillType) subpaths. */
+private fun socialIcon(name: String, vararg paths: Pair<String, PathFillType>): ImageVector {
+    val builder = ImageVector.Builder(
+        name = name,
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 35f,
+        viewportHeight = 35f,
+    )
+    paths.forEach { (data, fillType) ->
+        builder.addPath(
+            pathData = PathParser().parsePathString(data).toNodes(),
+            fill = SolidColor(Color.Black),
+            pathFillType = fillType,
+        )
+    }
+    return builder.build()
+}

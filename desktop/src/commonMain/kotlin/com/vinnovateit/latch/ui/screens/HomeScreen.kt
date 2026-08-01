@@ -80,6 +80,7 @@ fun HomeScreen(
     platform: PlatformServices,
     onOpenStats: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
     showNavigationMenuItems: Boolean,
 ) {
     val isLatched by controller.isLatched.collectAsStateWithLifecycle()
@@ -130,6 +131,7 @@ fun HomeScreen(
                 onHowItWorks = { showHowItWorks = true },
                 onOpenStats = onOpenStats,
                 onOpenSettings = onOpenSettings,
+                onOpenAbout = onOpenAbout,
                 showNavigationItems = showNavigationMenuItems,
             )
         }

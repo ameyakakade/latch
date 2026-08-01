@@ -120,7 +120,7 @@ fun SettingsScreen(
                 SettingsSection(title = "Account") {
                     SettingsItem(
                         title = "Auto-login",
-                        subtitle = "Log in automatically when a Latch network is detected",
+                        subtitle = "Login automatically when a VIT WIFI is available nearby",
                         leadingIcon = LatchIcons.Login,
                         trailingContent = {
                             Switch(
@@ -155,7 +155,11 @@ fun SettingsScreen(
                     SettingsRowGap()
                     SettingsItem(
                         title = "Accent colour",
-                        subtitle = if (useMonochrome) "Monochrome" else accentColor,
+                        subtitle = when {
+                            useMonochrome -> "Monochrome"
+                            AccentSeeds.parseHexOrNull(accentColor) != null -> "Custom ($accentColor)"
+                            else -> accentColor
+                        },
                         leadingIcon = LatchIcons.InvertColors,
                         onClick = { showAccentDialog = true },
                         trailingContent = {
@@ -174,7 +178,7 @@ fun SettingsScreen(
                     SettingsItem(
                         title = "Speed units",
                         subtitle = speedUnits,
-                        leadingIcon = LatchIcons.Speed,
+                        leadingIcon = LatchIcons.BarChart,
                         onClick = { showUnitsDialog = true },
                     )
                     SettingsRowGap()
@@ -222,7 +226,7 @@ fun SettingsScreen(
                             if (platform.buildInfo.isDebug) append(" (debug)")
                             if (!platform.buildInfo.isInstalled) append(" — dev run")
                         },
-                        leadingIcon = LatchIcons.Update,
+                        leadingIcon = LatchIcons.VersionTag,
                     )
                     SettingsRowGap()
                     UpdatePanel(
@@ -389,7 +393,7 @@ private fun UpdatePanel(
         SettingsItem(
             title = "Software updates",
             subtitle = statusText,
-            leadingIcon = LatchIcons.Update,
+            leadingIcon = LatchIcons.SystemUpdateAlt,
             trailingContent = {
                 if (state is UpdateState.Checking) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))

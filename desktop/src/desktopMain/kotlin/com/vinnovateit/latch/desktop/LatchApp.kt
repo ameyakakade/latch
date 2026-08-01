@@ -13,11 +13,14 @@ import com.vinnovateit.latch.core.stats.formatBitsPerSecond
 import com.vinnovateit.latch.core.stats.formatClockTime
 import com.vinnovateit.latch.desktop.platform.DesktopPlatformServices
 import com.vinnovateit.latch.desktop.platform.TrayNotifier
+import com.vinnovateit.latch.desktop.platform.WindowsBalloonNotifier
 import com.vinnovateit.latch.desktop.updater.GithubUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+
+private const val APP_DISPLAY_NAME = "LATCH by VinnovateIT"
 
 /**
  * Composition root. Everything is constructed once here, in dependency order,
@@ -62,6 +65,7 @@ class LatchApp private constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun start() {
+        if (AppPaths.isWindows) WindowsBalloonNotifier.start(platform.logger)
         applyAutostartDefault()
         engine.start()
 
@@ -71,7 +75,7 @@ class LatchApp private constructor(
         scope.launch {
             sessions.liveStatus.collect { status ->
                 if (status == null || status.liveData.isEmpty()) {
-                    notifier.showOngoing("Latch", "Not latched")
+                    notifier.showOngoing(APP_DISPLAY_NAME, "Not latched")
                     return@collect
                 }
                 val latest = status.liveData.last().usage
@@ -80,7 +84,7 @@ class LatchApp private constructor(
                 val arrow = if (downloadDominant) "↓" else "↑"
                 val (value, unit) = formatBitsPerSecond(dominant, SettingsManager.speedUnits.value)
                 notifier.showOngoing(
-                    "Latched",
+                    APP_DISPLAY_NAME,
                     "$arrow $value $unit • since ${formatClockTime(status.startTimeMillis)}",
                 )
             }
@@ -91,9 +95,9 @@ class LatchApp private constructor(
             var wasLatched = false
             engine.isLatched.collect { latched ->
                 if (latched && !wasLatched) {
-                    notifier.notifyTransient("Latch", "Connected to Wi-Fi")
+                    notifier.notifyTransient("Connected", "Latched onto Wi-Fi.")
                 } else if (!latched && wasLatched) {
-                    notifier.notifyTransient("Latch", "Disconnected")
+                    notifier.notifyTransient("Disconnected", "No longer latched.")
                 }
                 wasLatched = latched
             }
