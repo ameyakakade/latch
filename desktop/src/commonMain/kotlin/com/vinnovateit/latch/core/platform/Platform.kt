@@ -69,6 +69,15 @@ interface WifiPlatform {
     fun isConnectedToWifi(): Boolean
 
     /**
+     * Best-effort: switch the Wi-Fi radio back on if the user left it off.
+     *
+     * Android would need CHANGE_WIFI_STATE and, since Android 10, cannot do this
+     * at all -- hence the default no-op that simply reports the current state.
+     * @return whether Wi-Fi is enabled after the attempt.
+     */
+    fun enableWifi(): Boolean = isWifiEnabled()
+
+    /**
      * The SSID of the connected network, or null if unknown.
      *
      * The Android app has no SSID detection at all -- it infers "this is the VIT

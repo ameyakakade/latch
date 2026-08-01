@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.desktop.platform
 
 import com.sun.jna.platform.win32.Advapi32Util
+import com.sun.jna.platform.win32.Shell32
 import com.sun.jna.platform.win32.WinReg
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.SystemActions
@@ -17,22 +18,46 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
         const val RUN_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
         const val RUN_VALUE_NAME = "Latch"
         const val EXE_NAME = "Latch.exe"
+        const val SW_SHOWNORMAL = 1
+        const val SHELL_EXECUTE_ERROR_MAX = 32L
     }
 
     /**
      * Opens the Wi-Fi network flyout, which is the closest analogue of Android's
-     * Settings.Panel.ACTION_WIFI. Falls back to the full settings page, then to
-     * a shell invocation, because Desktop.browse on an ms-* URI throws on some
-     * configurations.
+     * Settings.Panel.ACTION_WIFI. Falls back to the full settings page.
+     *
+     * These are shell protocol URIs, not web URLs, so they must go through
+     * ShellExecute. Desktop.browse() hands anything it is given to the *default
+     * browser*, which launches Chrome on "ms-availablenetworks:" and then sits
+     * there -- and reports success while doing it, so a browse-first attempt
+     * also swallows the fallback.
      */
     override fun openWifiSettings() {
         val targets = listOf("ms-availablenetworks:", "ms-settings:network-wifi")
         for (target in targets) {
-            if (runCatching { Desktop.getDesktop().browse(URI(target)) }.isSuccess) return
+            if (shellExecute(target)) return
         }
-        runCatching {
-            ProcessBuilder("cmd", "/c", "start", "", "ms-settings:network-wifi").start()
-        }.onFailure { logger.e(TAG, "Could not open Wi-Fi settings", it) }
+        logger.e(TAG, "Could not open Wi-Fi settings", null)
+    }
+
+    /**
+     * @return whether the shell accepted the target. ShellExecute returns a
+     * pseudo-HINSTANCE that is an error code when <= 32; anything above that is
+     * a real launch.
+     */
+    private fun shellExecute(target: String): Boolean = runCatching {
+        val code = Shell32.INSTANCE
+            .ShellExecute(null, "open", target, null, null, SW_SHOWNORMAL)
+            .toLong()
+        if (code <= SHELL_EXECUTE_ERROR_MAX) {
+            logger.w(TAG, "ShellExecute('$target') failed with code $code")
+            false
+        } else {
+            true
+        }
+    }.getOrElse {
+        logger.e(TAG, "ShellExecute('$target') threw", it)
+        false
     }
 
     override fun openUrl(url: String) {

@@ -103,12 +103,27 @@ class LatchApp private constructor(
             }
         }
 
-        // Mirror the Android launch behaviour: probe once at startup so an
-        // already-authenticated network is detected without user action.
-        engine.submit(
-            if (SettingsManager.autoLogin.value) LatchCommand.CheckAndLogin
-            else LatchCommand.SilentCheck
-        )
+        // Switch the radio back on if the user left Wi-Fi off, *then* probe.
+        // enableWifi() shells out to PowerShell and waits for the adapter to
+        // associate, so it must stay off the main thread; probing first would
+        // just report "no Wi-Fi" and give up before the radio came up.
+        scope.launch(Dispatchers.IO) {
+            if (!platform.wifi.isWifiEnabled()) {
+                val enabled = platform.wifi.enableWifi()
+                platform.logger.d(
+                    "LatchApp",
+                    if (enabled) "Wi-Fi was off at launch; turned it back on."
+                    else "Wi-Fi was off at launch and could not be enabled.",
+                )
+            }
+
+            // Mirror the Android launch behaviour: probe once at startup so an
+            // already-authenticated network is detected without user action.
+            engine.submit(
+                if (SettingsManager.autoLogin.value) LatchCommand.CheckAndLogin
+                else LatchCommand.SilentCheck
+            )
+        }
 
         // Background update check on startup, installed builds only. A dev
         // (`gradle run`) build would otherwise nag a developer and burn the
