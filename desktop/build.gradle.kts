@@ -115,10 +115,10 @@ compose.desktop {
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
-            packageVersion = "1.3.0"
+            packageVersion = "1.3.1"
             description = "Auto-login for VIT hostel Wi-Fi"
-            vendor = "vInnovateIT"
-            copyright = "(c) 2026 vInnovateIT"
+            vendor = "VinnovateIT"
+            copyright = "(c) 2026 VinnovateIT"
 
             // jpackage bundles a JRE via jlink, so this list is load-bearing.
             // java.management -> OSHI, jdk.unsupported -> JNA's Unsafe.
