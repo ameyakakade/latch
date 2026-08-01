@@ -126,6 +126,13 @@ compose.desktop {
             modules("java.management", "java.naming", "jdk.unsupported", "java.instrument")
 
             windows {
+                // Without this jpackage stamps its own stock Java icon onto
+                // Latch.exe, which is then what the Start menu, the desktop
+                // shortcut and Explorer show. Regenerate with
+                // `java GenerateIcon.java` in that directory -- it is built from
+                // the same path geometry as the tray and window icons.
+                iconFile.set(project.file("icons/latch.ico"))
+
                 menu = true
                 menuGroup = "Latch"
                 shortcut = true
