@@ -3,6 +3,7 @@ package com.vinnovateit.latch.desktop.platform
 import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.TrayState
 import com.vinnovateit.latch.core.platform.UserNotifier
+import com.vinnovateit.latch.desktop.AppPaths
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
@@ -15,6 +16,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
  *
  *   showOngoing      -> tray tooltip only. Free, safe every 2s.
  *   notifyTransient  -> real balloon. State transitions ONLY.
+ *
+ * On Windows, [notifyTransient] routes through [WindowsBalloonNotifier] so
+ * that the Latch icon appears in the balloon (NIIF_USER). Compose Desktop's
+ * Notification.Type enum only exposes system icons (info/warning/error) and
+ * Type.None (no icon), so there is no way to supply the Latch mark through
+ * the Compose API alone.
  */
 class TrayNotifier : UserNotifier {
 
@@ -33,13 +40,20 @@ class TrayNotifier : UserNotifier {
     }
 
     override fun notifyTransient(title: String, text: String, isError: Boolean) {
-        trayState?.sendNotification(
-            Notification(
-                title = APP_DISPLAY_NAME,
-                message = text,
-                type = if (isError) Notification.Type.Error else Notification.Type.None,
+        // The OS toast shell already shows the app name/icon as its own header
+        // (from the AUMID) -- reusing APP_DISPLAY_NAME here as well duplicated it
+        // verbatim in the balloon body, so callers' own [title] is used instead.
+        if (AppPaths.isWindows) {
+            WindowsBalloonNotifier.notify(title, text, isError)
+        } else {
+            trayState?.sendNotification(
+                Notification(
+                    title = title,
+                    message = text,
+                    type = if (isError) Notification.Type.Error else Notification.Type.Info,
+                )
             )
-        )
+        }
     }
 
     override fun hideOngoing() {
