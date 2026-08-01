@@ -64,14 +64,14 @@ class GithubUpdater(
             val msiAsset = release.assets.find { it.name.startsWith(MSI_PATTERN) && it.name.endsWith(".msi") }
             if (msiAsset == null) {
                 logger.d("GithubUpdater", "No MSI asset in latest release")
-                _state.value = UpdateState.Idle
+                _state.value = UpdateState.UpToDate
                 lastCheckMs = System.currentTimeMillis()
                 return@withContext
             }
             val latestTag = release.tag_name.removePrefix("v")
             if (compareVersions(latestTag, buildInfo.versionName) <= 0) {
                 logger.d("GithubUpdater", "Already up to date ($latestTag)")
-                _state.value = UpdateState.Idle
+                _state.value = UpdateState.UpToDate
                 lastCheckMs = System.currentTimeMillis()
                 return@withContext
             }

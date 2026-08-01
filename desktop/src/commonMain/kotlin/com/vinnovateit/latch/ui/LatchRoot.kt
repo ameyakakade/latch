@@ -1,18 +1,57 @@
 package com.vinnovateit.latch.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.vinnovateit.latch.core.domain.SessionRepository
 import com.vinnovateit.latch.core.engine.LatchController
 import com.vinnovateit.latch.core.platform.PlatformServices
 import com.vinnovateit.latch.core.updater.UpdateState
+import com.vinnovateit.latch.desktop.LatchMark
+import com.vinnovateit.latch.ui.navigation.LatchDestination
 import com.vinnovateit.latch.ui.screens.CredentialsScreen
 import com.vinnovateit.latch.ui.screens.HomeScreen
+import com.vinnovateit.latch.ui.screens.SettingsScreen
+import com.vinnovateit.latch.ui.screens.StatsScreen
 import com.vinnovateit.latch.ui.theme.LatchTheme
 
+/** Below this width the app uses the Android-style overflow menu instead of a rail. */
+private val RailBreakpoint = 900.dp
+
+/**
+ * The whole window: theme, credential gate, and the three-screen shell.
+ *
+ * Navigation adapts rather than picking one idiom and forcing it. A wide window
+ * gets a persistent navigation rail, which is what a desktop user expects and
+ * what makes Stats and Settings one click away; a narrow one falls back to the
+ * Android app's own pattern, an overflow menu in the top bar with a back arrow
+ * on the secondary screens. Neither mode leaves a dead affordance on screen.
+ */
 @Composable
 fun LatchRoot(
     controller: LatchController,
@@ -25,26 +64,118 @@ fun LatchRoot(
     onDismissUpdate: () -> Unit,
 ) {
     LatchTheme {
-        var hasCredentials by remember { mutableStateOf(platform.credentials.exists()) }
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            var hasCredentials by remember { mutableStateOf(platform.credentials.exists()) }
+            var editingCredentials by remember { mutableStateOf(false) }
+            var destination by remember { mutableStateOf(LatchDestination.Home) }
 
-        if (!hasCredentials) {
-            CredentialsScreen(
-                onSave = { userId, password ->
-                    platform.credentials.save(userId, password)
-                    hasCredentials = true
+            if (!hasCredentials || editingCredentials) {
+                CredentialsScreen(
+                    onSave = { userId, password ->
+                        platform.credentials.save(userId, password)
+                        hasCredentials = true
+                        editingCredentials = false
+                    },
+                    // Nothing to go back to on first run. When re-entered from
+                    // Settings the old credentials are left untouched until a new
+                    // pair is actually saved, so cancelling is safe.
+                    onCancel = if (hasCredentials) {
+                        { editingCredentials = false }
+                    } else {
+                        null
+                    },
+                )
+                return@Surface
+            }
+
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val railVisible = maxWidth >= RailBreakpoint
+
+                Row(modifier = Modifier.fillMaxSize()) {
+                    if (railVisible) {
+                        LatchNavigationRail(
+                            selected = destination,
+                            onSelect = { destination = it },
+                        )
+                    }
+
+                    AnimatedContent(
+                        targetState = destination,
+                        transitionSpec = {
+                            fadeIn(tween(220)) togetherWith fadeOut(tween(160))
+                        },
+                        label = "LatchDestination",
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    ) { current ->
+                        val back: (() -> Unit)? = if (railVisible) {
+                            null
+                        } else {
+                            { destination = LatchDestination.Home }
+                        }
+
+                        when (current) {
+                            LatchDestination.Home -> HomeScreen(
+                                controller = controller,
+                                sessions = sessions,
+                                platform = platform,
+                                onOpenStats = { destination = LatchDestination.Stats },
+                                onOpenSettings = { destination = LatchDestination.Settings },
+                                showNavigationMenuItems = !railVisible,
+                            )
+
+                            LatchDestination.Stats -> StatsScreen(
+                                sessions = sessions,
+                                onBack = back,
+                                onClearHistory = { sessions.clearHistory() },
+                            )
+
+                            LatchDestination.Settings -> SettingsScreen(
+                                platform = platform,
+                                updateState = updateState,
+                                onBack = back,
+                                onNavigateToCredentials = { editingCredentials = true },
+                                onClearStats = { sessions.clearHistory() },
+                                onCheckForUpdates = onCheckForUpdates,
+                                onDownloadUpdate = onDownloadUpdate,
+                                onInstallUpdate = onInstallUpdate,
+                                onDismissUpdate = onDismissUpdate,
+                            )
+                        }
+                    }
                 }
-            )
-        } else {
-            HomeScreen(
-                controller = controller,
-                sessions = sessions,
-                platform = platform,
-                updateState = updateState,
-                onCheckForUpdates = onCheckForUpdates,
-                onDownloadUpdate = onDownloadUpdate,
-                onInstallUpdate = onInstallUpdate,
-                onDismissUpdate = onDismissUpdate,
-                onEditCredentials = { hasCredentials = false },
+            }
+        }
+    }
+}
+
+@Composable
+private fun LatchNavigationRail(
+    selected: LatchDestination,
+    onSelect: (LatchDestination) -> Unit,
+) {
+    NavigationRail(
+        containerColor = Color.Transparent,
+        header = {
+            Box(modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+                Icon(
+                    imageVector = LatchMark,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
+        },
+    ) {
+        Spacer(Modifier.height(8.dp))
+        LatchDestination.entries.forEach { entry ->
+            NavigationRailItem(
+                selected = entry == selected,
+                onClick = { onSelect(entry) },
+                icon = { Icon(entry.icon, contentDescription = entry.label) },
+                label = { Text(entry.label) },
             )
         }
     }
