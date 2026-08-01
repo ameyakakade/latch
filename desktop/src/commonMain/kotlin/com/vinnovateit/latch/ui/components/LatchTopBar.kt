@@ -58,6 +58,7 @@ internal fun LatchHomeTopBar(
     onHowItWorks: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
     modifier: Modifier = Modifier,
     showNavigationItems: Boolean = true,
 ) {
@@ -90,7 +91,7 @@ internal fun LatchHomeTopBar(
             Box {
                 IconButton(onClick = { menuExpanded = true }) {
                     Icon(
-                        imageVector = LatchIcons.MoreVert,
+                        imageVector = LatchIcons.Menu,
                         contentDescription = "Menu",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -133,6 +134,17 @@ internal fun LatchHomeTopBar(
                         onClick = {
                             menuExpanded = false
                             onHowItWorks()
+                        },
+                    )
+                    DropdownMenuItem(
+                        modifier = Modifier.width(208.dp),
+                        leadingIcon = {
+                            Icon(LatchIcons.InfoOutline, contentDescription = null)
+                        },
+                        text = { Text("About") },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenAbout()
                         },
                     )
                 }
