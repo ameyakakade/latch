@@ -34,6 +34,7 @@ import com.vinnovateit.latch.core.platform.PlatformServices
 import com.vinnovateit.latch.core.updater.UpdateState
 import com.vinnovateit.latch.desktop.LatchMark
 import com.vinnovateit.latch.ui.navigation.LatchDestination
+import com.vinnovateit.latch.ui.screens.AboutScreen
 import com.vinnovateit.latch.ui.screens.CredentialsScreen
 import com.vinnovateit.latch.ui.screens.HomeScreen
 import com.vinnovateit.latch.ui.screens.SettingsScreen
@@ -70,6 +71,7 @@ fun LatchRoot(
         ) {
             var hasCredentials by remember { mutableStateOf(platform.credentials.exists()) }
             var editingCredentials by remember { mutableStateOf(false) }
+            var showAbout by remember { mutableStateOf(false) }
             var destination by remember { mutableStateOf(LatchDestination.Home) }
 
             if (!hasCredentials || editingCredentials) {
@@ -87,6 +89,17 @@ fun LatchRoot(
                     } else {
                         null
                     },
+                )
+                return@Surface
+            }
+
+            // Reference material, not a nav destination -- takes over the whole
+            // window the same way CredentialsScreen does above, rather than
+            // living in LatchDestination/the rail.
+            if (showAbout) {
+                AboutScreen(
+                    platform = platform,
+                    onBack = { showAbout = false },
                 )
                 return@Surface
             }
@@ -123,6 +136,7 @@ fun LatchRoot(
                                 platform = platform,
                                 onOpenStats = { destination = LatchDestination.Stats },
                                 onOpenSettings = { destination = LatchDestination.Settings },
+                                onOpenAbout = { showAbout = true },
                                 showNavigationMenuItems = !railVisible,
                             )
 
