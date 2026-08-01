@@ -19,6 +19,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+private const val APP_DISPLAY_NAME = "LATCH by VinnovateIT"
+
 /**
  * Composition root. Everything is constructed once here, in dependency order,
  * and handed to whoever needs it -- replacing the Android app's hand-rolled
@@ -71,7 +73,7 @@ class LatchApp private constructor(
         scope.launch {
             sessions.liveStatus.collect { status ->
                 if (status == null || status.liveData.isEmpty()) {
-                    notifier.showOngoing("Latch", "Not latched")
+                    notifier.showOngoing(APP_DISPLAY_NAME, "Not latched")
                     return@collect
                 }
                 val latest = status.liveData.last().usage
@@ -80,7 +82,7 @@ class LatchApp private constructor(
                 val arrow = if (downloadDominant) "↓" else "↑"
                 val (value, unit) = formatBitsPerSecond(dominant, SettingsManager.speedUnits.value)
                 notifier.showOngoing(
-                    "Latched",
+                    APP_DISPLAY_NAME,
                     "$arrow $value $unit • since ${formatClockTime(status.startTimeMillis)}",
                 )
             }
@@ -91,9 +93,9 @@ class LatchApp private constructor(
             var wasLatched = false
             engine.isLatched.collect { latched ->
                 if (latched && !wasLatched) {
-                    notifier.notifyTransient("Latch", "Connected to Wi-Fi")
+                    notifier.notifyTransient(APP_DISPLAY_NAME, "Connected to Wi-Fi")
                 } else if (!latched && wasLatched) {
-                    notifier.notifyTransient("Latch", "Disconnected")
+                    notifier.notifyTransient(APP_DISPLAY_NAME, "Disconnected")
                 }
                 wasLatched = latched
             }

@@ -18,8 +18,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 class TrayNotifier : UserNotifier {
 
+    private companion object {
+        const val APP_DISPLAY_NAME = "LATCH by VinnovateIT"
+    }
+
     /** Bound to the Compose Tray's tooltip. */
-    val tooltip = MutableStateFlow("Latch")
+    val tooltip = MutableStateFlow(APP_DISPLAY_NAME)
 
     /** Set once the Compose tray exists; balloons are dropped before then. */
     var trayState: TrayState? = null
@@ -31,14 +35,14 @@ class TrayNotifier : UserNotifier {
     override fun notifyTransient(title: String, text: String, isError: Boolean) {
         trayState?.sendNotification(
             Notification(
-                title = title,
+                title = APP_DISPLAY_NAME,
                 message = text,
-                type = if (isError) Notification.Type.Error else Notification.Type.Info,
+                type = if (isError) Notification.Type.Error else Notification.Type.None,
             )
         )
     }
 
     override fun hideOngoing() {
-        tooltip.value = "Latch"
+        tooltip.value = APP_DISPLAY_NAME
     }
 }

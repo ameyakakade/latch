@@ -118,6 +118,37 @@ internal object LatchIcons {
         )
     }
 
+    val InfoOutline: ImageVector by lazy {
+        icon(
+            "InfoOutline",
+            "M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10" +
+                " 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8" +
+                "s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-12h2V7h-2v1zm0 2h2" +
+                "c1.1 0 2 .9 2 2v6h-2v-6h-2v-2z",
+        )
+    }
+
+    val HelpOutline: ImageVector by lazy {
+        icon(
+            "HelpOutline",
+            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-3h2v2h-2v-2zm1.71-9.71c-.38-.38-.88-.59-1.42-.59-1.12 0-2 .88-2 2H8c0-2.21 1.79-4 4-4 1.06 0 2.08.42 2.83 1.17.75.75 1.17 1.77 1.17 2.83 0 1.44-.8 2.2-1.49 2.86-.59.57-1.01.98-1.01 1.84V15h-2v-.89c0-1.75.9-2.6 1.65-3.3.52-.5.85-.84.85-1.48 0-.54-.21-1.04-.59-1.42z",
+        )
+    }
+
+    val SystemUpdateAlt: ImageVector by lazy {
+        icon(
+            "SystemUpdateAlt",
+            "M5 20h14v-2H5v2zm7-18L5.33 8h3.84V14h4.66V8h3.84L12 2z",
+        )
+    }
+
+    val VersionTag: ImageVector by lazy {
+        icon(
+            "VersionTag",
+            "M7 4h10l3 4v12H4V4h3zm0 2v12h12V8.73L16.05 6H7zm2 2h2v2H9V8zm0 4h6v2H9v-2zm0 4h4v2H9v-2z",
+        )
+    }
+
     val BarChart: ImageVector by lazy {
         icon("BarChart", "M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z")
     }

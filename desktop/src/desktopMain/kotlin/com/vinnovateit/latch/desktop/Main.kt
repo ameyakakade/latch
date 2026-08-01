@@ -10,6 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.sun.jna.platform.win32.Shell32
+import com.sun.jna.WString
 import kotlinx.coroutines.launch
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.application
@@ -17,12 +19,22 @@ import androidx.compose.ui.window.rememberTrayState
 import com.vinnovateit.latch.core.engine.LatchCommand
 import com.vinnovateit.latch.ui.LatchRoot
 
+private const val APP_DISPLAY_NAME = "LATCH by VinnovateIT"
+
+private fun configureWindowsAppUserModelId() {
+    if (!System.getProperty("os.name").contains("Windows", ignoreCase = true)) return
+    runCatching {
+        Shell32.INSTANCE.SetCurrentProcessExplicitAppUserModelID(WString(APP_DISPLAY_NAME))
+    }
+}
+
 fun main(args: Array<String>) {
     if (!SingleInstance.acquire()) return
 
     val startHidden = "--hidden" in args
     val app = LatchApp.create(echoLogsToStdout = System.console() != null || !startHidden)
     app.start()
+    configureWindowsAppUserModelId()
 
     application {
         var windowVisible by remember { mutableStateOf(!startHidden) }
