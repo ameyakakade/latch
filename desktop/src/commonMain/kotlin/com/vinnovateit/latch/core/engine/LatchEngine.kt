@@ -65,6 +65,12 @@ class LatchEngine(
         const val HEALTH_CHECK_INTERVAL_MS = 60_000L
         const val REVALIDATE_DELAY_MS = 2000L
         const val MAX_REVALIDATE_RETRIES = 3
+
+        // Campus networks are always named "<letter>-VIT", optionally with a
+        // trailing band suffix Windows appends (e.g. "G-VIT 5"). Anchored to the
+        // start of the SSID so an unrelated network that merely contains "VIT"
+        // somewhere in its name does not match.
+        val VIT_SSID_PATTERN = Regex("^[A-Za-z]-VIT", RegexOption.IGNORE_CASE)
     }
 
     private val logger = platform.logger
@@ -197,6 +203,14 @@ class LatchEngine(
         val code = portal.checkPortalStatus(handle)
 
         if (code == 204) {
+            val ssid = platform.wifi.currentSsid()
+            if (!isVitCampusSsid(ssid)) {
+                logger.d(TAG, "Network has internet but SSID '$ssid' is not a VIT campus network; not latching.")
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Failed(ConnectionStatus.Reason.NotTargetNetwork)
+                )
+                return
+            }
             logger.d(TAG, "Network has internet. Starting session.")
             platform.wifi.reportConnectivityOk(handle)
             ConnectionStatusManager.postStatus(ConnectionStatus.Success)
@@ -254,20 +268,13 @@ class LatchEngine(
      *
      * Of the two, the DNS check is the strong signal -- phc.prontonetworks.com
      * only resolves (to a private campus address) when you are actually attached
-     * to a Pronto network. The SSID match is defence in depth, and is a substring
-     * comparison because exact matching is unreliable: Windows reported the live
-     * network as "G-VIT 5" while the saved profile was "G-VIT".
+     * to a Pronto network. The SSID match is defence in depth, checked with
+     * [isVitCampusSsid].
      */
     private suspend fun isTargetNetwork(): Boolean = withContext(Dispatchers.IO) {
         val ssid = platform.wifi.currentSsid()
-        if (ssid == null) {
-            logger.w(TAG, "SSID unknown; refusing to send credentials.")
-            return@withContext false
-        }
-        val allowed = SettingsManager.allowedSsids.value
-        val matches = allowed.any { ssid.contains(it, ignoreCase = true) }
-        if (!matches) {
-            logger.w(TAG, "SSID '$ssid' does not match the allowed list; refusing to send credentials.")
+        if (!isVitCampusSsid(ssid)) {
+            logger.w(TAG, "SSID '$ssid' is not a VIT campus network; refusing to send credentials.")
             return@withContext false
         }
         val resolves = runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
@@ -276,6 +283,10 @@ class LatchEngine(
         }
         resolves
     }
+
+    /** True only for SSIDs shaped like "G-VIT" -- a single letter, a dash, "VIT". */
+    private fun isVitCampusSsid(ssid: String?): Boolean =
+        ssid != null && VIT_SSID_PATTERN.containsMatchIn(ssid.trim())
 
     private suspend fun handleCaptivePortal(handle: NetworkHandle) {
         ConnectionStatusManager.postStatus(
@@ -306,8 +317,8 @@ class LatchEngine(
 
                 is LoginResult.Failure -> {
                     platform.notifier.notifyTransient(
-                        title = "Latch",
-                        text = "Login failed. Check your credentials.",
+                        title = "Login failed",
+                        text = "Check your credentials.",
                         isError = true,
                     )
                     ConnectionStatusManager.postStatus(

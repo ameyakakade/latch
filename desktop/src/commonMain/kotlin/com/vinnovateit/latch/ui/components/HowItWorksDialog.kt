@@ -42,7 +42,7 @@ internal fun HowItWorksDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(Modifier.height(16.dp))
                 HowItWorksRow(
-                    icon = LatchIcons.Speed,
+                    icon = LatchIcons.Restore,
                     title = "10 Mbps cap",
                     body = "Campus Wi-Fi enforces a 10 Mbps cap per session. Latch re-authenticates automatically when the session expires.",
                 )
