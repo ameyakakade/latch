@@ -1,0 +1,159 @@
+package com.vinnovateit.latch.desktop
+
+import com.vinnovateit.latch.core.data.LatchDatabase
+import com.vinnovateit.latch.core.data.buildDatabase
+import com.vinnovateit.latch.core.domain.SessionRepository
+import com.vinnovateit.latch.core.engine.LatchCommand
+import com.vinnovateit.latch.core.engine.LatchEngine
+import com.vinnovateit.latch.core.platform.Platform
+import com.vinnovateit.latch.core.platform.PlatformServices
+import com.vinnovateit.latch.core.settings.SettingsManager
+import com.vinnovateit.latch.core.stats.ThroughputMonitor
+import com.vinnovateit.latch.core.stats.formatBitsPerSecond
+import com.vinnovateit.latch.core.stats.formatClockTime
+import com.vinnovateit.latch.desktop.platform.DesktopPlatformServices
+import com.vinnovateit.latch.desktop.platform.TrayNotifier
+import com.vinnovateit.latch.desktop.updater.GithubUpdater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+/**
+ * Composition root. Everything is constructed once here, in dependency order,
+ * and handed to whoever needs it -- replacing the Android app's hand-rolled
+ * `object` singletons that were initialized opportunistically from whichever
+ * component happened to run first.
+ */
+class LatchApp private constructor(
+    val platform: PlatformServices,
+    val notifier: TrayNotifier,
+    val sessions: SessionRepository,
+    val engine: LatchEngine,
+    private val database: LatchDatabase,
+    val updater: GithubUpdater,
+) {
+    companion object {
+        fun create(echoLogsToStdout: Boolean): LatchApp {
+            val notifier = TrayNotifier()
+            val platform = DesktopPlatformServices(
+                echoLogsToStdout = echoLogsToStdout,
+                notifier = notifier,
+            )
+            Platform.install(platform)
+            SettingsManager.initialize(platform.settingsStore)
+
+            val database = buildDatabase()
+            val throughput = ThroughputMonitor(platform.counters)
+            val sessions = SessionRepository(database.statsDao(), throughput)
+            sessions.initialize()
+
+            val engine = LatchEngine(platform, sessions)
+
+            val updater = GithubUpdater(
+                buildInfo = platform.buildInfo,
+                logger = platform.logger,
+            )
+
+            return LatchApp(platform, notifier, sessions, engine, database, updater)
+        }
+    }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    fun start() {
+        applyAutostartDefault()
+        engine.start()
+
+        // Drive the tray tooltip from live session data. This is the 2-second
+        // update path, so it must stay on showOngoing (tooltip) and never become
+        // a balloon.
+        scope.launch {
+            sessions.liveStatus.collect { status ->
+                if (status == null || status.liveData.isEmpty()) {
+                    notifier.showOngoing("Latch", "Not latched")
+                    return@collect
+                }
+                val latest = status.liveData.last().usage
+                val downloadDominant = latest.rxBps >= latest.txBps
+                val dominant = if (downloadDominant) latest.rxBps else latest.txBps
+                val arrow = if (downloadDominant) "↓" else "↑"
+                val (value, unit) = formatBitsPerSecond(dominant, SettingsManager.speedUnits.value)
+                notifier.showOngoing(
+                    "Latched",
+                    "$arrow $value $unit • since ${formatClockTime(status.startTimeMillis)}",
+                )
+            }
+        }
+
+        // Announce real state changes only.
+        scope.launch {
+            var wasLatched = false
+            engine.isLatched.collect { latched ->
+                if (latched && !wasLatched) {
+                    notifier.notifyTransient("Latch", "Connected to Wi-Fi")
+                } else if (!latched && wasLatched) {
+                    notifier.notifyTransient("Latch", "Disconnected")
+                }
+                wasLatched = latched
+            }
+        }
+
+        // Mirror the Android launch behaviour: probe once at startup so an
+        // already-authenticated network is detected without user action.
+        engine.submit(
+            if (SettingsManager.autoLogin.value) LatchCommand.CheckAndLogin
+            else LatchCommand.SilentCheck
+        )
+
+        // Background update check on startup, installed builds only. A dev
+        // (`gradle run`) build would otherwise nag a developer and burn the
+        // unauthenticated API budget; the manual button still works.
+        if (platform.buildInfo.isInstalled) {
+            scope.launch {
+                updater.check()
+            }
+        }
+    }
+
+    /**
+     * Turns on start-at-login the first time an *installed* build runs.
+     *
+     * Only applied once, and only recorded as applied if it actually took effect,
+     * so:
+     *  - a user who switches it off is never silently re-enabled;
+     *  - running from `gradle run` does not mark it done (appExePath() rejects a
+     *    path that is not Latch.exe), so the real install still gets its chance.
+     */
+    private fun applyAutostartDefault() {
+        if (!platform.capabilities.supportsAutostart) return
+        if (SettingsManager.autostartDefaultApplied) return
+
+        platform.systemActions.setAutostart(true)
+        if (platform.systemActions.isAutostartEnabled()) {
+            SettingsManager.autostartDefaultApplied = true
+            platform.logger.d("LatchApp", "Enabled start-at-login by default.")
+        } else {
+            platform.logger.d(
+                "LatchApp",
+                "Not an installed build; leaving start-at-login for the installed app.",
+            )
+        }
+    }
+
+    fun shutdown() {
+        engine.submit(LatchCommand.Shutdown)
+        runCatching { database.close() }
+    }
+
+    fun installUpdate(onExiting: () -> Unit) {
+        scope.launch(Dispatchers.IO) {
+            updater.download()
+            val state = updater.state.value
+            if (state is com.vinnovateit.latch.core.updater.UpdateState.Downloaded) {
+                updater.installAndExit(state.filePath)
+                onExiting()
+            }
+        }
+    }
+}
