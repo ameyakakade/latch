@@ -1,7 +1,6 @@
 package com.vinnovateit.latch.desktop
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.DpSize
@@ -9,7 +8,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
-import java.awt.Dimension
 import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
 
@@ -18,16 +16,18 @@ private const val PREFERRED_W = 1060f
 private const val PREFERRED_H = 700f
 
 /**
- * Below this the responsive layouts stop having anywhere to put things: the
- * compact home arrangement needs roughly this much height for the panel and the
- * power button not to overlap.
+ * The floor the preferred size is clamped to on small screens. Below this the
+ * responsive layouts stop having anywhere to put things: the compact home
+ * arrangement needs roughly this much height for the panel and the power button
+ * not to overlap.
  */
 private const val MIN_W = 560
 private const val MIN_H = 540
 
 /**
- * The window's initial size: the preferred size, clamped to 90% of the usable
- * screen so it never opens larger than the display it lands on.
+ * The window's size -- its only one, since the window is not resizable: the
+ * preferred size, clamped to 90% of the usable screen so it never opens larger
+ * than the display it lands on.
  *
  * The previous implementation pinned the window to a fixed 412x900 phone surface
  * and lowered [androidx.compose.ui.platform.LocalDensity] to make that fit on a
@@ -84,15 +84,16 @@ internal fun LatchWindow(
         visible = visible,
         onCloseRequest = onCloseRequest,
         state = state,
-        resizable = true,
+        // Locked to the size it opens at. This maps to Frame.setResizable(false),
+        // which is what actually removes the maximize box -- Windows then also
+        // refuses Aero Snap, Win+Up and the maximise-on-title-bar-double-click,
+        // so no separate placement guard is needed.
+        resizable = false,
         title = "Latch",
+        // Title bar, taskbar and Alt-Tab. Stays brand red regardless of
+        // connection state -- only the tray icon tracks that.
+        icon = remember { LatchIcon.brand() },
     ) {
-        // Compose has no minimum-size property, so it is set on the AWT window
-        // directly. Without it the user can drag the window down to a few pixels
-        // and the layouts collapse.
-        LaunchedEffect(window) {
-            window.minimumSize = Dimension(MIN_W, MIN_H)
-        }
         content()
     }
 }
