@@ -11,8 +11,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import com.vinnovateit.latch.desktop.LatchMark
 import com.vinnovateit.latch.desktop.resources.Res
 import com.vinnovateit.latch.desktop.resources.home_status_connected
@@ -95,9 +98,11 @@ internal fun LatchHomeTopBar(
                 DropdownMenu(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
+                    properties = PopupProperties(clippingEnabled = false),
                 ) {
                     if (showNavigationItems) {
                         DropdownMenuItem(
+                            modifier = Modifier.width(208.dp),
                             text = { Text("Stats") },
                             leadingIcon = {
                                 Icon(LatchIcons.BarChart, contentDescription = null)
@@ -108,6 +113,7 @@ internal fun LatchHomeTopBar(
                             },
                         )
                         DropdownMenuItem(
+                            modifier = Modifier.width(208.dp),
                             text = { Text("Settings") },
                             leadingIcon = {
                                 Icon(LatchIcons.SettingsOutlined, contentDescription = null)
@@ -119,6 +125,10 @@ internal fun LatchHomeTopBar(
                         )
                     }
                     DropdownMenuItem(
+                        modifier = Modifier.width(208.dp),
+                        leadingIcon = {
+                            Icon(LatchIcons.HelpOutline, contentDescription = null)
+                        },
                         text = { Text("How it works") },
                         onClick = {
                             menuExpanded = false

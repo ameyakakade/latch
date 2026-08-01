@@ -174,7 +174,7 @@ fun SettingsScreen(
                     SettingsItem(
                         title = "Speed units",
                         subtitle = speedUnits,
-                        leadingIcon = LatchIcons.Speed,
+                        leadingIcon = LatchIcons.BarChart,
                         onClick = { showUnitsDialog = true },
                     )
                     SettingsRowGap()
@@ -222,7 +222,7 @@ fun SettingsScreen(
                             if (platform.buildInfo.isDebug) append(" (debug)")
                             if (!platform.buildInfo.isInstalled) append(" — dev run")
                         },
-                        leadingIcon = LatchIcons.Update,
+                        leadingIcon = LatchIcons.VersionTag,
                     )
                     SettingsRowGap()
                     UpdatePanel(
@@ -389,7 +389,7 @@ private fun UpdatePanel(
         SettingsItem(
             title = "Software updates",
             subtitle = statusText,
-            leadingIcon = LatchIcons.Update,
+            leadingIcon = LatchIcons.SystemUpdateAlt,
             trailingContent = {
                 if (state is UpdateState.Checking) {
                     LoadingIndicator(modifier = Modifier.size(24.dp))

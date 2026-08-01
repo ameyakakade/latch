@@ -1,6 +1,7 @@
 package com.vinnovateit.latch.desktop
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.DpSize
@@ -12,8 +13,8 @@ import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
 
 /** What the window opens at when there is room for it. */
-private const val PREFERRED_W = 1060f
-private const val PREFERRED_H = 700f
+private const val PREFERRED_W = 460f
+private const val PREFERRED_H = 1000f
 
 /**
  * The floor the preferred size is clamped to on small screens. Below this the
@@ -21,8 +22,8 @@ private const val PREFERRED_H = 700f
  * arrangement needs roughly this much height for the panel and the power button
  * not to overlap.
  */
-private const val MIN_W = 560
-private const val MIN_H = 540
+private const val MIN_W = 420
+private const val MIN_H = 600
 
 /**
  * The window's size -- its only one, since the window is not resizable: the
@@ -76,9 +77,16 @@ internal fun LatchWindow(
 ) {
     val initialSize = remember { preferredWindowSize() }
     val state = rememberWindowState(
-        position = WindowPosition(Alignment.Center),
+        position = WindowPosition(Alignment.BottomEnd),
         size = initialSize,
     )
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            state.size = initialSize
+            state.position = WindowPosition(Alignment.BottomEnd)
+        }
+    }
 
     Window(
         visible = visible,
