@@ -13,14 +13,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.window.WindowDraggableArea
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,7 +41,7 @@ import java.awt.Toolkit
 private val CloseHoverRed = Color(0xFFE81123)
 
 /** Height of the custom title bar replacing the OS one. */
-private val TitleBarHeight = 36.dp
+private val TitleBarHeight = 32.dp
 
 /** What the window opens at when there is room for it. */
 private const val PREFERRED_W = 460f
@@ -161,9 +159,12 @@ internal fun LatchWindow(
 }
 
 /**
- * The custom title bar replacing the OS one: brand mark + wordmark on the left
- * (draggable, via the enclosing [WindowDraggableArea]), minimize/close on the
- * right. Deliberately no maximize control -- the window is fixed-size.
+ * The custom title bar replacing the OS one: an empty draggable strip (via the
+ * enclosing [WindowDraggableArea]) plus minimize/close on the right. No brand
+ * mark or wordmark here -- [content] below opens with its own Latch mark +
+ * "LATCH" wordmark header, so repeating it in the bar just showed the logo
+ * twice within the first 70px of the window. No maximize control either --
+ * the window is fixed-size.
  */
 @Composable
 private fun LatchTitleBar(
@@ -177,18 +178,7 @@ private fun LatchTitleBar(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = LatchMark,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 12.dp).size(16.dp),
-        )
-        Text(
-            text = "Latch",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 8.dp).weight(1f),
-        )
+        Box(modifier = Modifier.weight(1f))
         TitleBarButton(
             icon = LatchIcons.Minimize,
             contentDescription = "Minimize",
