@@ -49,7 +49,16 @@ private val WindowCornerRadius = 14.dp
 
 /** What the window opens at when there is room for it. */
 private const val PREFERRED_W = 400f
-private const val PREFERRED_H = 1000f
+private const val PREFERRED_H = 720f
+
+/**
+ * The most of the usable screen the window may occupy in either axis.
+ *
+ * It has to leave enough of a margin to still read as a panel sitting on the
+ * desktop rather than a maximised app, which is the whole point of a fixed-size
+ * tray window.
+ */
+private const val MAX_SCREEN_FRACTION = 0.85f
 
 /**
  * The floor the preferred size is clamped to on small screens. Below this the
@@ -62,8 +71,16 @@ private const val MIN_H = 600
 
 /**
  * The window's size -- its only one, since the window is not resizable: the
- * preferred size, clamped to 90% of the usable screen so it never opens larger
- * than the display it lands on.
+ * preferred size, shrunk to fit when the display cannot give it that much room.
+ *
+ * Both axes shrink by the *same* factor, so a small screen gets a smaller
+ * window rather than a differently-shaped one. Clamping each axis on its own
+ * (which is what this used to do) stretched the window towards whatever shape
+ * the screen was: with a preferred height taller than any laptop panel, the
+ * height was always decided by the screen clamp and never by the preference, so
+ * the window opened at ~90% of screen height on every machine and looked
+ * enormous on small ones -- while the width, whose preference *did* fit, stayed
+ * put and looked wide by comparison.
  *
  * The previous implementation pinned the window to a fixed 412x900 phone surface
  * and lowered [androidx.compose.ui.platform.LocalDensity] to make that fit on a
@@ -79,13 +96,24 @@ private fun preferredWindowSize(): DpSize {
         val scale = gc.defaultTransform.scaleY.toFloat().coerceAtLeast(1f)
 
         // Screen bounds are physical pixels; the window size is in dp, so divide
-        // the usable area back out by the OS scale before comparing.
+        // the usable area back out by the OS scale before comparing. This is why
+        // display *scaling*, not just resolution, decides how big this feels:
+        // a 1080p panel at 150% has only 693dp of usable height to give.
         val usableW = (gc.bounds.width - insets.left - insets.right) / scale
         val usableH = (gc.bounds.height - insets.top - insets.bottom) / scale
 
+        val fit = minOf(
+            1f,
+            usableW * MAX_SCREEN_FRACTION / PREFERRED_W,
+            usableH * MAX_SCREEN_FRACTION / PREFERRED_H,
+        )
+
         DpSize(
-            width = minOf(PREFERRED_W, usableW * 0.9f).coerceAtLeast(MIN_W.toFloat()).dp,
-            height = minOf(PREFERRED_H, usableH * 0.9f).coerceAtLeast(MIN_H.toFloat()).dp,
+            // The minimum floors can exceed the screen on a genuinely tiny
+            // display; coerceAtMost keeps the window on it regardless, since an
+            // undecorated window hanging off the bottom cannot be dragged back.
+            width = (PREFERRED_W * fit).coerceAtLeast(MIN_W.toFloat()).coerceAtMost(usableW).dp,
+            height = (PREFERRED_H * fit).coerceAtLeast(MIN_H.toFloat()).coerceAtMost(usableH).dp,
         )
     } catch (e: Throwable) {
         // Headless or an exotic display setup.
