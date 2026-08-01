@@ -1,16 +1,49 @@
 package com.vinnovateit.latch.desktop
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.window.WindowDraggableArea
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
+import com.vinnovateit.latch.ui.components.LatchIcons
+import com.vinnovateit.latch.ui.theme.LatchTheme
 import java.awt.GraphicsEnvironment
 import java.awt.Toolkit
+
+/** Windows' own close-button hover colour -- kept OS-consistent even in a custom bar. */
+private val CloseHoverRed = Color(0xFFE81123)
+
+/** Height of the custom title bar replacing the OS one. */
+private val TitleBarHeight = 36.dp
 
 /** What the window opens at when there is room for it. */
 private const val PREFERRED_W = 460f
@@ -97,11 +130,113 @@ internal fun LatchWindow(
         // refuses Aero Snap, Win+Up and the maximise-on-title-bar-double-click,
         // so no separate placement guard is needed.
         resizable = false,
+        // The OS chrome is replaced entirely by [LatchTitleBar] below -- title,
+        // taskbar and Alt-Tab icon still use the brand mark, but the window itself
+        // draws its own bar and a themed 1px edge instead of the native frame.
+        undecorated = true,
         title = "Latch",
-        // Title bar, taskbar and Alt-Tab. Stays brand red regardless of
-        // connection state -- only the tray icon tracks that.
         icon = remember { LatchIcon.brand() },
     ) {
-        content()
+        LatchTheme {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    WindowDraggableArea(modifier = Modifier.fillMaxWidth()) {
+                        LatchTitleBar(
+                            onMinimize = { state.isMinimized = true },
+                            onClose = onCloseRequest,
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The custom title bar replacing the OS one: brand mark + wordmark on the left
+ * (draggable, via the enclosing [WindowDraggableArea]), minimize/close on the
+ * right. Deliberately no maximize control -- the window is fixed-size.
+ */
+@Composable
+private fun LatchTitleBar(
+    onMinimize: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(TitleBarHeight)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = LatchMark,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 12.dp).size(16.dp),
+        )
+        Text(
+            text = "Latch",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 8.dp).weight(1f),
+        )
+        TitleBarButton(
+            icon = LatchIcons.Minimize,
+            contentDescription = "Minimize",
+            onClick = onMinimize,
+            hoverColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TitleBarButton(
+            icon = LatchIcons.Close,
+            contentDescription = "Close",
+            onClick = onClose,
+            hoverColor = CloseHoverRed,
+            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+            hoverIconTint = Color.White,
+        )
+    }
+}
+
+@Composable
+private fun TitleBarButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    hoverColor: Color,
+    iconTint: Color,
+    hoverIconTint: Color = iconTint,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+
+    Box(
+        modifier = Modifier
+            .width(46.dp)
+            .fillMaxHeight()
+            .background(if (hovered) hoverColor else Color.Transparent)
+            .hoverable(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (hovered) hoverIconTint else iconTint,
+            modifier = Modifier.size(14.dp),
+        )
     }
 }

@@ -52,6 +52,17 @@ fun main(args: Array<String>) {
             tooltip = tooltip,
             onAction = { windowVisible = true },
             menu = {
+                // Windows renders this menu with plain java.awt.MenuItem/PopupMenu --
+                // no icons, colors, rounding or mnemonics are available through that
+                // API at all (java.awt.Menu throws UnsupportedOperationException for
+                // a mnemonic), regardless of app theming. This status line is the
+                // actual ceiling for what can be polished here.
+                Item(
+                    text = if (isLatched) "● Connected" else "○ Not connected",
+                    enabled = false,
+                    onClick = {},
+                )
+                Separator()
                 if (isLatched) {
                     Item("Disconnect") { app.engine.submit(LatchCommand.Logout) }
                 } else {
