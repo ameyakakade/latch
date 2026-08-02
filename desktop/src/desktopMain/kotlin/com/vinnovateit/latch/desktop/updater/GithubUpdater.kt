@@ -5,6 +5,7 @@ import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.settings.SettingsManager
 import com.vinnovateit.latch.core.updater.UpdateState
 import com.vinnovateit.latch.desktop.AppPaths
+import com.vinnovateit.latch.desktop.platform.InstalledBuild
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -174,17 +175,47 @@ class GithubUpdater(
     }
 
     /**
-     * @return true if msiexec actually started, and therefore whether the caller
-     * should exit. Quitting regardless would discard the [UpdateState.Error] set
-     * here along with the process that was going to display it.
+     * Launching msiexec directly and exiting right after was the bug: msiexec
+     * detaches from its parent and installs in the background, our own process
+     * was already gone by the time it finished, and nothing was left to bring
+     * Latch back -- from the user's side, "Install and restart" just closed
+     * the app for good. A relaunch has to happen from a process that outlives
+     * ours, so this writes a throwaway .cmd that runs msiexec *synchronously*
+     * (cmd waits for it, unlike our own ProcessBuilder.start() which does not),
+     * then starts Latch.exe again once it's done, then deletes itself.
+     *
+     * @return true if the script actually launched, and therefore whether the
+     * caller should exit. Quitting regardless would discard the
+     * [UpdateState.Error] set here along with the process that was going to
+     * display it.
      */
     fun installAndExit(msiPath: String): Boolean = try {
-        ProcessBuilder("msiexec", "/i", msiPath, "/qn").inheritIO().start()
+        val script = writeRelaunchScript(msiPath)
+        ProcessBuilder("cmd", "/c", script.absolutePath)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
         true
     } catch (e: Exception) {
         logger.e("GithubUpdater", "Failed to launch installer", e)
         _state.value = UpdateState.Error("Failed to launch installer: ${e.message ?: "Unknown error"}")
         false
+    }
+
+    private fun writeRelaunchScript(msiPath: String): File {
+        val exePath = InstalledBuild.path
+        val script = File.createTempFile("latch-relaunch-", ".cmd")
+        script.writeText(
+            buildString {
+                appendLine("@echo off")
+                appendLine("msiexec /i \"$msiPath\" /qn /norestart")
+                // Relaunch either way -- a failed upgrade still leaves the
+                // previously-installed version in place and working.
+                if (exePath != null) appendLine("start \"\" \"$exePath\"")
+                appendLine("del \"%~f0\"")
+            },
+        )
+        return script
     }
 
     /**
