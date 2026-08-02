@@ -21,6 +21,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import com.vinnovateit.latch.ui.screens.CredentialsScreen
 import com.vinnovateit.latch.ui.screens.HomeScreen
 import com.vinnovateit.latch.ui.screens.SettingsScreen
 import com.vinnovateit.latch.ui.screens.StatsScreen
+import com.vinnovateit.latch.ui.screens.UpdateScreen
 import com.vinnovateit.latch.ui.theme.LatchTheme
 
 /** Below this width the app uses the Android-style overflow menu instead of a rail. */
@@ -101,6 +103,37 @@ fun LatchRoot(
                 AboutScreen(
                     platform = platform,
                     onBack = { showAbout = false },
+                )
+                return@Surface
+            }
+
+            // Surfaced the moment an update is found rather than left for
+            // someone to stumble on in Settings. Only the states worth
+            // interrupting for take the window over; a background check that
+            // is still Checking, came back UpToDate, or failed silently
+            // (Error while nothing was already showing -- see the Error branch
+            // below) leaves the user on whatever screen they were on.
+            var showUpdateScreen by remember { mutableStateOf(false) }
+            LaunchedEffect(updateState) {
+                showUpdateScreen = when (updateState) {
+                    is UpdateState.UpdateAvailable,
+                    is UpdateState.Downloading,
+                    is UpdateState.Downloaded,
+                    -> true
+                    // A download/install failure should stay on screen so the
+                    // error and Retry button are visible; a failed background
+                    // check must not pop the takeover up out of nowhere.
+                    is UpdateState.Error -> showUpdateScreen
+                    else -> false
+                }
+            }
+            if (showUpdateScreen) {
+                UpdateScreen(
+                    state = updateState,
+                    onDownload = onDownloadUpdate,
+                    onCancelDownload = onCancelDownload,
+                    onInstall = onInstallUpdate,
+                    onSkip = onDismissUpdate,
                 )
                 return@Surface
             }

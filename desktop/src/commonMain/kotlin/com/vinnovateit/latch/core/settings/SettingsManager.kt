@@ -42,6 +42,9 @@ object SettingsManager {
      */
     private const val KEY_AUTOSTART_DEFAULT_APPLIED = "autostart_default_applied"
 
+    /** Epoch day (UTC) of the last automatic update check, so it runs once per calendar day rather than on every launch. */
+    private const val KEY_LAST_UPDATE_CHECK_EPOCH_DAY = "last_update_check_epoch_day"
+
     private const val DEFAULT_AUTO_LOGIN = true
     private const val DEFAULT_SPEED_UNITS = "bps"
     private const val DEFAULT_THEME = "System Default"
@@ -164,6 +167,14 @@ object SettingsManager {
     var autostartDefaultApplied: Boolean
         get() = store.getBoolean(KEY_AUTOSTART_DEFAULT_APPLIED, false)
         set(value) = store.putBoolean(KEY_AUTOSTART_DEFAULT_APPLIED, value)
+
+    /**
+     * Stored as a string (epoch day) rather than adding a Long to [KeyValueStore]
+     * -- this is the only caller that needs one, and it round-trips cleanly.
+     */
+    var lastUpdateCheckEpochDay: Long?
+        get() = store.getString(KEY_LAST_UPDATE_CHECK_EPOCH_DAY, "").toLongOrNull()
+        set(value) = store.putString(KEY_LAST_UPDATE_CHECK_EPOCH_DAY, value?.toString() ?: "")
 
     private fun notifyChanged() {
         _settingsChanged.tryEmit(Unit)
