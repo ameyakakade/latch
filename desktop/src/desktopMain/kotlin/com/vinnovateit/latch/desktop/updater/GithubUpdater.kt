@@ -2,6 +2,7 @@ package com.vinnovateit.latch.desktop.updater
 
 import com.vinnovateit.latch.core.platform.BuildInfo
 import com.vinnovateit.latch.core.platform.Logger
+import com.vinnovateit.latch.core.settings.SettingsManager
 import com.vinnovateit.latch.core.updater.UpdateState
 import com.vinnovateit.latch.desktop.AppPaths
 import kotlinx.coroutines.Dispatchers
@@ -16,6 +17,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 private const val GITHUB_API = "https://api.github.com/repos/vinnovateit/auto-net-connector/releases/latest"
 private const val MSI_PATTERN = "Latch-"
@@ -56,19 +59,20 @@ class GithubUpdater(
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val state: StateFlow<UpdateState> = _state.asStateFlow()
 
-    private var lastCheckMs: Long = 0
-    private val cooldownMs = 3600_000L
-
     @Volatile
     private var cancelRequested = false
 
     /**
-     * @param force Bypasses the 1h cooldown. The manual "Check for Updates"
-     * button passes true; the silent startup check leaves it false.
+     * @param force Bypasses the once-a-day gate. The manual "Check for Updates"
+     * button passes true; the silent startup check leaves it false so opening
+     * the app several times in a day doesn't re-hit the API on every launch.
+     * Persisted (not just in-memory) since [GithubUpdater] is recreated fresh
+     * each process start.
      */
     suspend fun check(force: Boolean = false) = withContext(Dispatchers.IO) {
-        if (!force && System.currentTimeMillis() - lastCheckMs < cooldownMs) {
-            logger.d("GithubUpdater", "Skipping check — within cooldown")
+        val today = LocalDate.now(ZoneOffset.UTC).toEpochDay()
+        if (!force && SettingsManager.lastUpdateCheckEpochDay == today) {
+            logger.d("GithubUpdater", "Skipping check — already checked today")
             return@withContext
         }
         _state.value = UpdateState.Checking
@@ -78,14 +82,14 @@ class GithubUpdater(
             if (msiAsset == null) {
                 logger.d("GithubUpdater", "No MSI asset in latest release")
                 _state.value = UpdateState.UpToDate
-                lastCheckMs = System.currentTimeMillis()
+                SettingsManager.lastUpdateCheckEpochDay = today
                 return@withContext
             }
             val latestTag = release.tag_name.removePrefix("v")
             if (compareVersions(latestTag, buildInfo.versionName) <= 0) {
                 logger.d("GithubUpdater", "Already up to date ($latestTag)")
                 _state.value = UpdateState.UpToDate
-                lastCheckMs = System.currentTimeMillis()
+                SettingsManager.lastUpdateCheckEpochDay = today
                 return@withContext
             }
             _state.value = UpdateState.UpdateAvailable(
@@ -93,7 +97,7 @@ class GithubUpdater(
                 downloadUrl = msiAsset.browser_download_url,
                 releaseNotes = release.body,
             )
-            lastCheckMs = System.currentTimeMillis()
+            SettingsManager.lastUpdateCheckEpochDay = today
         } catch (e: Exception) {
             logger.e("GithubUpdater", "Update check failed", e)
             _state.value = UpdateState.Error("Check failed: ${e.message ?: "Unknown error"}")
