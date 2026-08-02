@@ -21,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -47,6 +48,11 @@ private val ContentMaxWidth = 560.dp
  * [UpdateState.Downloaded]); [UpdateState.Error] during a download is shown here
  * too so the in-progress takeover doesn't just vanish, but a plain check failure
  * stays silent and demoted to Settings -- see LatchRoot's gating.
+ *
+ * Installing itself is not a button here -- LatchRoot fires it automatically
+ * the instant the state becomes [UpdateState.Downloaded], since there is
+ * nothing left for the user to decide once the file is on disk. This screen
+ * just reflects that it's happening; [onRetry] only matters if it fails.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -54,7 +60,7 @@ fun UpdateScreen(
     state: UpdateState,
     onDownload: () -> Unit,
     onCancelDownload: () -> Unit,
-    onInstall: (String) -> Unit,
+    onRetry: () -> Unit,
     onSkip: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -136,17 +142,12 @@ fun UpdateScreen(
 
                     is UpdateState.Downloaded -> {
                         Text(
-                            text = "The update is ready. Installing will close Latch briefly and reopen it.",
+                            text = "Update downloaded. Installing now -- Latch will close briefly and reopen.",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 24.dp),
+                            modifier = Modifier.padding(bottom = 20.dp),
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            TextButton(onClick = onSkip) { Text("Later") }
-                            Button(onClick = { onInstall(state.filePath) }) {
-                                Text("Install and restart")
-                            }
-                        }
+                        LoadingIndicator(modifier = Modifier.size(32.dp))
                     }
 
                     is UpdateState.Error -> {
@@ -159,7 +160,7 @@ fun UpdateScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             TextButton(onClick = onSkip) { Text("Dismiss") }
                             Button(
-                                onClick = onDownload,
+                                onClick = onRetry,
                                 colors = ButtonDefaults.buttonColors(),
                             ) { Text("Retry") }
                         }
