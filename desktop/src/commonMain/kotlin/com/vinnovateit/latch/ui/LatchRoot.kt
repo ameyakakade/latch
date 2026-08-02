@@ -114,6 +114,12 @@ fun LatchRoot(
             // (Error while nothing was already showing -- see the Error branch
             // below) leaves the user on whatever screen they were on.
             var showUpdateScreen by remember { mutableStateOf(false) }
+
+            // Remembered so a failed install can be retried directly instead of
+            // re-downloading -- the Error state itself only carries a message,
+            // not the path the failure happened on.
+            var lastDownloadedPath by remember { mutableStateOf<String?>(null) }
+
             LaunchedEffect(updateState) {
                 showUpdateScreen = when (updateState) {
                     is UpdateState.UpdateAvailable,
@@ -126,13 +132,40 @@ fun LatchRoot(
                     is UpdateState.Error -> showUpdateScreen
                     else -> false
                 }
+
+                // A fresh download invalidates whatever path was remembered
+                // from a previous cycle -- GithubUpdater deletes the file on
+                // failure, so retrying against a stale path here would hand
+                // msiexec a file that no longer exists.
+                if (updateState is UpdateState.UpdateAvailable || updateState is UpdateState.Downloading) {
+                    lastDownloadedPath = null
+                }
+
+                // Installing is automatic once the file is on disk -- there is
+                // nothing left for the user to decide at this point, and the
+                // MSI silently installing (see GithubUpdater.installAndExit) is
+                // the whole point of getting here. onInstallUpdate exits the
+                // process on success; a failure surfaces as UpdateState.Error
+                // and the Downloaded->Error case above keeps the takeover up.
+                val downloaded = updateState as? UpdateState.Downloaded
+                if (downloaded != null) {
+                    lastDownloadedPath = downloaded.filePath
+                    onInstallUpdate(downloaded.filePath)
+                }
             }
+
             if (showUpdateScreen) {
                 UpdateScreen(
                     state = updateState,
                     onDownload = onDownloadUpdate,
                     onCancelDownload = onCancelDownload,
-                    onInstall = onInstallUpdate,
+                    // Retrying after a download failure means fetching again;
+                    // after an install failure the file is already on disk, so
+                    // retrying means handing that same path to msiexec again.
+                    onRetry = {
+                        val path = lastDownloadedPath
+                        if (path != null) onInstallUpdate(path) else onDownloadUpdate()
+                    },
                     onSkip = onDismissUpdate,
                 )
                 return@Surface
