@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -89,7 +91,15 @@ fun CredentialsScreen(
         )
 
         Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
+            // On a short, fixed-size window (LatchWindow clamps down to a
+            // 600dp floor on small/high-DPI screens) this content -- icon,
+            // title, two fields, the Save button, and the encryption notice --
+            // does not fit. Without a scroll it just clipped, hiding Save
+            // below the visible area with no way to reach it.
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(32.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
