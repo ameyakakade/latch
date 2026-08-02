@@ -115,7 +115,7 @@ compose.desktop {
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
-            packageVersion = "1.3.3"
+            packageVersion = "1.3.4"
             description = "Auto-login for VIT hostel Wi-Fi"
             vendor = "VinnovateIT"
             copyright = "(c) 2026 VinnovateIT"
