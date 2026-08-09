@@ -251,9 +251,27 @@ class GithubUpdater(
                 appendLine(":ready")
 
                 appendLine("msiexec /i \"$msiPath\" /qn /norestart")
-                // Relaunch either way -- a failed upgrade still leaves the
-                // previously-installed version in place and working.
-                if (exePath != null) appendLine("start \"\" \"$exePath\"")
+
+                if (exePath != null) {
+                    // Never `start` a path that isn't there. The old code
+                    // relaunched unconditionally on the assumption that a failed
+                    // upgrade leaves the previous version in place -- which is
+                    // false for a major upgrade: RemoveExistingProducts takes the
+                    // old product out first, so a failure downstream of that
+                    // leaves *nothing* installed. What the user actually saw was
+                    // "Windows cannot find ...\Latch.exe", which says nothing
+                    // about the install having failed.
+                    appendLine("if exist \"$exePath\" goto relaunch")
+                    // Nothing installed and /qn ate the reason. Re-run the
+                    // installer with a basic UI so the real error is on screen
+                    // and the user has a route back to a working app, instead of
+                    // being left with no Latch and no explanation.
+                    appendLine("msiexec /i \"$msiPath\" /qb")
+                    appendLine("if not exist \"$exePath\" goto cleanup")
+                    appendLine(":relaunch")
+                    appendLine("start \"\" \"$exePath\"")
+                    appendLine(":cleanup")
+                }
                 appendLine("del \"%~f0\"")
             },
         )
