@@ -37,10 +37,22 @@ class LinuxWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private var cached: WifiSnapshot? = null
     private var cachedAt: Long = 0
+    private var lastFingerprint: String? = null
 
     private fun invalidate() {
         cached = null
         cachedAt = 0
+        lastFingerprint = null
+    }
+
+    private fun getNetworkFingerprint(): String = try {
+        val routeStr = File("/proc/net/route").takeIf { it.exists() }?.readText() ?: ""
+        val operstate = File("/sys/class/net").listFiles()?.joinToString {
+            "${it.name}:${File(it, "operstate").takeIf { f -> f.exists() }?.readText()?.trim()}"
+        } ?: ""
+        "$routeStr|$operstate"
+    } catch (_: Throwable) {
+        ""
     }
 
     private fun runCommand(vararg args: String): String? = try {
@@ -62,9 +74,16 @@ class LinuxWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun snapshot(): WifiSnapshot {
+        val currentFingerprint = getNetworkFingerprint()
         val now = System.currentTimeMillis()
-        cached?.let { if (now - cachedAt < CACHE_TTL_MS) return it }
 
+        cached?.let {
+            if (currentFingerprint == lastFingerprint && (now - cachedAt < 10_000L)) {
+                return it
+            }
+        }
+
+        lastFingerprint = currentFingerprint
         val wifiEnabled = checkWifiEnabled()
         val (iface, ssid) = resolveConnectedWifi()
         val gateway = resolveGateway(iface)
