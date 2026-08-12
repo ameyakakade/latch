@@ -292,22 +292,16 @@ class LatchEngine(
     /**
      * True unless the SSID is readable and readably *not* a campus network.
      *
-     * The null case is the important one. Null means "could not read it", not
-     * "this is not VIT": Windows reports a network *profile* name of
-     * "Identifying..." rather than an SSID whenever Network Location Awareness
-     * has not classified the network, and behind a captive portal that is the
-     * steady state, because NLA cannot reach the internet to classify anything.
-     * Failing closed there made the one situation this app exists for the one
-     * situation in which it refused to act.
-     *
-     * Treating unknown as allowed costs less than it appears: [isTargetNetwork]
-     * still requires the portal host to resolve, and that is the strong signal
-     * of the two -- phc.prontonetworks.com only answers on a Pronto network. A
-     * readable SSID that does not match is still refused outright.
+     * The null case is the important one: null means "could not read it" (e.g. Windows
+     * profile name "Identifying..." before captive portal login). Treating unknown as
+     * allowed lets portal host check resolve it.
      */
     private fun isVitCampusSsid(ssid: String?): Boolean {
-        val trimmed = ssid?.trim()?.takeIf { it.isNotEmpty() } ?: return true
-        return VIT_SSID_PATTERN.containsMatchIn(trimmed)
+        val clean = ssid?.trim()?.removeSurrounding("\"")?.takeIf { it.isNotEmpty() } ?: return true
+        return VIT_SSID_PATTERN.containsMatchIn(clean) ||
+            clean.contains("VIT", ignoreCase = true) ||
+            clean.endsWith("-VIT", ignoreCase = true) ||
+            SettingsManager.allowedSsids.value.any { clean.contains(it, ignoreCase = true) }
     }
 
     private suspend fun handleCaptivePortal(handle: NetworkHandle) {
@@ -324,13 +318,24 @@ class LatchEngine(
                 )
                 return
             }
-            val result = login.attemptLogin(
+            var result = login.attemptLogin(
                 userId = user,
                 password = pass,
                 handle = handle,
                 useAlternate = false,
                 fallbackIp = platform.wifi.gatewayIp(),
             )
+            if (result is LoginResult.Failure) {
+                logger.d(TAG, "First login attempt failed; retrying after 1s delay...")
+                delay(1000)
+                result = login.attemptLogin(
+                    userId = user,
+                    password = pass,
+                    handle = handle,
+                    useAlternate = true,
+                    fallbackIp = platform.wifi.gatewayIp(),
+                )
+            }
             when (result) {
                 is LoginResult.Success -> {
                     logger.d(TAG, "Login succeeded; re-validating network.")
@@ -338,11 +343,7 @@ class LatchEngine(
                 }
 
                 is LoginResult.Failure -> {
-                    platform.notifier.notifyTransient(
-                        title = "Login failed",
-                        text = "Check your credentials.",
-                        isError = true,
-                    )
+                    logger.w(TAG, "Login failed after retry.")
                     ConnectionStatusManager.postStatus(
                         ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
                     )

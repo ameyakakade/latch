@@ -90,8 +90,11 @@ public final class GenerateIcon {
 
         Path out = Path.of("latch.ico");
         Files.write(out, assemble(payloads));
+        Path outPng = Path.of("latch.png");
+        Files.write(outPng, payloads.get(SIZES.length - 1));
         System.out.println("Wrote " + out.toAbsolutePath() + " ("
             + Files.size(out) + " bytes, " + SIZES.length + " entries)");
+        System.out.println("Wrote " + outPng.toAbsolutePath() + " (" + Files.size(outPng) + " bytes)");
         for (int i = 0; i < SIZES.length; i++) {
             System.out.println("  " + SIZES[i] + "x" + SIZES[i] + "  "
                 + (isPng.get(i) ? "PNG " : "DIB ") + payloads.get(i).length + " bytes");
