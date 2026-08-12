@@ -152,10 +152,11 @@ object LinuxAppIndicatorTray {
             val thread = Thread({
                 while (isRunning) {
                     try {
-                        while (gtk.gtk_main_iteration_do(false)) {
-                            // Process all pending GTK events
+                        var processedCount = 0
+                        while (processedCount < 10 && gtk.gtk_main_iteration_do(false)) {
+                            processedCount++
                         }
-                        Thread.sleep(30)
+                        Thread.sleep(if (processedCount > 0) 50 else 200)
                     } catch (_: Throwable) {
                         break
                     }
