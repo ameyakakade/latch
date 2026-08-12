@@ -29,7 +29,8 @@ private fun configureWindowsAppUserModelId() {
 }
 
 fun main(args: Array<String>) {
-    if (!SingleInstance.acquire()) return
+    var onActivateWindow: (() -> Unit)? = null
+    if (!SingleInstance.acquire { onActivateWindow?.invoke() }) return
 
     val startHidden = "--hidden" in args
     val app = LatchApp.create(echoLogsToStdout = System.console() != null || !startHidden)
@@ -38,6 +39,7 @@ fun main(args: Array<String>) {
 
     application {
         var windowVisible by remember { mutableStateOf(!startHidden) }
+        onActivateWindow = { windowVisible = true }
 
         val trayState = rememberTrayState()
         val isLatched by app.engine.isLatched.collectAsState()
@@ -46,41 +48,59 @@ fun main(args: Array<String>) {
 
         LaunchedEffect(trayState) { app.notifier.trayState = trayState }
 
-        Tray(
-            state = trayState,
-            icon = remember(isLatched) { LatchIcon.forTray(latched = isLatched) },
-            tooltip = tooltip,
-            onAction = { windowVisible = true },
-            menu = {
-                // Windows renders this menu with plain java.awt.MenuItem/PopupMenu --
-                // no icons, colors, rounding or mnemonics are available through that
-                // API at all (java.awt.Menu throws UnsupportedOperationException for
-                // a mnemonic), regardless of app theming. This status line is the
-                // actual ceiling for what can be polished here.
-                Item(
-                    text = if (isLatched) "● Connected" else "○ Not connected",
-                    enabled = false,
-                    onClick = {},
+        val isLinux = remember { System.getProperty("os.name").contains("Linux", ignoreCase = true) }
+        val useLinuxTray = remember { isLinux && com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.isSupported() }
+
+        LaunchedEffect(isLatched) {
+            if (useLinuxTray) {
+                com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.init(
+                    isLatched = isLatched,
+                    onOpenLatch = { windowVisible = true },
+                    onToggleConnect = {
+                        if (isLatched) app.engine.submit(LatchCommand.Logout)
+                        else app.engine.submit(LatchCommand.CheckAndLogin)
+                    },
+                    onExitLatch = {
+                        app.shutdown()
+                        exitApplication()
+                    },
                 )
-                Separator()
-                if (isLatched) {
-                    Item("Disconnect") { app.engine.submit(LatchCommand.Logout) }
-                } else {
-                    Item("Connect") { app.engine.submit(LatchCommand.CheckAndLogin) }
-                }
-                Item("Open Latch") { windowVisible = true }
-                Separator()
-                Item("Quit") {
-                    app.shutdown()
-                    exitApplication()
-                }
-            },
-        )
+                com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.updateStatus(isLatched)
+            } else if (isLinux) {
+                kotlinx.coroutines.delay(200)
+                runCatching { patchLinuxTrayIconAlpha(isLatched) { windowVisible = true } }
+            }
+        }
+
+        if (!useLinuxTray) {
+            Tray(
+                state = trayState,
+                icon = remember(isLatched) { LatchIcon.forTray(latched = isLatched) },
+                tooltip = tooltip,
+                onAction = { windowVisible = true },
+                menu = {
+                    Item("Open Latch") {
+                        windowVisible = true
+                    }
+                    Separator()
+                    if (isLatched) {
+                        Item("Disconnect") { app.engine.submit(LatchCommand.Logout) }
+                    } else {
+                        Item("Connect") { app.engine.submit(LatchCommand.CheckAndLogin) }
+                    }
+                    Separator()
+                    Item("Exit Latch") {
+                        app.shutdown()
+                        exitApplication()
+                    }
+                },
+            )
+        }
 
         LatchWindow(
             visible = windowVisible,
             onCloseRequest = { windowVisible = false },
-        ) {
+        ) { onMinimize, onClose ->
             val scope = rememberCoroutineScope()
             Surface(modifier = Modifier.fillMaxSize()) {
                 LatchRoot(
@@ -88,6 +108,8 @@ fun main(args: Array<String>) {
                     sessions = app.sessions,
                     platform = app.platform,
                     updateState = updateState,
+                    onMinimize = onMinimize,
+                    onClose = onClose,
                     onCheckForUpdates = { scope.launch { app.updater.check(force = true) } },
                     onDownloadUpdate = { app.downloadUpdate() },
                     onCancelDownload = { app.cancelUpdateDownload() },

@@ -16,6 +16,8 @@ internal object AppPaths {
     val isMac: Boolean =
         System.getProperty("os.name").orEmpty().contains("Mac", ignoreCase = true)
 
+    val isLinux: Boolean = !isWindows && !isMac
+
     val dataDir: File by lazy {
         val base = when {
             isWindows -> System.getenv("LOCALAPPDATA")
