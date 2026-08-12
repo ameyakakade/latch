@@ -155,7 +155,7 @@ compose.desktop {
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
-            packageVersion = "1.3.6"
+            packageVersion = "1.3.7"
             description = "Auto-login for VIT hostel Wi-Fi"
             vendor = "VinnovateIT"
             copyright = "(c) 2026 VinnovateIT"
@@ -201,11 +201,11 @@ tasks.register<Tar>("packageReleaseTarGz") {
     description = "Packages release distributable directory into a .tar.gz archive"
     dependsOn("createReleaseDistributable")
 
-    archiveFileName.set("latch-1.3.6-linux-x64.tar.gz")
+    archiveFileName.set("latch-1.3.7-linux-x64.tar.gz")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     compression = Compression.GZIP
 
     from(layout.buildDirectory.dir("compose/binaries/main-release/app")) {
-        into("latch-1.3.6")
+        into("latch-1.3.7")
     }
 }
