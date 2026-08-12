@@ -12,27 +12,28 @@ import com.vinnovateit.latch.core.platform.SystemActions
 import com.vinnovateit.latch.core.platform.UserNotifier
 import com.vinnovateit.latch.core.platform.WifiPlatform
 import com.vinnovateit.latch.desktop.AppPaths
+import com.vinnovateit.latch.desktop.platform.linux.LinuxCredentialStore
+import com.vinnovateit.latch.desktop.platform.linux.LinuxSystemActions
+import com.vinnovateit.latch.desktop.platform.linux.LinuxWifiPlatform
+import com.vinnovateit.latch.desktop.platform.windows.DpapiCredentialStore
+import com.vinnovateit.latch.desktop.platform.windows.WindowsSystemActions
+import com.vinnovateit.latch.desktop.platform.windows.WindowsWifiPlatform
 
 private object DesktopBuildInfo : BuildInfo {
-    // Kept in step with the MSI packageVersion in build.gradle.kts.
     override val versionName: String = "1.3.6"
     override val isDebug: Boolean = System.getProperty("latch.debug") == "true"
     override val isInstalled: Boolean = InstalledBuild.isInstalled
 }
 
 private object DesktopCapabilities : PlatformCapabilities {
-    // Material You reads the OS wallpaper palette; no desktop equivalent, so the
-    // Settings toggle is hidden and the theme falls through to a seed scheme.
     override val supportsDynamicColor: Boolean = false
-    override val supportsAutostart: Boolean = AppPaths.isWindows
+    override val supportsAutostart: Boolean = AppPaths.isWindows || AppPaths.isLinux
 }
 
 /**
- * Wires the concrete Windows implementations together.
- *
- * Only Windows is implemented today. Linux and macOS would each supply their own
- * WifiPlatform / CredentialStore / SystemActions here -- the dispatch is at
- * runtime rather than compile time precisely so that stays an additive change.
+ * Wires concrete OS implementations together via runtime OS dispatch.
+ * Windows and Linux are supported; macOS can be added by adding a macos package
+ * and wiring its implementations in this dispatch.
  */
 class DesktopPlatformServices(
     echoLogsToStdout: Boolean = false,
@@ -47,15 +48,25 @@ class DesktopPlatformServices(
 
     override val settingsStore: KeyValueStore = JsonKeyValueStore(AppPaths.settingsFile, logger)
 
-    override val credentials: CredentialStore =
-        DpapiCredentialStore(AppPaths.credentialsFile, logger)
+    override val credentials: CredentialStore = when {
+        AppPaths.isWindows -> DpapiCredentialStore(AppPaths.credentialsFile, logger)
+        AppPaths.isLinux -> LinuxCredentialStore(AppPaths.credentialsFile, logger)
+        else -> LinuxCredentialStore(AppPaths.credentialsFile, logger) // Default fallback
+    }
 
-    private val windowsWifi = WindowsWifiPlatform(logger)
-    override val wifi: WifiPlatform = windowsWifi
+    override val wifi: WifiPlatform = when {
+        AppPaths.isWindows -> WindowsWifiPlatform(logger)
+        AppPaths.isLinux -> LinuxWifiPlatform(logger)
+        else -> LinuxWifiPlatform(logger) // Default fallback
+    }
 
-    override val counters: ByteCounterSource = OshiByteCounters(windowsWifi, logger)
+    override val counters: ByteCounterSource = OshiByteCounters(wifi, logger)
 
-    override val systemActions: SystemActions = WindowsSystemActions(logger)
+    override val systemActions: SystemActions = when {
+        AppPaths.isWindows -> WindowsSystemActions(logger)
+        AppPaths.isLinux -> LinuxSystemActions(logger)
+        else -> LinuxSystemActions(logger) // Default fallback
+    }
 
     override val httpTransport: HttpTransport = DesktopHttpTransport()
 }

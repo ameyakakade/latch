@@ -64,9 +64,17 @@ sealed interface WifiEvent {
     data class Lost(val handle: NetworkHandle?) : WifiEvent
 }
 
+data class WifiAccessPoint(val ssid: String, val bssid: String, val signalPercentage: Int)
+
 interface WifiPlatform {
     fun isWifiEnabled(): Boolean
     fun isConnectedToWifi(): Boolean
+
+    /**
+     * Scans for available Wi-Fi access points whose SSID ends with "-VIT" or contains "VIT",
+     * connects to the BSSID with the highest signal strength, and returns true if connected.
+     */
+    fun connectToBestVitNetwork(): Boolean = false
 
     /**
      * Best-effort: switch the Wi-Fi radio back on if the user left it off.
@@ -91,6 +99,8 @@ interface WifiPlatform {
     fun gatewayIp(): String?
 
     fun activeHandle(): NetworkHandle?
+
+    fun wifiInterfaceName(): String? = activeHandle()?.id
 
     val events: Flow<WifiEvent>
 

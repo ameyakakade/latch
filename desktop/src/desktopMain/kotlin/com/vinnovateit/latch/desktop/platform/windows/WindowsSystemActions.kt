@@ -1,10 +1,11 @@
-package com.vinnovateit.latch.desktop.platform
+package com.vinnovateit.latch.desktop.platform.windows
 
 import com.sun.jna.platform.win32.Advapi32Util
 import com.sun.jna.platform.win32.Shell32
 import com.sun.jna.platform.win32.WinReg
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.SystemActions
+import com.vinnovateit.latch.desktop.platform.InstalledBuild
 import java.awt.Desktop
 import java.net.URI
 
@@ -22,16 +23,6 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
         const val SHELL_EXECUTE_ERROR_MAX = 32L
     }
 
-    /**
-     * Opens the Wi-Fi network flyout, which is the closest analogue of Android's
-     * Settings.Panel.ACTION_WIFI. Falls back to the full settings page.
-     *
-     * These are shell protocol URIs, not web URLs, so they must go through
-     * ShellExecute. Desktop.browse() hands anything it is given to the *default
-     * browser*, which launches Chrome on "ms-availablenetworks:" and then sits
-     * there -- and reports success while doing it, so a browse-first attempt
-     * also swallows the fallback.
-     */
     override fun openWifiSettings() {
         val targets = listOf("ms-availablenetworks:", "ms-settings:network-wifi")
         for (target in targets) {
@@ -40,11 +31,6 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
         logger.e(TAG, "Could not open Wi-Fi settings", null)
     }
 
-    /**
-     * @return whether the shell accepted the target. ShellExecute returns a
-     * pseudo-HINSTANCE that is an error code when <= 32; anything above that is
-     * a real launch.
-     */
     private fun shellExecute(target: String): Boolean = runCatching {
         val code = Shell32.INSTANCE
             .ShellExecute(null, "open", target, null, null, SW_SHOWNORMAL)
@@ -65,12 +51,6 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
             .onFailure { logger.e(TAG, "Could not open URL: $url", it) }
     }
 
-    /**
-     * Autostart via the HKCU Run key using JNA rather than shelling out to
-     * `reg add`. The registry value must be `"<path>" --hidden` *including* the
-     * inner quotes, and Java's Windows command-line assembly mangles embedded
-     * quotes in ways that vary by JDK -- JNA avoids that layer entirely.
-     */
     override fun setAutostart(enabled: Boolean) {
         val exe = appExePath()
         if (exe == null) {
@@ -94,7 +74,6 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
         }
     }
 
-    /** Reads actual OS state rather than a mirrored flag that could drift. */
     override fun isAutostartEnabled(): Boolean = try {
         Advapi32Util.registryValueExists(WinReg.HKEY_CURRENT_USER, RUN_KEY, RUN_VALUE_NAME)
     } catch (e: Throwable) {
@@ -102,11 +81,6 @@ class WindowsSystemActions(private val logger: Logger) : SystemActions {
         false
     }
 
-    /**
-     * Resolves the path to register for autostart, or null if this process must
-     * not register itself. See [InstalledBuild] for why build-output locations
-     * are rejected explicitly.
-     */
     private fun appExePath(): String? {
         val exe = InstalledBuild.path
         if (exe == null) {
