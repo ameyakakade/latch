@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +65,7 @@ import com.vinnovateit.latch.ui.components.SettingsActionDialog
 import com.vinnovateit.latch.ui.theme.ColorGraphDownload
 import com.vinnovateit.latch.ui.theme.ColorGraphUpload
 import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
+import com.vinnovateit.latch.ui.theme.satoshiFontFamily
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
@@ -87,11 +90,14 @@ fun StatsScreen(
     var showClearConfirmation by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LatchDetailHeader(title = stringResource(Res.string.stats_title), onBack = onBack)
+        LatchDetailHeader(
+            title = stringResource(Res.string.stats_title),
+            onBack = onBack,
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 32.dp),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             liveStatus?.let { live ->
@@ -211,36 +217,80 @@ private fun LiveSessionCard(
             null
         },
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            DataUsageDonut(
-                data = usage,
-                modifier = Modifier.size(108.dp),
-                isAmoled = isAmoled,
-            )
-            Spacer(Modifier.width(24.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Current session",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.height(4.dp))
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            // Android-matching Header: "ACTIVE SESSION" live green badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(6.dp),
+                        ) {}
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "ACTIVE SESSION",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontFamily = satoshiFontFamily(),
+                        )
+                    }
+                }
+
                 Text(
                     text = "${formatDurationDynamic(duration)} • since " +
                         formatClockTime(startTimeMillis),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = satoshiFontFamily(),
                 )
-                Spacer(Modifier.height(16.dp))
-                RateReadout(
-                    downloadBps = latestRxBps,
-                    uploadBps = latestTxBps,
-                    speedUnit = speedUnit,
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DataUsageDonut(
+                    data = usage,
+                    modifier = Modifier.size(96.dp),
+                    isAmoled = isAmoled,
                 )
+                Spacer(Modifier.width(20.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    val (totalVal, totalUnit) = formatBytes(usage.rxBytes + usage.txBytes)
+                    Text(
+                        text = "$totalVal $totalUnit",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = satoshiFontFamily(),
+                    )
+                    Text(
+                        text = "Total Session Data",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = satoshiFontFamily(),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    RateReadout(
+                        downloadBps = latestRxBps,
+                        uploadBps = latestTxBps,
+                        speedUnit = speedUnit,
+                    )
+                }
             }
         }
     }
@@ -344,17 +394,26 @@ private fun SessionRow(session: SessionSummary) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                val now = System.currentTimeMillis()
+                val diffMs = now - session.startTimestamp
+                val timeString = when {
+                    diffMs < 60_000L -> "Just now"
+                    diffMs < 3600_000L -> "${diffMs / 60_000L} mins ago"
+                    diffMs < 86400_000L -> "${diffMs / 3600_000L} hours ago"
+                    else -> formatDate(session.startTimestamp, "E, dd MMM")
+                }
                 Text(
-                    text = formatDate(session.startTimestamp, "E, dd MMM"),
+                    text = timeString,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = satoshiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = formatClockTime(session.startTimestamp) + " • " +
-                        formatDurationDynamic(session.endTimestamp - session.startTimestamp),
+                    text = formatDurationDynamic(session.endTimestamp - session.startTimestamp),
                     style = MaterialTheme.typography.bodySmall,
+                    fontFamily = satoshiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -366,6 +425,7 @@ private fun SessionRow(session: SessionSummary) {
                     text = "$total $totalUnit",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
+                    fontFamily = satoshiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -380,6 +440,7 @@ private fun SessionRow(session: SessionSummary) {
                     Text(
                         text = "$dl $dlUnit",
                         style = MaterialTheme.typography.bodySmall,
+                        fontFamily = satoshiFontFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(12.dp))
@@ -393,6 +454,7 @@ private fun SessionRow(session: SessionSummary) {
                     Text(
                         text = "$ul $ulUnit",
                         style = MaterialTheme.typography.bodySmall,
+                        fontFamily = satoshiFontFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

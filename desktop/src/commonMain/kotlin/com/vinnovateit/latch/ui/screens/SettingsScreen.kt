@@ -101,14 +101,17 @@ fun SettingsScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LatchDetailHeader(title = "Settings", onBack = onBack)
+        LatchDetailHeader(
+            title = "Settings",
+            onBack = onBack,
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+                .padding(horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Column(
@@ -197,7 +200,7 @@ fun SettingsScreen(
                 if (platform.capabilities.supportsAutostart) {
                     SettingsSection(title = "System") {
                         SettingsItem(
-                            title = "Start at login",
+                            title = "Run at startup",
                             subtitle = "Launch Latch automatically when you sign in",
                             leadingIcon = LatchIcons.DesktopWindows,
                             trailingContent = {
@@ -214,30 +217,6 @@ fun SettingsScreen(
                             },
                         )
                     }
-                }
-
-                // -------------------------------------------------------------
-                // Application Updates
-                // -------------------------------------------------------------
-                SettingsSection(title = "Application Updates") {
-                    SettingsItem(
-                        title = "Version",
-                        subtitle = buildString {
-                            append(platform.buildInfo.versionName)
-                            if (platform.buildInfo.isDebug) append(" (debug)")
-                            if (!platform.buildInfo.isInstalled) append(" — dev run")
-                        },
-                        leadingIcon = LatchIcons.VersionTag,
-                    )
-                    SettingsRowGap()
-                    UpdatePanel(
-                        state = updateState,
-                        onCheckForUpdates = onCheckForUpdates,
-                        onDownloadUpdate = onDownloadUpdate,
-                        onCancelDownload = onCancelDownload,
-                        onInstallUpdate = onInstallUpdate,
-                        onDismissUpdate = onDismissUpdate,
-                    )
                 }
 
                 Spacer(Modifier.height(32.dp))
@@ -304,35 +283,13 @@ fun SettingsScreen(
             onSelect = { SettingsManager.setAccentColor(it) },
             onDismiss = { showAccentDialog = false },
             bottomContent = {
-                Column {
-                    AccentColorPicker(
-                        selectedColorName = accentColor,
-                        onColorSelected = { SettingsManager.setAccentColor(it) },
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                    )
-                    Spacer(Modifier.height(20.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Monochrome",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = "Desaturate the scheme to greys",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = useMonochrome,
-                            onCheckedChange = { SettingsManager.setUseMonochrome(it) },
-                        )
-                    }
-                }
+                AccentColorPicker(
+                    selectedColorName = accentColor,
+                    useMonochrome = useMonochrome,
+                    onColorSelected = { SettingsManager.setAccentColor(it) },
+                    onMonochromeToggle = { SettingsManager.setUseMonochrome(it) },
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                )
             },
         )
     }
@@ -374,7 +331,7 @@ fun SettingsScreen(
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun UpdatePanel(
+internal fun UpdatePanel(
     state: UpdateState,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,

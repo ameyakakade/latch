@@ -47,6 +47,7 @@ import com.vinnovateit.latch.desktop.resources.credentials_title
 import com.vinnovateit.latch.desktop.resources.password
 import com.vinnovateit.latch.desktop.resources.registration_number
 import com.vinnovateit.latch.desktop.resources.save_credentials
+import com.vinnovateit.latch.ui.components.LatchDetailHeader
 import com.vinnovateit.latch.ui.components.LatchIcons
 import com.vinnovateit.latch.ui.components.LeafOverlay
 import com.vinnovateit.latch.ui.theme.modernizFontFamily
@@ -66,8 +67,8 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun CredentialsScreen(
-    onSave: (userId: String, password: String) -> Unit,
-    onCancel: (() -> Unit)? = null,
+    onSave: (String, String) -> Unit,
+    onCancel: (() -> Unit)?,
 ) {
     var regNo by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -90,21 +91,19 @@ fun CredentialsScreen(
             contentScale = ContentScale.Crop,
         )
 
-        Column(
-            // On a short, fixed-size window (LatchWindow clamps down to a
-            // 600dp floor on small/high-DPI screens) this content -- icon,
-            // title, two fields, the Save button, and the encryption notice --
-            // does not fit. Without a scroll it just clipped, hiding Save
-            // below the visible area with no way to reach it.
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            LatchDetailHeader(
+                title = "",
+                onBack = onCancel,
+            )
+
             Column(
-                modifier = Modifier.widthIn(max = 440.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 32.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(

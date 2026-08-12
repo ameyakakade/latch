@@ -3,6 +3,7 @@ package com.vinnovateit.latch.ui.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,40 +25,47 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 internal fun HowItWorksDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("How Latch works") },
-        text = {
-            Column {
-                HowItWorksRow(
-                    icon = LatchIcons.Wifi,
-                    title = "Automatic Wi-Fi login",
-                    body = "Latch detects when you join a captive-portal network and logs you in silently using your saved credentials.",
-                )
-                Spacer(Modifier.height(16.dp))
-                HowItWorksRow(
-                    icon = LatchIcons.BarChart,
-                    title = "Live session stats",
-                    body = "Download and upload speeds are sampled every second and displayed on the home screen while you're connected.",
-                )
-                Spacer(Modifier.height(16.dp))
-                HowItWorksRow(
-                    icon = LatchIcons.Restore,
-                    title = "10 Mbps cap",
-                    body = "Campus Wi-Fi enforces a 10 Mbps cap per session. Latch re-authenticates automatically when the session expires.",
-                )
-                Spacer(Modifier.height(16.dp))
-                HowItWorksRow(
-                    icon = LatchIcons.DesktopWindows,
-                    title = "Lives in the system tray",
-                    body = "Latch runs quietly in the background. The tray icon turns red when you're latched and grey when you're not.",
-                )
+    LatchBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "How Latch works",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontFamily = com.vinnovateit.latch.ui.theme.satoshiFontFamily(),
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+            HowItWorksRow(
+                icon = LatchIcons.Wifi,
+                title = "Automatic Wi-Fi login",
+                body = "Latch detects when you join a captive-portal network and logs you in silently using your saved credentials.",
+            )
+            Spacer(Modifier.height(16.dp))
+            HowItWorksRow(
+                icon = LatchIcons.BarChart,
+                title = "Live session stats",
+                body = "Download and upload speeds are sampled every second and displayed on the home screen while you're connected.",
+            )
+            Spacer(Modifier.height(16.dp))
+            HowItWorksRow(
+                icon = LatchIcons.Restore,
+                title = "20 Mbps cap",
+                body = "Campus Wi-Fi enforces a 20 Mbps cap per session. Latch re-authenticates automatically when the session expires.",
+            )
+            Spacer(Modifier.height(16.dp))
+            HowItWorksRow(
+                icon = LatchIcons.DesktopWindows,
+                title = "Lives in the system tray",
+                body = "Latch runs quietly in the background. The tray icon turns red when you're latched and grey when you're not.",
+            )
+            Spacer(Modifier.height(20.dp))
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text("Got it", fontFamily = com.vinnovateit.latch.ui.theme.satoshiFontFamily())
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Got it") }
-        },
-    )
+        }
+    }
 }
 
 @Composable
