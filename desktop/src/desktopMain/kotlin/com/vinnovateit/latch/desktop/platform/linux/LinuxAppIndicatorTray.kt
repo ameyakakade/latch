@@ -73,6 +73,12 @@ object LinuxAppIndicatorTray {
     private var iconFileConnected: File? = null
     private var iconFileDisconnected: File? = null
 
+    @Volatile private var isRunning = true
+
+    fun stop() {
+        isRunning = false
+    }
+
     fun isSupported(): Boolean {
         return GtkLib.INSTANCE != null && AppIndicatorLib.INSTANCE != null
     }
@@ -141,9 +147,12 @@ object LinuxAppIndicatorTray {
 
             // Run GTK event pump thread
             val thread = Thread({
-                while (true) {
+                while (isRunning) {
                     try {
-                        gtk.gtk_main_iteration_do(true)
+                        while (gtk.gtk_main_iteration_do(false)) {
+                            // Process all pending GTK events
+                        }
+                        Thread.sleep(30)
                     } catch (_: Throwable) {
                         break
                     }
