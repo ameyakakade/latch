@@ -21,7 +21,7 @@ import java.net.URL
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-private const val GITHUB_API = "https://api.github.com/repos/vinnovateit/auto-net-connector/releases/latest"
+private const val GITHUB_API = "https://api.github.com/repos/vinnovateit/latch/releases/latest"
 private const val MSI_PATTERN = "Latch-"
 private const val PIPE = 32 * 1024
 
@@ -79,9 +79,16 @@ class GithubUpdater(
         _state.value = UpdateState.Checking
         try {
             val release = fetchLatestRelease()
-            val msiAsset = release.assets.find { it.name.startsWith(MSI_PATTERN) && it.name.endsWith(".msi") }
-            if (msiAsset == null) {
-                logger.d("GithubUpdater", "No MSI asset in latest release")
+            val packageAsset = release.assets.find { asset ->
+                if (AppPaths.isWindows) {
+                    asset.name.startsWith(MSI_PATTERN) && asset.name.endsWith(".msi")
+                } else {
+                    asset.name.contains("Latch", ignoreCase = true) &&
+                        (asset.name.endsWith(".deb") || asset.name.endsWith(".AppImage") || asset.name.endsWith(".tar.gz"))
+                }
+            }
+            if (packageAsset == null) {
+                logger.d("GithubUpdater", "No compatible release asset in latest release")
                 _state.value = UpdateState.UpToDate
                 SettingsManager.lastUpdateCheckEpochDay = today
                 return@withContext
@@ -95,7 +102,7 @@ class GithubUpdater(
             }
             _state.value = UpdateState.UpdateAvailable(
                 version = latestTag,
-                downloadUrl = msiAsset.browser_download_url,
+                downloadUrl = packageAsset.browser_download_url,
                 releaseNotes = release.body,
             )
             SettingsManager.lastUpdateCheckEpochDay = today
@@ -106,9 +113,7 @@ class GithubUpdater(
     }
 
     /**
-     * Fetches the MSI and stops. Installing is deliberately a separate, explicit
-     * step: downloading 50-odd MB must not also decide on the user's behalf that
-     * now is a good moment to close the app.
+     * Fetches the installer package and stops.
      */
     suspend fun download() = withContext(Dispatchers.IO) {
         val current = _state.value
@@ -116,7 +121,8 @@ class GithubUpdater(
         cancelRequested = false
         _state.value = UpdateState.Downloading(0f)
 
-        val dest = File(AppPaths.updatesDir, "Latch-${current.version}.msi")
+        val ext = current.downloadUrl.substringAfterLast('.', "pkg")
+        val dest = File(AppPaths.updatesDir, "Latch-${current.version}.$ext")
         try {
             val conn = open(URL(current.downloadUrl))
             if (conn.responseCode !in 200..299) {
@@ -146,8 +152,6 @@ class GithubUpdater(
                 }
             }
 
-            // Deleted only after both streams are closed -- Windows refuses to
-            // unlink a file that is still open.
             if (cancelled) {
                 dest.delete()
                 _state.value = current
@@ -155,8 +159,6 @@ class GithubUpdater(
                 return@withContext
             }
 
-            // A connection dropped mid-transfer ends the read loop normally, so
-            // without this a truncated MSI would be offered up as installable.
             if (total > 0 && written != total) {
                 throw IOException("Incomplete download: got $written of $total bytes")
             }
@@ -174,30 +176,18 @@ class GithubUpdater(
         cancelRequested = true
     }
 
-    /**
-     * Launching msiexec directly and exiting right after was the bug: msiexec
-     * detaches from its parent and installs in the background, our own process
-     * was already gone by the time it finished, and nothing was left to bring
-     * Latch back -- from the user's side, "Install and restart" just closed
-     * the app for good. A relaunch has to happen from a process that outlives
-     * ours, so this writes a throwaway .cmd that runs msiexec *synchronously*
-     * (cmd waits for it, unlike our own ProcessBuilder.start() which does not),
-     * then starts Latch.exe again once it's done, then deletes itself. The
-     * script's first job is to wait for this process to actually exit, so
-     * msiexec never meets a still-locked Latch.exe -- see writeRelaunchScript.
-     *
-     * @return true if the script actually launched, and therefore whether the
-     * caller should exit. Quitting regardless would discard the
-     * [UpdateState.Error] set here along with the process that was going to
-     * display it.
-     */
-    fun installAndExit(msiPath: String): Boolean = try {
-        val script = writeRelaunchScript(msiPath)
-        ProcessBuilder("cmd", "/c", script.absolutePath)
-            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-            .redirectError(ProcessBuilder.Redirect.DISCARD)
-            .start()
-        true
+    fun installAndExit(packagePath: String): Boolean = try {
+        if (AppPaths.isWindows) {
+            val script = writeRelaunchScript(packagePath)
+            ProcessBuilder("cmd", "/c", script.absolutePath)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+            true
+        } else {
+            ProcessBuilder("xdg-open", packagePath).start()
+            true
+        }
     } catch (e: Exception) {
         logger.e("GithubUpdater", "Failed to launch installer", e)
         _state.value = UpdateState.Error("Failed to launch installer: ${e.message ?: "Unknown error"}")

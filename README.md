@@ -6,8 +6,8 @@
 <div align="center">
   <a href="https://github.com/vinnovateit/latch">
     <picture>
-      <source srcset="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/redLogoLatch.svg">
-  	  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/redLogoLatch.svg">
+      <source srcset="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg">
+  	  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg">
     </picture>
   </a>
 
@@ -16,11 +16,11 @@
   <p align="center">
     Android app that automates login to VIT hostel WiFi networks.
     <br /><br />
-    <a href="https://github.com/vinnovateit/auto-net-connector">Visit</a>
+    <a href="https://github.com/vinnovateit/latch">Visit</a>
     &middot;
-    <a href="https://github.com/vinnovateit/auto-net-connector/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/vinnovateit/latch/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/vinnovateit/auto-net-connector/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/vinnovateit/latch/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -55,8 +55,8 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 <picture>
-  <source srcset="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/redLogoLatch.svg">
-  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/redLogoLatch.svg" width="200" align="right">
+  <source srcset="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg">
+  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg" width="200" align="right">
 </picture>
 Latch is an Android application developed by VinnovateIT that automates the login process for VIT hostel WiFi networks. It detects network connections, submits credentials automatically, and optionally logs network statistics. The app improves convenience and reduces repetitive manual logins for students.
 
@@ -70,9 +70,9 @@ Use wisely: don't overfill & don't use too heavy imgs
 
 | Landing Screen | Home Screen |
   | :--------------: | :--------: |
-| <img width="60%" alt="Landing Screen" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/onboarding.jpg"> | <img width="60%" alt="Home screen" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/home_screen.jpg"> |
+| <img width="60%" alt="Landing Screen" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/onboarding.jpg"> | <img width="60%" alt="Home screen" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/home_screen.jpg"> |
 | Stats | Settings |
-| <img width="60%" alt="Network stats" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/stats_screen.jpg"> | <img width="60%" alt="Settings screen" src="https://raw.githubusercontent.com/vinnovateit/auto-net-connector/main/.github/assets/settings_screen.jpg"> |
+| <img width="60%" alt="Network stats" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/stats_screen.jpg"> | <img width="60%" alt="Settings screen" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/settings_screen.jpg"> |
 
 </details>
 
@@ -90,7 +90,7 @@ Use wisely: don't overfill & don't use too heavy imgs
 - Add support for multiple VIT campuses
 - Improve UI responsiveness
 
-See the [open issues](https://github.com/vinnovateit/auto-net-connector/issues) for a full list of proposed features and known issues.
+See the [open issues](https://github.com/vinnovateit/latch/issues) for a full list of proposed features and known issues.
 
 
 
@@ -111,12 +111,12 @@ To get a local copy up and running follow these simple steps.
 1. Clone the repository
 
    ```sh
-   git clone https://github.com/vinnovateit/auto-net-connector.git
+   git clone https://github.com/vinnovateit/latch.git
    ```
 3. Open the project in Android Studio
 4. Sync Gradle and build the project
 5. Run on a connected device or emulator
-6. Enter your VIT hostel credentials when prompted
+6. Enter your VIT hostel credentials when prompted     
 
 
 
@@ -129,8 +129,8 @@ Latch automatically detects VIT hostel WiFi networks and logs in using the crede
 
 ### Top contributors:
 
-<a href="https://github.com/vinnovateit/auto-net-connector/graphs/contributors" align="center">
-  <img src="https://contrib.rocks/image?repo=vinnovateit/auto-net-connector" alt="contrib.rocks image" />
+<a href="https://github.com/vinnovateit/latch/graphs/contributors" align="center">
+  <img src="https://contrib.rocks/image?repo=vinnovateit/latch" alt="contrib.rocks image" />
 </a>
 
 

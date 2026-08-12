@@ -3,6 +3,7 @@ package com.vinnovateit.latch.desktop.platform
 import com.vinnovateit.latch.core.platform.ByteCounterSource
 import com.vinnovateit.latch.core.platform.ByteCounts
 import com.vinnovateit.latch.core.platform.Logger
+import com.vinnovateit.latch.core.platform.WifiPlatform
 import oshi.SystemInfo
 import oshi.hardware.NetworkIF
 
@@ -14,7 +15,7 @@ import oshi.hardware.NetworkIF
  * we read the Wi-Fi adapter directly.
  */
 class OshiByteCounters(
-    private val wifi: WindowsWifiPlatform,
+    private val wifi: WifiPlatform,
     private val logger: Logger,
 ) : ByteCounterSource {
 

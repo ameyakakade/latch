@@ -12,10 +12,10 @@ package com.vinnovateit.latch.desktop.platform
  */
 internal object InstalledBuild {
 
-    private const val EXE_NAME = "Latch.exe"
+    private val validExeNames = listOf("latch.exe", "latch")
 
     private val devMarkers = listOf(
-        "\\build\\compose\\", "\\build\\", "\\out\\", "\\.gradle\\", "\\target\\",
+        "/build/compose/", "/build/", "/out/", "/.gradle/", "/target/",
     )
 
     /** The resolved executable path, or null if this is not an installed build. */
@@ -24,9 +24,10 @@ internal object InstalledBuild {
             ?: ProcessHandle.current().info().command().orElse(null)
             ?: return@lazy null
 
-        if (!candidate.endsWith(EXE_NAME, ignoreCase = true)) return@lazy null
+        val name = candidate.substringAfterLast('/').substringAfterLast('\\').lowercase()
+        if (name !in validExeNames) return@lazy null
 
-        val normalized = candidate.replace('/', '\\').lowercase()
+        val normalized = candidate.replace('\\', '/').lowercase()
         if (devMarkers.any { normalized.contains(it) }) null else candidate
     }
 

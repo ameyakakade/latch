@@ -1,10 +1,8 @@
 package com.vinnovateit.latch.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,14 +13,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,12 +27,23 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.core.platform.PlatformServices
+import com.vinnovateit.latch.core.updater.UpdateState
+import com.vinnovateit.latch.desktop.LatchIcon
+import com.vinnovateit.latch.desktop.LatchMark
 import com.vinnovateit.latch.desktop.VinnovateItLogo
 import com.vinnovateit.latch.ui.components.LatchDetailHeader
 import com.vinnovateit.latch.ui.components.LatchIcons
+import com.vinnovateit.latch.ui.theme.satoshiFontFamily
 
 private val ContentMaxWidth = 720.dp
+
+private const val LATCH_BLURB = "Latch is an auto-login utility built for the VIT hostel " +
+    "Wi-Fi network. It detects the captive portal, signs you in " +
+    "automatically with your saved credentials, and keeps your " +
+    "session alive in the background — so you never have to open " +
+    "a browser just to get online."
 
 private const val VINNOVATEIT_BLURB = "VinnovateIT is a community of builders and innovators " +
     "exploring technology beyond classrooms, through hands-on learning and real problem " +
@@ -44,24 +51,27 @@ private const val VINNOVATEIT_BLURB = "VinnovateIT is a community of builders an
     "when ideas meet execution.\n\nSome of our major projects include Messit, BunkBuddies, " +
     "StudyHub, etc."
 
-private const val GITHUB_REPO_URL = "https://github.com/vinnovateit/auto-net-connector"
+private const val GITHUB_REPO_URL = "https://github.com/vinnovateit/latch"
 private const val INSTAGRAM_URL = "https://www.instagram.com/vinnovateit/"
 private const val LINKEDIN_URL = "https://www.linkedin.com/company/v-innovate-it/"
 private const val GITHUB_ORG_URL = "https://github.com/vinnovateit"
 
-/**
- * "About Latch" -- reachable from the home screen's overflow menu. Takes over
- * the full window rather than living inside the nav rail: it is reference
- * material, not a destination someone flips back to, matching how the
- * credentials screen already takes over the window in [com.vinnovateit.latch.ui.LatchRoot].
- */
 @Composable
 fun AboutScreen(
     platform: PlatformServices,
     onBack: () -> Unit,
+    updateState: UpdateState = UpdateState.Idle,
+    onCheckForUpdates: () -> Unit = {},
+    onDownloadUpdate: () -> Unit = {},
+    onCancelDownload: () -> Unit = {},
+    onInstallUpdate: (String) -> Unit = {},
+    onDismissUpdate: () -> Unit = {},
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        LatchDetailHeader(title = "Latch", onBack = onBack)
+        LatchDetailHeader(
+            title = "About",
+            onBack = onBack,
+        )
 
         Column(
             modifier = Modifier
@@ -73,46 +83,106 @@ fun AboutScreen(
         ) {
             Column(
                 modifier = Modifier.widthIn(max = ContentMaxWidth).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(24.dp))
 
-                AboutCard(
-                    icon = LatchIcons.Wifi,
-                    title = "About Latch",
+                // ── Latch ──────────────────────────────────────────────────
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = "Latch is an auto-login utility built for the VIT hostel " +
-                            "Wi-Fi network. It detects the captive portal, signs you in " +
-                            "automatically with your saved credentials, and keeps your " +
-                            "session alive in the background -- so you never have to open " +
-                            "a browser just to get online.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Icon(
+                        imageVector = LatchMark,
+                        contentDescription = "Latch logo",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(72.dp),
                     )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Latch",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = satoshiFontFamily(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    // Version + inline refresh
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val versionLabel = buildString {
+                            append("v")
+                            append(platform.buildInfo.versionName)
+                            if (platform.buildInfo.isDebug) append(" (debug)")
+                            if (!platform.buildInfo.isInstalled) append(" — dev")
+                        }
+                        val isChecking = updateState is UpdateState.Checking
+                        val statusSuffix = when (updateState) {
+                            is UpdateState.UpToDate -> " · Latest"
+                            is UpdateState.UpdateAvailable -> " · v${updateState.version} available"
+                            is UpdateState.Downloaded -> " · v${updateState.version} ready"
+                            is UpdateState.Dismissed -> " · Update postponed"
+                            is UpdateState.Error -> " · Check failed"
+                            else -> ""
+                        }
+                        Text(
+                            text = versionLabel + statusSuffix,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = satoshiFontFamily(),
+                        )
+                        Spacer(Modifier.width(2.dp))
+                        IconButton(
+                            onClick = onCheckForUpdates,
+                            enabled = !isChecking,
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(
+                                imageVector = LatchIcons.Autorenew,
+                                contentDescription = "Check for updates",
+                                tint = if (isChecking)
+                                    MaterialTheme.colorScheme.outline
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+
+                    // Show download/install actions when update is available or downloaded
+                    when (updateState) {
+                        is UpdateState.UpdateAvailable -> {
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(onClick = onDownloadUpdate) {
+                                Text("Download v${updateState.version}")
+                            }
+                        }
+                        is UpdateState.Downloaded -> {
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedButton(onClick = { onInstallUpdate(updateState.filePath) }) {
+                                Text("Install and restart")
+                            }
+                        }
+                        else -> {}
+                    }
                 }
 
-                AboutCard(
-                    icon = LatchIcons.Lightbulb,
-                    title = "About VinnovateIT",
-                ) {
-                    Text(
-                        text = VINNOVATEIT_BLURB,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Spacer(Modifier.height(20.dp))
 
-                ContributeSection(onContribute = { platform.systemActions.openUrl(GITHUB_REPO_URL) })
-
-                SocialLinksRow(
-                    onOpenInstagram = { platform.systemActions.openUrl(INSTAGRAM_URL) },
-                    onOpenLinkedIn = { platform.systemActions.openUrl(LINKEDIN_URL) },
-                    onOpenGitHub = { platform.systemActions.openUrl(GITHUB_ORG_URL) },
+                Text(
+                    text = LATCH_BLURB,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
+                Spacer(Modifier.height(32.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(32.dp))
+
+                // ── VinnovateIT ───────────────────────────────────────────
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(
@@ -123,96 +193,55 @@ fun AboutScreen(
                             .width(160.dp)
                             .height(56.dp),
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "VinnovateIT",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = satoshiFontFamily(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Latch by VinnovateIT",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = "Version ${platform.buildInfo.versionName}",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = VINNOVATEIT_BLURB,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    SocialLinksRow(
+                        onOpenInstagram = { platform.systemActions.openUrl(INSTAGRAM_URL) },
+                        onOpenLinkedIn = { platform.systemActions.openUrl(LINKEDIN_URL) },
+                        onOpenGitHub = { platform.systemActions.openUrl(GITHUB_ORG_URL) },
                     )
                 }
 
+                Spacer(Modifier.height(32.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Spacer(Modifier.height(24.dp))
+
+                ContributeSection(onContribute = { platform.systemActions.openUrl(GITHUB_REPO_URL) })
+
+                Spacer(Modifier.height(32.dp))
             }
         }
     }
 }
 
-/**
- * A rounded card with a circled icon + title header, matching [SettingsSection]'s
- * card language rather than [HowItWorksDialog]'s dialog-row one -- this screen is
- * a full page of reference material, not a transient prompt.
- */
-@Composable
-private fun AboutCard(
-    icon: ImageVector,
-    title: String,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            content()
-        }
-    }
-}
-
-/**
- * Mirrors the Android app's `ContributingSection` in MeetTheTeamPage.kt --
- * same copy, same GitHub-outlined-button treatment, same repo URL.
- */
 @Composable
 private fun ContributeSection(onContribute: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = "Contribute",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Spacer(Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .width(80.dp)
-                .height(3.dp)
-                .background(MaterialTheme.colorScheme.primary),
-        )
-        Spacer(Modifier.height(16.dp))
         Text(
             text = "We welcome contributions. Visit our GitHub repository to get started.",
             style = MaterialTheme.typography.bodyMedium,

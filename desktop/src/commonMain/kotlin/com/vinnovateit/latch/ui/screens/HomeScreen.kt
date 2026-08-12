@@ -10,19 +10,25 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.vinnovateit.latch.ui.components.LatchIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -49,7 +55,6 @@ import com.vinnovateit.latch.ui.components.LatchHomeTopBar
 import com.vinnovateit.latch.ui.components.LeafOverlay
 import com.vinnovateit.latch.ui.components.MorphingPowerButton
 import com.vinnovateit.latch.ui.components.SpectrumCard
-import com.vinnovateit.latch.ui.components.StatusPill
 import com.vinnovateit.latch.ui.theme.LocalIsDarkTheme
 import kotlinx.coroutines.delay
 
@@ -91,17 +96,6 @@ fun HomeScreen(
     val history = liveStatus?.liveData?.takeLast(CHART_WINDOW) ?: emptyList()
 
     var showHowItWorks by remember { mutableStateOf(false) }
-    var showStatusPill by remember { mutableStateOf(false) }
-    var statusPillTrigger by remember { mutableLongStateOf(0L) }
-
-    // The pill announces the state, then gets out of the way. Re-armed both by
-    // pressing the power button and by the engine latching on its own, which is
-    // the common case on desktop -- the daemon logs in before the window opens.
-    LaunchedEffect(statusPillTrigger, isLatched) {
-        showStatusPill = true
-        delay(5000)
-        showStatusPill = false
-    }
 
     /*
      * Mirrors the Android app's "smart" power button: when there is no Wi-Fi to
@@ -109,16 +103,17 @@ fun HomeScreen(
      * also writes auto-login, so an explicit disconnect is not undone by the next
      * network event.
      */
+    val coroutineScope = rememberCoroutineScope()
+
     val onPowerClick: () -> Unit = {
-        statusPillTrigger = System.currentTimeMillis()
-        val hasWifi = platform.wifi.isWifiEnabled() && platform.wifi.isConnectedToWifi()
-        when {
-            !isLatched && !hasWifi -> platform.systemActions.openWifiSettings()
-            isLatched -> {
-                controller.submit(LatchCommand.Logout)
-                SettingsManager.setAutoLogin(false)
-            }
-            else -> {
+        if (isLatched) {
+            controller.submit(LatchCommand.Logout)
+            SettingsManager.setAutoLogin(false)
+        } else {
+            coroutineScope.launch(Dispatchers.IO) {
+                if (!platform.wifi.isConnectedToWifi() || platform.wifi.currentSsid()?.contains("VIT", ignoreCase = true) != true) {
+                    platform.wifi.connectToBestVitNetwork()
+                }
                 controller.submit(LatchCommand.CheckAndLogin)
                 SettingsManager.setAutoLogin(true)
             }
@@ -128,6 +123,7 @@ fun HomeScreen(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val topBar: @Composable () -> Unit = {
             LatchHomeTopBar(
+                isLatched = isLatched,
                 onHowItWorks = { showHowItWorks = true },
                 onOpenStats = onOpenStats,
                 onOpenSettings = onOpenSettings,
@@ -140,7 +136,6 @@ fun HomeScreen(
             WideHome(
                 topBar = topBar,
                 isLatched = isLatched,
-                showStatusPill = showStatusPill,
                 onPowerClick = onPowerClick,
                 onOpenWifiSettings = { platform.systemActions.openWifiSettings() },
                 history = history,
@@ -153,7 +148,6 @@ fun HomeScreen(
                 topBar = topBar,
                 availableWidth = maxWidth,
                 isLatched = isLatched,
-                showStatusPill = showStatusPill,
                 onPowerClick = onPowerClick,
                 onOpenWifiSettings = { platform.systemActions.openWifiSettings() },
                 history = history,
@@ -174,7 +168,6 @@ private fun CompactHome(
     topBar: @Composable () -> Unit,
     availableWidth: Dp,
     isLatched: Boolean,
-    showStatusPill: Boolean,
     onPowerClick: () -> Unit,
     onOpenWifiSettings: () -> Unit,
     history: List<LiveDataPoint>,
@@ -205,11 +198,6 @@ private fun CompactHome(
         Column(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxWidth().weight(0.5f)) {
                 topBar()
-                StatusPill(
-                    visible = showStatusPill,
-                    isConnected = isLatched,
-                    modifier = Modifier.offset(y = (-8).dp),
-                )
                 Spacer(Modifier.weight(1f))
                 WifiSettingsLink(
                     onClick = onOpenWifiSettings,
@@ -271,7 +259,6 @@ private fun CompactHome(
 private fun WideHome(
     topBar: @Composable () -> Unit,
     isLatched: Boolean,
-    showStatusPill: Boolean,
     onPowerClick: () -> Unit,
     onOpenWifiSettings: () -> Unit,
     history: List<LiveDataPoint>,
@@ -293,11 +280,6 @@ private fun WideHome(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 topBar()
-                StatusPill(
-                    visible = showStatusPill,
-                    isConnected = isLatched,
-                    modifier = Modifier.offset(y = (-8).dp),
-                )
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -350,6 +332,13 @@ private fun WifiSettingsLink(onClick: () -> Unit, modifier: Modifier = Modifier)
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(onClick = onClick) {
+            Icon(
+                imageVector = LatchIcons.WifiLock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = "Open Wi-Fi settings",
                 style = MaterialTheme.typography.labelLarge,
