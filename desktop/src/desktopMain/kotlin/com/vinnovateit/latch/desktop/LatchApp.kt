@@ -13,7 +13,7 @@ import com.vinnovateit.latch.core.stats.formatBitsPerSecond
 import com.vinnovateit.latch.core.stats.formatClockTime
 import com.vinnovateit.latch.desktop.platform.DesktopPlatformServices
 import com.vinnovateit.latch.desktop.platform.TrayNotifier
-import com.vinnovateit.latch.desktop.platform.WindowsBalloonNotifier
+import com.vinnovateit.latch.desktop.platform.windows.WindowsBalloonNotifier
 import com.vinnovateit.latch.desktop.updater.GithubUpdater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
