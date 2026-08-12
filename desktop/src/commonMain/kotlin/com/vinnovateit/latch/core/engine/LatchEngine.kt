@@ -198,22 +198,28 @@ class LatchEngine(
         retry: Int = 0,
         silent: Boolean = false,
     ) {
+        val currentSsid = platform.wifi.currentSsid()
+        val currentGateway = platform.wifi.gatewayIp()
+        logger.d(TAG, "[ConnectAnalysis] === Connection Probe Started (revalidating=$revalidating, retry=$retry) ===")
+        logger.d(TAG, "[ConnectAnalysis] Step 1/4: Network Info: SSID='$currentSsid', Gateway='$currentGateway'")
+
         ConnectionStatusManager.postStatus(
             ConnectionStatus.Connecting(ConnectionStatus.Step.CheckingInternet)
         )
 
         val code = portal.checkPortalStatus(handle)
+        logger.d(TAG, "[ConnectAnalysis] Step 2/4: Portal Probe Response Code: $code (204 = Direct Internet, 200/302 = Captive Portal, -1 = Network Error)")
 
         if (code == 204) {
             val ssid = platform.wifi.currentSsid()
             if (!isVitCampusSsid(ssid)) {
-                logger.d(TAG, "Network has internet but SSID '$ssid' is not a VIT campus network; not latching.")
+                logger.d(TAG, "[ConnectAnalysis] Network has 204 internet but SSID '$ssid' is not a VIT campus network; not latching.")
                 ConnectionStatusManager.postStatus(
                     ConnectionStatus.Failed(ConnectionStatus.Reason.NotTargetNetwork)
                 )
                 return
             }
-            logger.d(TAG, "Network has internet. Starting session.")
+            logger.d(TAG, "[ConnectAnalysis] Network has real internet (HTTP 204). Starting session.")
             platform.wifi.reportConnectivityOk(handle)
             ConnectionStatusManager.postStatus(ConnectionStatus.Success)
             _isLatched.value = true
@@ -226,11 +232,11 @@ class LatchEngine(
         // looping forever.
         if (revalidating) {
             if (retry < MAX_REVALIDATE_RETRIES) {
-                logger.d(TAG, "Waiting for network gates to open (attempt ${retry + 1})")
+                logger.d(TAG, "[ConnectAnalysis] Waiting for network gates to open (attempt ${retry + 1}/$MAX_REVALIDATE_RETRIES)")
                 delay(REVALIDATE_DELAY_MS)
                 checkAndAct(handle, revalidating = true, retry = retry + 1, silent = silent)
             } else {
-                logger.w(TAG, "Network never granted internet after successful login.")
+                logger.w(TAG, "[ConnectAnalysis] Network never granted internet after successful login.")
                 ConnectionStatusManager.postStatus(
                     ConnectionStatus.Failed(ConnectionStatus.Reason.NetworkTimeoutAfterLogin)
                 )
@@ -239,7 +245,7 @@ class LatchEngine(
         }
 
         if (silent || !SettingsManager.autoLogin.value) {
-            logger.d(TAG, "Silent check or auto-login disabled; not logging in.")
+            logger.d(TAG, "[ConnectAnalysis] Silent check or auto-login disabled; skipping login attempt.")
             ConnectionStatusManager.postStatus(
                 ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
             )
@@ -247,54 +253,56 @@ class LatchEngine(
         }
 
         if (!isTargetNetwork()) {
-            logger.w(TAG, "Captive portal present but this is not a known Latch network.")
+            logger.w(TAG, "[ConnectAnalysis] Captive portal present but network target verification failed.")
             ConnectionStatusManager.postStatus(
                 ConnectionStatus.Failed(ConnectionStatus.Reason.NotTargetNetwork)
             )
             return
         }
 
-        logger.d(TAG, "Captive portal detected on a known network. Logging in.")
+        logger.d(TAG, "[ConnectAnalysis] Captive portal detected on a verified network. Proceeding to login.")
         handleCaptivePortal(handle)
     }
 
     /**
      * Gate before any credential-bearing request.
-     *
-     * The Android app has no equivalent: it infers "this is the VIT portal"
-     * purely from a failed generate_204 probe, then POSTs the student's userId
-     * and password in cleartext. On a phone that mostly lives on campus that is
-     * tolerable. On a laptop that visits cafes, airports and hotels it would leak
-     * credentials to every captive portal it meets, so desktop requires both a
-     * matching SSID and the portal host actually resolving on this network.
-     *
-     * Of the two, the DNS check is the strong signal -- phc.prontonetworks.com
-     * only resolves (to a private campus address) when you are actually attached
-     * to a Pronto network. The SSID match is defence in depth, checked with
-     * [isVitCampusSsid].
      */
     private suspend fun isTargetNetwork(): Boolean = withContext(Dispatchers.IO) {
         val ssid = platform.wifi.currentSsid()
+        logger.d(TAG, "[ConnectAnalysis] Step 3/4: Target Network Verification: SSID='$ssid'")
         if (!isVitCampusSsid(ssid)) {
-            logger.w(TAG, "SSID '$ssid' is not a VIT campus network; refusing to send credentials.")
+            logger.w(TAG, "[ConnectAnalysis] SSID '$ssid' failed VIT campus match; refusing login.")
             return@withContext false
         }
         if (ssid == null) {
-            logger.w(TAG, "SSID unreadable; falling back to the portal-host check alone.")
+            logger.w(TAG, "[ConnectAnalysis] SSID unreadable; checking portal host resolution alone.")
         }
-        val resolves = runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
+        
+        var resolves = runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
         if (!resolves) {
-            logger.w(TAG, "Portal host does not resolve on this network; refusing to log in.")
+            logger.w(TAG, "[ConnectAnalysis] Portal host '$PORTAL_HOST' DNS failed on 1st try. Retrying after 300ms...")
+            delay(300)
+            resolves = runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
+        }
+
+        if (!resolves) {
+            val gatewayIp = platform.wifi.gatewayIp()
+            if (gatewayIp != null) {
+                logger.d(TAG, "[ConnectAnalysis] Checking fallback gateway IP reachable: $gatewayIp")
+                resolves = runCatching { InetAddress.getByName(gatewayIp) }.isSuccess
+            }
+        }
+
+        if (!resolves) {
+            logger.w(TAG, "[ConnectAnalysis] Target Verification FAILED: Portal host '$PORTAL_HOST' unresolvable.")
+        } else {
+            logger.d(TAG, "[ConnectAnalysis] Target Verification PASSED: Network verified successfully.")
         }
         resolves
     }
 
     /**
      * True unless the SSID is readable and readably *not* a campus network.
-     *
-     * The null case is the important one: null means "could not read it" (e.g. Windows
-     * profile name "Identifying..." before captive portal login). Treating unknown as
-     * allowed lets portal host check resolve it.
      */
     private fun isVitCampusSsid(ssid: String?): Boolean {
         val clean = ssid?.trim()?.removeSurrounding("\"")?.takeIf { it.isNotEmpty() } ?: return true
@@ -305,6 +313,7 @@ class LatchEngine(
     }
 
     private suspend fun handleCaptivePortal(handle: NetworkHandle) {
+        logger.d(TAG, "[ConnectAnalysis] Step 4/4: Authenticating with Captive Portal...")
         ConnectionStatusManager.postStatus(
             ConnectionStatus.Connecting(ConnectionStatus.Step.Authenticating)
         )
@@ -313,11 +322,13 @@ class LatchEngine(
             val user = platform.credentials.userId()
             val pass = platform.credentials.password()
             if (user == null || pass == null) {
+                logger.w(TAG, "[ConnectAnalysis] Auth Failed: Missing saved credentials.")
                 ConnectionStatusManager.postStatus(
                     ConnectionStatus.Failed(ConnectionStatus.Reason.NoCredentials)
                 )
                 return
             }
+            logger.d(TAG, "[ConnectAnalysis] Attempting Portal Login 1 (HTTP)...")
             var result = login.attemptLogin(
                 userId = user,
                 password = pass,
@@ -326,7 +337,7 @@ class LatchEngine(
                 fallbackIp = platform.wifi.gatewayIp(),
             )
             if (result is LoginResult.Failure) {
-                logger.d(TAG, "First login attempt failed; retrying after 1s delay...")
+                logger.w(TAG, "[ConnectAnalysis] Attempt 1 (HTTP) Failed; Retrying Attempt 2 (HTTPS) in 1s...")
                 delay(1000)
                 result = login.attemptLogin(
                     userId = user,
@@ -338,17 +349,22 @@ class LatchEngine(
             }
             when (result) {
                 is LoginResult.Success -> {
-                    logger.d(TAG, "Login succeeded; re-validating network.")
+                    logger.d(TAG, "[ConnectAnalysis] Auth SUCCESS! Revalidating network access...")
                     checkAndAct(handle, revalidating = true)
                 }
 
                 is LoginResult.Failure -> {
-                    logger.w(TAG, "Login failed after retry.")
+                    logger.w(TAG, "[ConnectAnalysis] Auth FAILED on both HTTP & HTTPS attempts.")
                     ConnectionStatusManager.postStatus(
                         ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
                     )
                 }
             }
+        } catch (e: Exception) {
+            logger.e(TAG, "[ConnectAnalysis] Exception during handleCaptivePortal: ${e.message}", e)
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
+            )
         } finally {
             platform.wifi.bindProcess(null)
         }
