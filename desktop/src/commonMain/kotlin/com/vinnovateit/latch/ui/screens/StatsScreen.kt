@@ -89,7 +89,6 @@ fun StatsScreen(
     val liveStatus by sessions.liveStatus.collectAsStateWithLifecycle()
     val summaries by sessions.sessionSummaries.collectAsStateWithLifecycle()
     val speedUnit by SettingsManager.speedUnits.collectAsStateWithLifecycle()
-    var showClearConfirmation by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         LatchDetailHeader(
@@ -100,7 +99,7 @@ fun StatsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             liveStatus?.let { live ->
                 item {
@@ -146,28 +145,13 @@ fun StatsScreen(
                 }
             } else {
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "History",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Text(
-                            text = "Clear",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { showClearConfirmation = true }
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
-                        )
-                    }
+                    Text(
+                        text = "History",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    )
                 }
 
                 items(summaries) { session ->
@@ -175,20 +159,6 @@ fun StatsScreen(
                 }
             }
         }
-    }
-
-    if (showClearConfirmation) {
-        SettingsActionDialog(
-            title = stringResource(Res.string.stats_reset_dialog_title),
-            description = stringResource(Res.string.stats_reset_dialog_message),
-            confirmText = stringResource(Res.string.stats_reset_dialog_confirm),
-            cancelText = stringResource(Res.string.stats_reset_dialog_cancel),
-            onConfirm = {
-                onClearHistory()
-                showClearConfirmation = false
-            },
-            onDismiss = { showClearConfirmation = false },
-        )
     }
 }
 
@@ -240,8 +210,7 @@ private fun LiveSessionCard(
                 )
 
                 Text(
-                    text = "${formatDurationDynamic(duration)} • since " +
-                        formatClockTime(startTimeMillis),
+                    text = formatDurationDynamic(duration),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontFamily = satoshiFontFamily(),
@@ -380,7 +349,7 @@ private fun SessionRow(session: SessionSummary) {
         },
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {

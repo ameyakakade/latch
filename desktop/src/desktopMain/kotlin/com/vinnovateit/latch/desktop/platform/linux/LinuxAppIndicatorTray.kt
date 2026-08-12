@@ -19,6 +19,7 @@ private interface GtkLib : Library {
     fun gtk_main_iteration_do(blocking: Boolean): Boolean
     fun gtk_menu_new(): Pointer
     fun gtk_menu_item_new_with_label(label: String): Pointer
+    fun gtk_menu_item_set_label(menuItem: Pointer, label: String)
     fun gtk_separator_menu_item_new(): Pointer
     fun gtk_menu_shell_append(menuShell: Pointer, child: Pointer)
     fun gtk_widget_show_all(widget: Pointer)
@@ -65,6 +66,7 @@ object LinuxAppIndicatorTray {
 
     private var indicator: Pointer? = null
     private var isInitialized = false
+    private var itemConnectPtr: Pointer? = null
     private var openLatchCallback: GCallback? = null
     private var toggleConnectCallback: GCallback? = null
     private var exitLatchCallback: GCallback? = null
@@ -123,6 +125,7 @@ object LinuxAppIndicatorTray {
             // 2. Connect / Disconnect
             val connectLabel = if (isLatched) "Disconnect" else "Connect"
             val itemConnect = gtk.gtk_menu_item_new_with_label(connectLabel)
+            itemConnectPtr = itemConnect
             toggleConnectCallback = GCallback { _, _ ->
                 javax.swing.SwingUtilities.invokeLater { onToggleConnect() }
             }
@@ -164,6 +167,7 @@ object LinuxAppIndicatorTray {
     }
 
     fun updateStatus(isLatched: Boolean) {
+        val gtk = GtkLib.INSTANCE ?: return
         val appInd = AppIndicatorLib.INSTANCE ?: return
         val ind = indicator ?: return
         if (!isInitialized) return
@@ -172,6 +176,10 @@ object LinuxAppIndicatorTray {
         val iconFile = if (isLatched) iconFileConnected else iconFileDisconnected
         if (iconFile != null && iconFile.exists()) {
             appInd.app_indicator_set_icon_full(ind, iconFile.absolutePath, "Latch")
+        }
+
+        itemConnectPtr?.let { item ->
+            gtk.gtk_menu_item_set_label(item, if (isLatched) "Disconnect" else "Connect")
         }
     }
 

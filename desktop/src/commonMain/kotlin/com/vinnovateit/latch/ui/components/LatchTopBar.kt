@@ -139,36 +139,27 @@ internal fun LatchHomeTopBar(
                     modifier = Modifier.size(28.dp),
                 )
                 Spacer(Modifier.width(12.dp))
-                AnimatedContent(
-                    targetState = showPill,
-                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                AnimatedVisibility(
+                    visible = showPill,
+                    enter = fadeIn(tween(200)),
+                    exit = fadeOut(tween(200)),
                     label = "TopBarTitlePill",
-                ) { pillVisible ->
-                    if (!pillVisible) {
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isLatched) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
                         Text(
-                            text = "Latch",
-                            fontFamily = modernizFontFamily(),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                            text = stringResource(
+                                if (isLatched) Res.string.home_status_connected
+                                else Res.string.home_status_disconnected,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isLatched) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold,
+                            fontFamily = satoshiFontFamily(),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
                         )
-                    } else {
-                        Surface(
-                            shape = CircleShape,
-                            color = if (isLatched) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    if (isLatched) Res.string.home_status_connected
-                                    else Res.string.home_status_disconnected,
-                                ),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (isLatched) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = satoshiFontFamily(),
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                            )
-                        }
                     }
                 }
             }
