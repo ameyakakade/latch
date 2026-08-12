@@ -87,7 +87,8 @@ fun StatsScreen(
     onClearHistory: () -> Unit,
 ) {
     val liveStatus by sessions.liveStatus.collectAsStateWithLifecycle()
-    val summaries by sessions.sessionSummaries.collectAsStateWithLifecycle()
+    val rawSummaries by sessions.sessionSummaries.collectAsStateWithLifecycle()
+    val summaries = remember(rawSummaries) { processHistorySummaries(rawSummaries) }
     val speedUnit by SettingsManager.speedUnits.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -120,12 +121,12 @@ fun StatsScreen(
             }
 
             item {
-                TotalsRow(summaries = summaries)
+                TotalsRow(summaries = rawSummaries)
             }
 
-            if (summaries.isNotEmpty()) {
+            if (rawSummaries.isNotEmpty()) {
                 item {
-                    DailyUsageBarChart(summaries = summaries)
+                    DailyUsageBarChart(summaries = rawSummaries)
                 }
             }
 
@@ -228,28 +229,16 @@ private fun LiveSessionCard(
                     modifier = Modifier.size(96.dp),
                     isAmoled = isAmoled,
                 )
-                Spacer(Modifier.width(20.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    val (totalVal, totalUnit) = formatBytes(usage.rxBytes + usage.txBytes)
-                    Text(
-                        text = "$totalVal $totalUnit",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = satoshiFontFamily(),
-                    )
-                    Text(
-                        text = "Total Session Data",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = satoshiFontFamily(),
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    RateReadout(
-                        downloadBps = latestRxBps,
-                        uploadBps = latestTxBps,
-                        speedUnit = speedUnit,
-                    )
+                Spacer(Modifier.width(24.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    val (rxValue, rxUnit) = formatBitsPerSecond(latestRxBps, speedUnit)
+                    val (txValue, txUnit) = formatBitsPerSecond(latestTxBps, speedUnit)
+
+                    RateChip(LatchIcons.ArrowUpward, "$txValue $txUnit", ColorGraphUpload)
+                    RateChip(LatchIcons.ArrowDownward, "$rxValue $rxUnit", ColorGraphDownload)
                 }
             }
         }
@@ -509,4 +498,38 @@ private fun DailyUsageBarChart(summaries: List<SessionSummary>) {
             }
         }
     }
+}
+
+private fun processHistorySummaries(summaries: List<SessionSummary>): List<SessionSummary> {
+    if (summaries.isEmpty()) return emptyList()
+
+    val dayFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+    val todayKey = dayFormat.format(java.util.Date())
+
+    val (todaySessions, pastSessions) = summaries.partition {
+        dayFormat.format(java.util.Date(it.startTimestamp)) == todayKey
+    }
+
+    val mergedPastSessions = pastSessions.groupBy {
+        dayFormat.format(java.util.Date(it.startTimestamp))
+    }.map { (_, group) ->
+        val sortedGroup = group.sortedBy { it.startTimestamp }
+        val earliestStart = sortedGroup.first().startTimestamp
+        val latestEnd = sortedGroup.maxOf { it.endTimestamp }
+        val totalRx = sortedGroup.sumOf { it.totalData.rxBytes }
+        val totalTx = sortedGroup.sumOf { it.totalData.txBytes }
+        val maxRx = sortedGroup.maxOfOrNull { it.maxRxBps } ?: 0L
+        val maxTx = sortedGroup.maxOfOrNull { it.maxTxBps } ?: 0L
+
+        SessionSummary(
+            startTimestamp = earliestStart,
+            endTimestamp = latestEnd,
+            totalData = com.vinnovateit.latch.core.model.DataUsage(rxBytes = totalRx, txBytes = totalTx),
+            history = emptyList(),
+            maxRxBps = maxRx,
+            maxTxBps = maxTx,
+        )
+    }
+
+    return (todaySessions + mergedPastSessions).sortedByDescending { it.startTimestamp }
 }
