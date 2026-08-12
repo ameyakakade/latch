@@ -202,10 +202,10 @@ tasks.register<Tar>("packageReleaseTarGz") {
     dependsOn("createReleaseDistributable")
 
     archiveFileName.set("latch-1.3.6-linux-x64.tar.gz")
-    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main-release/tar"))
+    destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     compression = Compression.GZIP
 
-    from(layout.buildDirectory.dir("compose/binaries/main-release/app/Latch")) {
+    from(layout.buildDirectory.dir("compose/binaries/main-release/app")) {
         into("latch-1.3.6")
     }
 }
