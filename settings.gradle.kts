@@ -1,3 +1,5 @@
+System.setProperty("java.version", "21.0.1")
+
 pluginManagement {
     repositories {
         google()

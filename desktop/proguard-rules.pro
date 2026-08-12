@@ -7,6 +7,17 @@
 # packaged exe after changing them.
 
 # ---------------------------------------------------------------------------
+# Global shrink / obfuscation options
+# ---------------------------------------------------------------------------
+# Flatten remaining classes into a single package -- smaller jar, fewer dirs.
+-repackageclasses 'latch'
+# Keep source file name and line numbers so obfuscated stack traces are
+# still useful for crash reports (class/method names will be scrambled).
+-keepattributes SourceFile,LineNumberTable
+# Silence notes about duplicate class definitions from bundled dependencies.
+-dontnote **
+
+# ---------------------------------------------------------------------------
 # Room + AndroidX SQLite
 # ---------------------------------------------------------------------------
 # Room instantiates the KSP-generated *_Impl classes reflectively by name.

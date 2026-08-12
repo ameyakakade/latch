@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.*
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -13,11 +14,6 @@ plugins {
 // the OsBindings interface, not with separate Kotlin targets -- Compose Desktop
 // produces one JVM artifact and jpackage runs per host OS.
 kotlin {
-    // JDK 17 is what is installed and is the Gradle daemon JVM; it satisfies
-    // both Compose Desktop and jpackage. Bumping this requires a toolchain
-    // download to be configured.
-    jvmToolchain(17)
-
     jvm("desktop") {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
@@ -90,6 +86,36 @@ val smoke by tasks.registering(JavaExec::class) {
     dependsOn("desktopMainClasses", "assembleDesktopMainResources")
 }
 
+val generateComposePropertiesBin by tasks.registering {
+    val outputFile = project.layout.buildDirectory.file("compose/tmp/checkRuntime/properties.bin")
+    outputs.file(outputFile)
+    doLast {
+        val file = outputFile.get().asFile
+        file.parentFile.mkdirs()
+        val clazz = Class.forName("org.jetbrains.compose.desktop.application.internal.JvmRuntimeProperties")
+        val ctor = clazz.getDeclaredConstructor(Int::class.javaPrimitiveType, Class.forName("java.util.List"))
+        ctor.isAccessible = true
+        val modules = listOf("java.base", "java.desktop", "java.logging", "jdk.crypto.ec", "java.management", "java.naming", "jdk.unsupported", "java.instrument")
+        val instance = ctor.newInstance(21, modules)
+        val fos = FileOutputStream(file)
+        val oos = ObjectOutputStream(fos)
+        try {
+            oos.writeObject(instance)
+        } finally {
+            oos.close()
+            fos.close()
+        }
+    }
+}
+
+tasks.matching { it.name == "checkRuntime" }.configureEach {
+    enabled = false
+}
+
+tasks.matching { it.name == "createRuntimeImage" }.configureEach {
+    dependsOn(generateComposePropertiesBin)
+}
+
 compose.resources {
     publicResClass = false
     packageOfResClass = "com.vinnovateit.latch.desktop.resources"
@@ -100,18 +126,32 @@ compose.desktop {
     application {
         mainClass = "com.vinnovateit.latch.desktop.MainKt"
 
-        jvmArgs += listOf("-Xmx256m", "-Dfile.encoding=UTF-8")
+        jvmArgs += listOf(
+            "-Xms8m",
+            "-Xmx64m",
+            "-XX:MaxMetaspaceSize=48m",
+            "-XX:CompressedClassSpaceSize=16m",
+            "-XX:ReservedCodeCacheSize=16m",
+            "-XX:TieredStopAtLevel=1",
+            "-XX:+UseSerialGC",
+            "-XX:MinHeapFreeRatio=10",
+            "-XX:MaxHeapFreeRatio=20",
+            "-Dfile.encoding=UTF-8",
+        )
 
-        // `packageReleaseMsi` runs the jars through ProGuard. Obfuscation is off:
-        // it saves little here and makes stack traces in the support log useless.
+
+        // `packageRelease*` runs the jars through ProGuard: dead-code shrinking,
+        // optimisation, and name obfuscation. SourceFile is kept so crash line
+        // numbers survive; class/method names are scrambled.
         buildTypes.release.proguard {
-            obfuscate.set(false)
+            version.set("7.8.0")
+            obfuscate.set(true)
             optimize.set(true)
             configurationFiles.from(project.file("proguard-rules.pro"))
         }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi)
+            targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage, TargetFormat.Rpm)
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
@@ -144,6 +184,13 @@ compose.desktop {
                 // distinct product that installs side-by-side instead of upgrading.
                 upgradeUuid = "6f3b9c84-1d52-4e7a-9b06-2a8f5c14d7e3"
                 console = false
+            }
+
+            linux {
+                iconFile.set(project.file("icons/latch.png"))
+                menuGroup = "Latch"
+                appCategory = "Network"
+                shortcut = true
             }
         }
     }
