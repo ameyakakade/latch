@@ -195,3 +195,17 @@ compose.desktop {
         }
     }
 }
+
+tasks.register<Tar>("packageReleaseTarGz") {
+    group = "compose desktop"
+    description = "Packages release distributable directory into a .tar.gz archive"
+    dependsOn("createReleaseDistributable")
+
+    archiveFileName.set("latch-1.3.6-linux-x64.tar.gz")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main-release/tar"))
+    compression = Compression.GZIP
+
+    from(layout.buildDirectory.dir("compose/binaries/main-release/app/Latch")) {
+        into("latch-1.3.6")
+    }
+}
