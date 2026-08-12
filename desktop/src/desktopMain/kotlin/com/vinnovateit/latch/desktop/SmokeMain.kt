@@ -14,12 +14,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
 /**
- * Headless smoke check for the Windows platform layer.
+ * Headless smoke check for the desktop platform layer.
  *
  * Exists because the real app is a GUI tray process, which is awkward to assert
  * against in CI or from a terminal. This exercises every platform seam that could
  * plausibly be wrong on a given machine -- Wi-Fi/SSID detection, OSHI counters,
- * DPAPI round-trip, JSON settings, Room, and the captive-portal probe -- and
+ * Credential store round-trip, JSON settings, Room, and the captive-portal probe -- and
  * prints what it found.
  *
  * Run with: ./gradlew :desktop:smoke
@@ -66,7 +66,7 @@ fun main() = runBlocking {
     println("observed download: $dv $du  (raw rxBps=${usage.rxBps} bytes/s)")
 
     println()
-    println("--- Credential store (DPAPI) ---")
+    println("--- Credential store ---")
     val creds = platform.credentials
     val had = creds.exists()
     println("pre-existing     : $had")

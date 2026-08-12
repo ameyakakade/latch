@@ -408,7 +408,7 @@ fun ContributingSection() {
         onClick = {
             val intent = Intent(
                 Intent.ACTION_VIEW,
-                "https://github.com/vinnovateit/auto-net-connector".toUri()
+                "https://github.com/vinnovateit/latch".toUri()
             )
             context.startActivity(intent)
         },

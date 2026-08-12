@@ -593,7 +593,7 @@ fun HowItWorksBottomSheet(onDismiss: () -> Unit) {
                 )
                 HowItWorksRow(
                     icon = Icons.Rounded.Speed,
-                    text = "The 10 mbps cap will not be bypassable."
+                    text = "The 20 mbps cap will not be bypassable."
                 )
                 HowItWorksRow(
                     icon = Icons.Rounded.PowerSettingsNew,

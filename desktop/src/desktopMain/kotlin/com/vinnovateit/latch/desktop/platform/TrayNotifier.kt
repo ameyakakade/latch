@@ -4,6 +4,7 @@ import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.TrayState
 import com.vinnovateit.latch.core.platform.UserNotifier
 import com.vinnovateit.latch.desktop.AppPaths
+import com.vinnovateit.latch.desktop.platform.windows.WindowsBalloonNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /**

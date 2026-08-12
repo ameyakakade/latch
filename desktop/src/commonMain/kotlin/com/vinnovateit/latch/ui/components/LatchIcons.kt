@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 /**
@@ -14,6 +15,93 @@ import androidx.compose.ui.unit.dp
  * Every fill is black; Icon's tint parameter overrides it at the call site.
  */
 internal object LatchIcons {
+
+    val WifiLock: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "android_wifi_3_bar_lock",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18.33f, 20.78f)
+                quadToRelative(-0.38f, 0f, -0.63f, -0.29f)
+                reflectiveQuadTo(17.45f, 19.83f)
+                verticalLineTo(16.27f)
+                quadToRelative(0f, -0.37f, 0.25f, -0.64f)
+                quadToRelative(0.25f, -0.26f, 0.63f, -0.26f)
+                horizontalLineToRelative(0.13f)
+                verticalLineToRelative(-1f)
+                quadToRelative(0f, -0.9f, 0.65f, -1.53f)
+                reflectiveQuadToRelative(1.55f, -0.63f)
+                reflectiveQuadToRelative(1.55f, 0.63f)
+                reflectiveQuadToRelative(0.65f, 1.53f)
+                verticalLineToRelative(1f)
+                horizontalLineToRelative(0.13f)
+                quadToRelative(0.38f, 0f, 0.63f, 0.26f)
+                reflectiveQuadToRelative(0.25f, 0.64f)
+                verticalLineToRelative(3.55f)
+                quadToRelative(0f, 0.38f, -0.25f, 0.66f)
+                reflectiveQuadToRelative(-0.63f, 0.29f)
+                horizontalLineTo(18.33f)
+                close()
+                moveToRelative(1.33f, -5.4f)
+                horizontalLineToRelative(2f)
+                verticalLineToRelative(-1f)
+                quadToRelative(0f, -0.43f, -0.29f, -0.71f)
+                reflectiveQuadTo(20.65f, 13.38f)
+                reflectiveQuadToRelative(-0.71f, 0.29f)
+                reflectiveQuadToRelative(-0.29f, 0.71f)
+                verticalLineToRelative(1f)
+                close()
+                moveToRelative(-9.48f, 4.65f)
+                quadTo(9.43f, 19.27f, 9.43f, 18.2f)
+                reflectiveQuadToRelative(0.75f, -1.82f)
+                reflectiveQuadTo(12f, 15.63f)
+                reflectiveQuadToRelative(1.83f, 0.75f)
+                reflectiveQuadToRelative(0.75f, 1.82f)
+                reflectiveQuadToRelative(-0.75f, 1.82f)
+                reflectiveQuadTo(12f, 20.78f)
+                reflectiveQuadTo(10.18f, 20.02f)
+                close()
+                moveTo(12f, 13.48f)
+                quadToRelative(-0.9f, 0f, -1.76f, 0.24f)
+                reflectiveQuadTo(8.6f, 14.38f)
+                quadTo(7.85f, 14.8f, 7f, 14.79f)
+                reflectiveQuadTo(5.58f, 14.18f)
+                quadTo(4.98f, 13.55f, 5f, 12.71f)
+                quadTo(5.03f, 11.88f, 5.7f, 11.38f)
+                quadTo(7.08f, 10.4f, 8.68f, 9.88f)
+                reflectiveQuadTo(12f, 9.35f)
+                quadToRelative(1.5f, 0f, 2.95f, 0.41f)
+                reflectiveQuadToRelative(2.72f, 1.21f)
+                quadTo(16.73f, 11.48f, 16f, 12.29f)
+                quadTo(15.28f, 13.1f, 14.85f, 14.1f)
+                quadToRelative(-0.68f, -0.3f, -1.4f, -0.46f)
+                reflectiveQuadTo(12f, 13.48f)
+                close()
+                moveTo(7.9f, 7.95f)
+                quadTo(5.93f, 8.63f, 4.28f, 9.9f)
+                quadTo(3.6f, 10.43f, 2.75f, 10.41f)
+                reflectiveQuadTo(1.33f, 9.8f)
+                quadTo(0.73f, 9.17f, 0.75f, 8.32f)
+                quadTo(0.78f, 7.47f, 1.43f, 6.95f)
+                quadTo(3.68f, 5.13f, 6.38f, 4.14f)
+                quadTo(9.08f, 3.15f, 12f, 3.15f)
+                reflectiveQuadToRelative(5.63f, 0.99f)
+                reflectiveQuadToRelative(4.95f, 2.81f)
+                quadToRelative(0.65f, 0.52f, 0.67f, 1.38f)
+                quadTo(23.28f, 9.17f, 22.68f, 9.8f)
+                quadToRelative(-0.57f, 0.6f, -1.43f, 0.61f)
+                reflectiveQuadTo(19.73f, 9.9f)
+                quadTo(18.08f, 8.63f, 16.1f, 7.95f)
+                reflectiveQuadTo(12f, 7.27f)
+                reflectiveQuadTo(7.9f, 7.95f)
+                close()
+            }
+        }.build()
+    }
 
     val PowerSettingsNew: ImageVector by lazy {
         icon(
@@ -119,14 +207,88 @@ internal object LatchIcons {
         )
     }
 
+    val Info: ImageVector by lazy {
+        icon(
+            "Info",
+            "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z",
+        )
+    }
+
     val InfoOutline: ImageVector by lazy {
         icon(
             "InfoOutline",
-            "M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10" +
+            "M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10" +
                 " 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8" +
                 "s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-12h2V7h-2v1zm0 2h2" +
                 "c1.1 0 2 .9 2 2v6h-2v-6h-2v-2z",
         )
+    }
+
+    val Help: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "help",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(12.95f, 17.55f)
+                quadTo(13.4f, 17.1f, 13.4f, 16.48f)
+                reflectiveQuadTo(12.95f, 15.41f)
+                reflectiveQuadTo(11.88f, 14.98f)
+                reflectiveQuadTo(10.8f, 15.41f)
+                reflectiveQuadToRelative(-0.45f, 1.06f)
+                reflectiveQuadToRelative(0.45f, 1.07f)
+                reflectiveQuadTo(11.88f, 18f)
+                reflectiveQuadToRelative(1.08f, -0.45f)
+                close()
+                moveTo(12f, 22.85f)
+                quadTo(9.73f, 22.85f, 7.75f, 22f)
+                quadTo(5.78f, 21.15f, 4.31f, 19.69f)
+                reflectiveQuadTo(2f, 16.25f)
+                reflectiveQuadTo(1.15f, 12f)
+                reflectiveQuadTo(2f, 7.75f)
+                quadTo(2.85f, 5.77f, 4.31f, 4.31f)
+                reflectiveQuadTo(7.75f, 2f)
+                reflectiveQuadTo(12f, 1.15f)
+                quadToRelative(2.28f, 0f, 4.25f, 0.85f)
+                reflectiveQuadToRelative(3.44f, 2.31f)
+                quadTo(21.15f, 5.77f, 22f, 7.75f)
+                reflectiveQuadTo(22.85f, 12f)
+                quadToRelative(0f, 2.27f, -0.85f, 4.25f)
+                reflectiveQuadToRelative(-2.31f, 3.44f)
+                quadTo(18.23f, 21.15f, 16.25f, 22f)
+                quadTo(14.28f, 22.85f, 12f, 22.85f)
+                close()
+                moveTo(12.03f, 8.23f)
+                quadToRelative(0.43f, 0f, 0.74f, 0.29f)
+                reflectiveQuadToRelative(0.31f, 0.71f)
+                reflectiveQuadTo(12.83f, 10f)
+                reflectiveQuadToRelative(-0.58f, 0.63f)
+                quadToRelative(-0.57f, 0.5f, -1.02f, 1.13f)
+                reflectiveQuadToRelative(-0.45f, 1.38f)
+                quadToRelative(0f, 0.42f, 0.33f, 0.72f)
+                reflectiveQuadToRelative(0.77f, 0.3f)
+                quadToRelative(0.48f, 0f, 0.81f, -0.31f)
+                quadToRelative(0.34f, -0.31f, 0.51f, -0.76f)
+                quadToRelative(0.15f, -0.43f, 0.41f, -0.75f)
+                reflectiveQuadTo(14.2f, 11.7f)
+                quadToRelative(0.57f, -0.53f, 0.94f, -1.21f)
+                reflectiveQuadTo(15.5f, 9.02f)
+                quadToRelative(0f, -1.32f, -1f, -2.2f)
+                reflectiveQuadTo(12.15f, 5.95f)
+                quadTo(11.1f, 5.95f, 10.2f, 6.4f)
+                reflectiveQuadTo(8.75f, 7.72f)
+                quadTo(8.53f, 8.1f, 8.61f, 8.54f)
+                reflectiveQuadTo(9.08f, 9.2f)
+                quadTo(9.5f, 9.48f, 9.99f, 9.36f)
+                reflectiveQuadTo(10.83f, 8.85f)
+                quadTo(11.05f, 8.57f, 11.36f, 8.4f)
+                quadTo(11.68f, 8.23f, 12.03f, 8.23f)
+                close()
+            }
+        }.build()
     }
 
     val HelpOutline: ImageVector by lazy {
