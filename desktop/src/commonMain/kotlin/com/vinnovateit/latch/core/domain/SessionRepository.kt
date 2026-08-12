@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
+// Chart renders 150 points max; keep 200 so stopSession() aggregations are
+// accurate while memory stays bounded regardless of session length.
+// ponytail: flat cap, upgrade to a ring buffer if alloc pressure shows up.
+private const val LIVE_HISTORY_CAP = 200
+
 /**
  * Tracks the live session and persists finished ones.
  *
@@ -79,8 +84,9 @@ class SessionRepository(
         sessionUpdateJob = scope.launch {
             throughput.dataUsageFlow.collect { usage ->
                 val current = _liveStatus.value ?: return@collect
+                val next = current.liveData + LiveDataPoint(System.currentTimeMillis(), usage)
                 _liveStatus.value = current.copy(
-                    liveData = current.liveData + LiveDataPoint(System.currentTimeMillis(), usage),
+                    liveData = if (next.size > LIVE_HISTORY_CAP) next.drop(1) else next,
                 )
             }
         }

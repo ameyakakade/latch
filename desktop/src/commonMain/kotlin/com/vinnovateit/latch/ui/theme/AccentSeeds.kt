@@ -30,6 +30,9 @@ internal object AccentSeeds {
         "Red" to Red,
         "Blue" to Blue,
         "Green" to Green,
+        "Purple" to Purple,
+        "Pink" to Pink,
+        "Yellow" to Yellow,
     )
 
     /**
