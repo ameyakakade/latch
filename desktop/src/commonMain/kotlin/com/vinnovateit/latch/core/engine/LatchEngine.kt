@@ -279,6 +279,9 @@ class LatchEngine(
             logger.w(TAG, "SSID '$ssid' is not a VIT campus network; refusing to send credentials.")
             return@withContext false
         }
+        if (ssid == null) {
+            logger.w(TAG, "SSID unreadable; falling back to the portal-host check alone.")
+        }
         val resolves = runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
         if (!resolves) {
             logger.w(TAG, "Portal host does not resolve on this network; refusing to log in.")
@@ -286,9 +289,26 @@ class LatchEngine(
         resolves
     }
 
-    /** True for SSIDs starting with "VIT" or "<letter>-VIT" (e.g. "G-VIT", "VIT5G"). */
-    private fun isVitCampusSsid(ssid: String?): Boolean =
-        ssid != null && VIT_SSID_PATTERN.containsMatchIn(ssid.trim())
+    /**
+     * True unless the SSID is readable and readably *not* a campus network.
+     *
+     * The null case is the important one. Null means "could not read it", not
+     * "this is not VIT": Windows reports a network *profile* name of
+     * "Identifying..." rather than an SSID whenever Network Location Awareness
+     * has not classified the network, and behind a captive portal that is the
+     * steady state, because NLA cannot reach the internet to classify anything.
+     * Failing closed there made the one situation this app exists for the one
+     * situation in which it refused to act.
+     *
+     * Treating unknown as allowed costs less than it appears: [isTargetNetwork]
+     * still requires the portal host to resolve, and that is the strong signal
+     * of the two -- phc.prontonetworks.com only answers on a Pronto network. A
+     * readable SSID that does not match is still refused outright.
+     */
+    private fun isVitCampusSsid(ssid: String?): Boolean {
+        val trimmed = ssid?.trim()?.takeIf { it.isNotEmpty() } ?: return true
+        return VIT_SSID_PATTERN.containsMatchIn(trimmed)
+    }
 
     private suspend fun handleCaptivePortal(handle: NetworkHandle) {
         ConnectionStatusManager.postStatus(
