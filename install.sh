@@ -7,7 +7,7 @@ set -e
 # ==============================================================================
 
 REPO="vinnovateit/latch"
-DEFAULT_TAR_URL="https://github.com/${REPO}/releases/latest/download/latch-1.3.6-linux-x64.tar.gz"
+DEFAULT_TAR_URL="https://github.com/${REPO}/releases/latest/download/latch-1.3.7-linux-x64.tar.gz"
 
 echo "==== Installing Latch Desktop by VinnovateIT ===="
 
