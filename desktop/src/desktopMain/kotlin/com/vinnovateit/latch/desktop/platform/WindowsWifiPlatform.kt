@@ -88,6 +88,37 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         cachedAt = 0
     }
 
+    /**
+     * Turns the raw name the script found into an SSID, or null for "we do not
+     * know".
+     *
+     * Null is a materially different answer from a name that simply is not a
+     * campus SSID, and the engine treats it as such: an unknown SSID must not be
+     * read as "this is not a VIT network", or a machine whose profile name never
+     * resolves can never log in.
+     *
+     * A `wlan`-sourced value is the real SSID and is taken as-is. A `profile`
+     * one is a network-profile name, so the known placeholders are rejected.
+     * The list is English-only by necessity -- these strings are localized, and
+     * there is no non-localized form to match -- but on a machine where the
+     * netsh label is localized the WLAN path usually succeeded anyway, and
+     * anything slipping through lands on the DNS check rather than on a wrong
+     * "not a campus network" conclusion.
+     */
+    private fun resolveSsid(raw: String?, source: String?): String? {
+        val name = raw?.takeIf { it.isNotEmpty() } ?: return null
+        if (source == "wlan") return name
+        val placeholder = name.equals("Identifying...", ignoreCase = true) ||
+            name.equals("Unidentified network", ignoreCase = true) ||
+            name.equals("Network", ignoreCase = true)
+        return if (placeholder) {
+            logger.d(TAG, "Profile name '$name' is a placeholder, not an SSID; treating as unknown.")
+            null
+        } else {
+            name
+        }
+    }
+
     private fun snapshot(): WifiSnapshot {
         val now = System.currentTimeMillis()
         cached?.let { if (now - cachedAt < CACHE_TTL_MS) return it }
@@ -107,13 +138,31 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
               if (${'$'}w) { ${'$'}radio = if (${'$'}w.State -eq 'On') { '1' } else { '0' } }
             } catch { ${'$'}radio = '' }
             ${'$'}ssid = ''
-            if (${'$'}name) { ${'$'}p = Get-NetConnectionProfile -InterfaceAlias ${'$'}name; if (${'$'}p) { ${'$'}ssid = ${'$'}p.Name } }
+            ${'$'}src = ''
+            # The WLAN interface first. Get-NetConnectionProfile returns a
+            # *network profile* name, which is only incidentally the SSID: while
+            # Network Location Awareness has not classified the network it reads
+            # "Identifying..." instead, and on a captive portal -- the exact case
+            # this app exists for -- it can sit there indefinitely, because NLA
+            # cannot reach the internet to classify anything. netsh reports the
+            # real SSID throughout.
+            #
+            # Anchoring the label at line start is what keeps this off the BSSID
+            # line. The label itself is localized on some Windows builds, in
+            # which case this finds nothing and the profile name below is used.
+            foreach (${'$'}line in (netsh wlan show interfaces)) {
+              if (${'$'}line -match '^\s*SSID\s*:\s*(.+)${'$'}') { ${'$'}ssid = ${'$'}matches[1].Trim(); ${'$'}src = 'wlan'; break }
+            }
+            if (-not ${'$'}ssid -and ${'$'}name) {
+              ${'$'}p = Get-NetConnectionProfile -InterfaceAlias ${'$'}name
+              if (${'$'}p) { ${'$'}ssid = ${'$'}p.Name; ${'$'}src = 'profile' }
+            }
             ${'$'}gw = ''
             if (${'$'}name) {
               ${'$'}r = Get-NetRoute -InterfaceAlias ${'$'}name -DestinationPrefix '0.0.0.0/0' | Select-Object -First 1
               if (${'$'}r) { ${'$'}gw = ${'$'}r.NextHop }
             }
-            Write-Output ("RESULT|" + ${'$'}name + "|" + ${'$'}up + "|" + ${'$'}radio + "|" + ${'$'}ssid + "|" + ${'$'}gw)
+            Write-Output ("RESULT|" + ${'$'}name + "|" + ${'$'}up + "|" + ${'$'}radio + "|" + ${'$'}ssid + "|" + ${'$'}gw + "|" + ${'$'}src)
         """.trimIndent()
 
         val result = runPowerShell(script)
@@ -130,7 +179,10 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
                     "0" -> false
                     else -> null
                 },
-                ssid = parts.getOrNull(3)?.trim()?.takeIf { it.isNotEmpty() },
+                ssid = resolveSsid(
+                    raw = parts.getOrNull(3)?.trim(),
+                    source = parts.getOrNull(5)?.trim(),
+                ),
                 gateway = parts.getOrNull(4)?.trim()?.takeIf { it.isNotEmpty() },
             )
         }
