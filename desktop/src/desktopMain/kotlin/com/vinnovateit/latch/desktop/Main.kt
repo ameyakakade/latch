@@ -39,7 +39,13 @@ fun main(args: Array<String>) {
 
     application {
         var windowVisible by remember { mutableStateOf(!startHidden) }
-        onActivateWindow = { windowVisible = true }
+        var restoreTrigger by remember { mutableStateOf(0) }
+
+        val openLatch: () -> Unit = {
+            windowVisible = true
+            restoreTrigger++
+        }
+        onActivateWindow = openLatch
 
         val trayState = rememberTrayState()
         val isLatched by app.engine.isLatched.collectAsState()
@@ -55,7 +61,7 @@ fun main(args: Array<String>) {
             if (useLinuxTray) {
                 com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.init(
                     isLatched = isLatched,
-                    onOpenLatch = { windowVisible = true },
+                    onOpenLatch = openLatch,
                     onToggleConnect = {
                         if (isLatched) app.engine.submit(LatchCommand.Logout)
                         else app.engine.submit(LatchCommand.CheckAndLogin)
@@ -69,7 +75,7 @@ fun main(args: Array<String>) {
                 com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.updateStatus(isLatched)
             } else if (isLinux) {
                 kotlinx.coroutines.delay(200)
-                runCatching { patchLinuxTrayIconAlpha(isLatched) { windowVisible = true } }
+                runCatching { patchLinuxTrayIconAlpha(isLatched, openLatch) }
             }
         }
 
@@ -78,28 +84,27 @@ fun main(args: Array<String>) {
                 state = trayState,
                 icon = remember(isLatched) { LatchIcon.forTray(latched = isLatched) },
                 tooltip = tooltip,
-                onAction = { windowVisible = true },
+                onAction = openLatch,
                 menu = {
-                    Item("Open Latch") {
-                        windowVisible = true
-                    }
+                    Item("Open Latch", onClick = openLatch)
                     Separator()
                     if (isLatched) {
-                        Item("Disconnect") { app.engine.submit(LatchCommand.Logout) }
+                        Item("Disconnect", onClick = { app.engine.submit(LatchCommand.Logout) })
                     } else {
-                        Item("Connect") { app.engine.submit(LatchCommand.CheckAndLogin) }
+                        Item("Connect", onClick = { app.engine.submit(LatchCommand.CheckAndLogin) })
                     }
                     Separator()
-                    Item("Exit Latch") {
+                    Item("Exit Latch", onClick = {
                         app.shutdown()
                         exitApplication()
-                    }
+                    })
                 },
             )
         }
 
         LatchWindow(
             visible = windowVisible,
+            restoreTrigger = restoreTrigger,
             onCloseRequest = { windowVisible = false },
         ) { onMinimize, onClose ->
             val scope = rememberCoroutineScope()
