@@ -106,6 +106,7 @@ private fun preferredWindowSize(): DpSize {
 @Composable
 internal fun LatchWindow(
     visible: Boolean,
+    restoreTrigger: Int = 0,
     onCloseRequest: () -> Unit,
     content: @Composable (onMinimize: () -> Unit, onClose: () -> Unit) -> Unit,
 ) {
@@ -115,7 +116,7 @@ internal fun LatchWindow(
         size = initialSize,
     )
 
-    LaunchedEffect(visible) {
+    LaunchedEffect(visible, restoreTrigger) {
         if (visible) {
             state.isMinimized = false
         }
@@ -131,7 +132,7 @@ internal fun LatchWindow(
         title = "Latch",
         icon = remember { LatchIcon.brand() },
     ) {
-        LaunchedEffect(visible) {
+        LaunchedEffect(visible, restoreTrigger) {
             if (visible) {
                 state.isMinimized = false
                 (window as? java.awt.Frame)?.state = java.awt.Frame.NORMAL
