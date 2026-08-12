@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,8 +45,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.ui.theme.AccentSeeds
-import kotlin.math.abs
+import com.vinnovateit.latch.ui.theme.satoshiFontFamily
 
 // ---------------------------------------------------------------------------
 // Section wrapper
@@ -57,21 +59,23 @@ internal fun SettingsSection(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Column(modifier = modifier) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-        )
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+    Column(modifier = modifier.padding(horizontal = 4.dp, vertical = 6.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 8.dp),
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                content()
-            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = satoshiFontFamily(),
+            )
+        }
+        Column(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))) {
+            content()
         }
     }
 }
@@ -102,51 +106,76 @@ internal fun SettingsItem(
         Modifier
     }
 
-    Row(
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier
             .fillMaxWidth()
-            .then(clickModifier)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clip(RoundedCornerShape(10.dp))
+            .then(clickModifier),
     ) {
-        if (leadingIcon != null) {
-            Icon(
-                imageVector = leadingIcon,
-                contentDescription = null,
-                tint = if (enabled) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(Modifier.width(16.dp))
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                },
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                        alpha = if (enabled) 1f else 0.38f,
-                    ),
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+        ) {
+            if (leadingIcon != null) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .size(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = leadingIcon,
+                        contentDescription = null,
+                        tint = if (enabled) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
+                    )
+                }
             }
-        }
 
-        if (trailingContent != null) {
-            Spacer(Modifier.width(12.dp))
-            trailingContent()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    },
+                    fontFamily = satoshiFontFamily(),
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = if (enabled) 1f else 0.38f,
+                        ),
+                        fontFamily = satoshiFontFamily(),
+                    )
+                }
+            }
+
+            if (trailingContent != null) {
+                Box(
+                    modifier = Modifier.padding(start = 16.dp),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    trailingContent()
+                }
+            }
         }
     }
 }
@@ -171,76 +200,85 @@ internal fun SettingsSelectionDialog(
     onDismiss: () -> Unit,
     bottomContent: @Composable (() -> Unit)? = null,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                if (description != null) {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp),
-                    )
-                }
-                options.forEach { option ->
-                    val isSelected = option.label == selected
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                onSelect(option.label)
-                                onDismiss()
-                            }
-                            .padding(horizontal = 12.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (option.icon != null) {
-                            Icon(
-                                imageVector = option.icon,
-                                contentDescription = null,
-                                tint = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                modifier = Modifier.size(20.dp),
-                            )
-                            Spacer(Modifier.width(12.dp))
+    LatchBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                fontFamily = satoshiFontFamily(),
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = satoshiFontFamily(),
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
+            options.forEach { option ->
+                val isSelected = option.label == selected
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            onSelect(option.label)
+                            onDismiss()
                         }
-                        Text(
-                            text = option.displayLabel,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSelected) {
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (option.icon != null) {
+                        Icon(
+                            imageVector = option.icon,
+                            contentDescription = null,
+                            tint = if (isSelected) {
                                 MaterialTheme.colorScheme.primary
                             } else {
-                                MaterialTheme.colorScheme.onSurface
+                                MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.size(20.dp),
                         )
-                        if (isSelected) {
-                            Icon(
-                                imageVector = LatchIcons.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Text(
+                        text = option.displayLabel,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        fontFamily = satoshiFontFamily(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (isSelected) {
+                        Icon(
+                            imageVector = LatchIcons.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp),
+                        )
                     }
                 }
-                if (bottomContent != null) {
-                    Spacer(Modifier.height(12.dp))
-                    bottomContent()
-                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
+            if (bottomContent != null) {
+                Spacer(Modifier.height(12.dp))
+                bottomContent()
+            }
+            Spacer(Modifier.height(12.dp))
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text("Cancel", fontFamily = satoshiFontFamily())
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -256,25 +294,36 @@ internal fun SettingsActionDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
+    LatchBottomSheet(onDismissRequest = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                fontFamily = satoshiFontFamily(),
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = satoshiFontFamily(),
+                modifier = Modifier.padding(bottom = 16.dp),
             )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(confirmText, color = MaterialTheme.colorScheme.error)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text(cancelText, fontFamily = satoshiFontFamily())
+                }
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = onConfirm) {
+                    Text(confirmText, color = MaterialTheme.colorScheme.error, fontFamily = satoshiFontFamily())
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(cancelText) }
-        },
-    )
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -284,70 +333,153 @@ internal fun SettingsActionDialog(
 @Composable
 internal fun AccentColorPicker(
     selectedColorName: String,
+    useMonochrome: Boolean,
     onColorSelected: (String) -> Unit,
+    onMonochromeToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showCustomDialog by remember { mutableStateOf(false) }
     val customColor = AccentSeeds.parseHexOrNull(selectedColorName)
+    var showInlineCustom by remember { mutableStateOf(customColor != null) }
 
-    // Scrollable rather than wrapping: 6 presets + the custom swatch (308dp+ of
-    // circles alone, before gaps) is wider than the dialog on the compact window
-    // this app opens at, and AlertDialog clips content that overflows its Surface
-    // rather than letting it spill -- without this, the last swatch or two were
-    // simply invisible with no way to reach them.
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AccentSeeds.ordered.forEach { (name, color) ->
-            AccentSwatchButton(
-                color = color,
-                isSelected = name == selectedColorName,
-                onClick = { onColorSelected(name) },
-            )
-        }
+    val initialCustomColor = customColor ?: AccentSeeds.forName(selectedColorName)
+    var hue by remember(selectedColorName) { mutableFloatStateOf(colorToHue(initialCustomColor)) }
+    var hexText by remember(selectedColorName) { mutableStateOf(with(AccentSeeds) { (customColor ?: initialCustomColor).toHexString() }) }
+    var previewColor by remember(selectedColorName) { mutableStateOf(customColor ?: initialCustomColor) }
+    var trackWidthPx by remember { mutableFloatStateOf(1f) }
 
-        // Custom swatch: shows the last-picked colour once one is active, or a
-        // rainbow "add" affordance beforehand. There is deliberately no separate
-        // "last custom colour" setting -- switching to a preset and back starts
-        // the picker fresh from that preset, which is a fine trade for not
-        // persisting a second value alongside accentColor.
-        if (customColor != null) {
-            AccentSwatchButton(
-                color = customColor,
-                isSelected = true,
-                onClick = { showCustomDialog = true },
+    fun applyHue(fraction: Float) {
+        hue = (fraction * 360f).coerceIn(0f, 360f)
+        previewColor = hslToColor(hue, CustomColorSaturation, CustomColorLightness)
+        hexText = with(AccentSeeds) { previewColor.toHexString() }
+        onColorSelected(hexText)
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Monochrome swatch — first in the row
+            MonochromeSwatchButton(
+                isSelected = useMonochrome,
+                onClick = { onMonochromeToggle(!useMonochrome) },
             )
-        } else {
+
+            AccentSeeds.ordered.forEach { (name, color) ->
+                AccentSwatchButton(
+                    color = color,
+                    isSelected = name == selectedColorName && !showInlineCustom && !useMonochrome,
+                    onClick = {
+                        showInlineCustom = false
+                        if (useMonochrome) onMonochromeToggle(false)
+                        onColorSelected(name)
+                    },
+                )
+            }
+
             Surface(
-                onClick = { showCustomDialog = true },
+                onClick = {
+                    if (useMonochrome) onMonochromeToggle(false)
+                    showInlineCustom = !showInlineCustom
+                    if (showInlineCustom) onColorSelected(hexText)
+                },
                 modifier = Modifier.size(44.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                border = BorderStroke(2.dp, Brush.sweepGradient(RainbowSweep)),
+                color = if (showInlineCustom && customColor != null && !useMonochrome) customColor else MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(
+                    if (showInlineCustom && !useMonochrome) 3.dp else 2.dp,
+                    if (showInlineCustom && !useMonochrome) SolidColor(MaterialTheme.colorScheme.onSurface) else Brush.sweepGradient(RainbowSweep),
+                ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = LatchIcons.Add,
-                        contentDescription = "Custom colour",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    if (showInlineCustom && customColor != null && !useMonochrome) {
+                        Icon(
+                            imageVector = LatchIcons.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = LatchIcons.Add,
+                            contentDescription = "Custom colour",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
         }
-    }
 
-    if (showCustomDialog) {
-        CustomColorDialog(
-            initialColor = customColor ?: AccentSeeds.forName(selectedColorName),
-            onConfirm = { picked ->
-                with(AccentSeeds) { onColorSelected(picked.toHexString()) }
-                showCustomDialog = false
-            },
-            onDismiss = { showCustomDialog = false },
-        )
+        if (showInlineCustom && !useMonochrome) {
+            Spacer(Modifier.height(14.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                // Compact borderless hex field
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    BasicTextField(
+                        value = hexText,
+                        onValueChange = { typed ->
+                            hexText = typed
+                            AccentSeeds.parseHexOrNull(typed)?.let { parsed ->
+                                previewColor = parsed
+                                hue = colorToHue(parsed)
+                                onColorSelected(typed)
+                            }
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = satoshiFontFamily(),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(28.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.horizontalGradient(FullHueGradient))
+                        .onSizeChanged { trackWidthPx = it.width.toFloat().coerceAtLeast(1f) }
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset -> applyHue(offset.x / trackWidthPx) }
+                        }
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, _ ->
+                                applyHue(change.position.x / trackWidthPx)
+                            }
+                        },
+                ) {
+                    val thumbFraction = (hue / 360f).coerceIn(0f, 1f)
+                    Surface(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .offset {
+                                IntOffset(
+                                    (thumbFraction * (trackWidthPx - 28.dp.toPx())).toInt(),
+                                    0,
+                                )
+                            },
+                        shape = CircleShape,
+                        color = Color.Transparent,
+                        border = BorderStroke(3.dp, Color.White),
+                    ) {}
+                }
+            }
+        }
     }
 }
 
@@ -357,10 +489,6 @@ private fun AccentSwatchButton(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
-    // The border is always present (transparent when unselected) rather than
-    // conditionally null -- a border that only appears on the selected swatch
-    // nudged just that circle's rendered size/position relative to its plain
-    // neighbours, which read as the row being unevenly spaced.
     Surface(
         onClick = onClick,
         modifier = Modifier.size(44.dp),
@@ -384,132 +512,74 @@ private fun AccentSwatchButton(
     }
 }
 
+/** A half-black / half-white circle representing the monochrome scheme. */
+@Composable
+private fun MonochromeSwatchButton(isSelected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp),
+        shape = CircleShape,
+        color = Color.Unspecified,
+        border = BorderStroke(
+            3.dp,
+            if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+        ),
+    ) {
+        Box(Modifier.size(44.dp)) {
+            // Left half — black
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(androidx.compose.ui.graphics.RectangleShape)
+                    .background(Color(0xFF212121)),
+            )
+            // Right half — white (overlaid)
+            Box(
+                Modifier
+                    .size(22.dp, 44.dp)
+                    .align(Alignment.CenterEnd)
+                    .background(Color(0xFFF5F5F5)),
+            )
+            if (isSelected) {
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = LatchIcons.Check,
+                        contentDescription = null,
+                        tint = Color(0xFF9E9E9E),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** Sampled every 30deg of hue at the picker's fixed saturation/lightness. */
 private val RainbowSweep: List<Color> =
     (0..360 step 30).map { hslToColor(it.toFloat(), CustomColorSaturation, CustomColorLightness) }
 
-// ---------------------------------------------------------------------------
-// Custom colour picker dialog
-// ---------------------------------------------------------------------------
-
 /** Fixed saturation/lightness for the hue slider -- matches the presets' depth. */
 private const val CustomColorSaturation = 0.75f
 private const val CustomColorLightness = 0.42f
-
-@Composable
-internal fun CustomColorDialog(
-    initialColor: Color,
-    onConfirm: (Color) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var hue by remember { mutableFloatStateOf(colorToHue(initialColor)) }
-    var hexText by remember { mutableStateOf(with(AccentSeeds) { initialColor.toHexString() }) }
-    var previewColor by remember { mutableStateOf(initialColor) }
-    var trackWidthPx by remember { mutableFloatStateOf(1f) }
-
-    fun applyHue(fraction: Float) {
-        hue = (fraction * 360f).coerceIn(0f, 360f)
-        previewColor = hslToColor(hue, CustomColorSaturation, CustomColorLightness)
-        hexText = with(AccentSeeds) { previewColor.toHexString() }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Custom colour") },
-        text = {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        shape = CircleShape,
-                        color = previewColor,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    ) {}
-                    OutlinedTextField(
-                        value = hexText,
-                        onValueChange = { typed ->
-                            hexText = typed
-                            AccentSeeds.parseHexOrNull(typed)?.let { parsed ->
-                                previewColor = parsed
-                                hue = colorToHue(parsed)
-                            }
-                        },
-                        label = { Text("Hex") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Spacer(Modifier.height(20.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(28.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.horizontalGradient(FullHueGradient))
-                        .onSizeChanged { trackWidthPx = it.width.toFloat().coerceAtLeast(1f) }
-                        .pointerInput(Unit) {
-                            detectTapGestures { offset -> applyHue(offset.x / trackWidthPx) }
-                        }
-                        .pointerInput(Unit) {
-                            detectDragGestures { change, _ ->
-                                applyHue(change.position.x / trackWidthPx)
-                            }
-                        },
-                ) {
-                    // Thumb: a white ring at the current hue position.
-                    val thumbFraction = (hue / 360f).coerceIn(0f, 1f)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(28.dp),
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .offset {
-                                    IntOffset(
-                                        (thumbFraction * (trackWidthPx - 28.dp.toPx())).toInt(),
-                                        0,
-                                    )
-                                },
-                            shape = CircleShape,
-                            color = Color.Transparent,
-                            border = BorderStroke(3.dp, Color.White),
-                        ) {}
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(previewColor) },
-                enabled = AccentSeeds.parseHexOrNull(hexText) != null,
-            ) { Text("Apply") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
-}
 
 private val FullHueGradient: List<Color> =
     (0..360 step 15).map { hslToColor(it.toFloat(), CustomColorSaturation, CustomColorLightness) }
 
 /** Standard HSL -> RGB, hue in [0, 360), saturation/lightness in [0, 1]. */
 private fun hslToColor(hue: Float, saturation: Float, lightness: Float): Color {
-    val c = (1f - abs(2f * lightness - 1f)) * saturation
-    val x = c * (1f - abs((hue / 60f) % 2f - 1f))
+    val c = (1f - kotlin.math.abs(2f * lightness - 1f)) * saturation
+    val x = c * (1f - kotlin.math.abs((hue / 60f) % 2f - 1f))
     val m = lightness - c / 2f
-    val (r1, g1, b1) = when {
-        hue < 60f -> Triple(c, x, 0f)
-        hue < 120f -> Triple(x, c, 0f)
-        hue < 180f -> Triple(0f, c, x)
-        hue < 240f -> Triple(0f, x, c)
-        hue < 300f -> Triple(x, 0f, c)
-        else -> Triple(c, 0f, x)
+    val r1: Float
+    val g1: Float
+    val b1: Float
+    when {
+        hue < 60f -> { r1 = c; g1 = x; b1 = 0f }
+        hue < 120f -> { r1 = x; g1 = c; b1 = 0f }
+        hue < 180f -> { r1 = 0f; g1 = c; b1 = x }
+        hue < 240f -> { r1 = 0f; g1 = x; b1 = c }
+        hue < 300f -> { r1 = x; g1 = 0f; b1 = c }
+        else -> { r1 = c; g1 = 0f; b1 = x }
     }
     return Color(r1 + m, g1 + m, b1 + m)
 }
