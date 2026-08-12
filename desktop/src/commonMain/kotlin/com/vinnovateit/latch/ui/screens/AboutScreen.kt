@@ -190,13 +190,6 @@ fun AboutScreen(
                             .width(140.dp)
                             .height(48.dp),
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "VinnovateIT",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = VINNOVATEIT_BLURB,
