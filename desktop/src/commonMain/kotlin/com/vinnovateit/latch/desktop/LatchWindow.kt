@@ -118,8 +118,6 @@ internal fun LatchWindow(
     LaunchedEffect(visible) {
         if (visible) {
             state.isMinimized = false
-            state.size = initialSize
-            state.position = WindowPosition(androidx.compose.ui.Alignment.BottomEnd)
         }
     }
 

@@ -39,6 +39,7 @@ import com.vinnovateit.latch.ui.components.LatchDetailHeader
 import com.vinnovateit.latch.ui.components.LatchIcons
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ColorFilter
+import com.vinnovateit.latch.ui.theme.modernizFontFamily
 
 private val ContentMaxWidth = 720.dp
 
@@ -101,9 +102,10 @@ fun AboutScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(
                         text = "Latch",
+                        fontFamily = modernizFontFamily(),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.height(4.dp))
                     // Version + refresh icon inline
