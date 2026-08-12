@@ -62,7 +62,7 @@ fun main(args: Array<String>) {
                     },
                     onExitLatch = {
                         app.shutdown()
-                        exitApplication()
+                        kotlin.system.exitProcess(0)
                     },
                 )
                 com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.updateStatus(isLatched)

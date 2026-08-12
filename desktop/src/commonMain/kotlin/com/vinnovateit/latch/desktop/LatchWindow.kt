@@ -117,6 +117,7 @@ internal fun LatchWindow(
 
     LaunchedEffect(visible) {
         if (visible) {
+            state.isMinimized = false
             state.size = initialSize
             state.position = WindowPosition(androidx.compose.ui.Alignment.BottomEnd)
         }
@@ -126,21 +127,22 @@ internal fun LatchWindow(
         visible = visible,
         onCloseRequest = onCloseRequest,
         state = state,
-        // Locked to the size it opens at. This maps to Frame.setResizable(false),
-        // which is what actually removes the maximize box -- Windows then also
-        // refuses Aero Snap, Win+Up and the maximise-on-title-bar-double-click,
-        // so no separate placement guard is needed.
         resizable = false,
-        // The OS chrome is replaced entirely -- title, taskbar and Alt-Tab icon
-        // still use the brand mark, but the window itself draws its own immersive
-        // top bar with window controls embedded inside it.
-        // `transparent` is what lets the corners outside the rounded Surface below
-        // actually show the desktop through rather than square OS window pixels.
         undecorated = true,
         transparent = true,
         title = "Latch",
         icon = remember { LatchIcon.brand() },
     ) {
+        LaunchedEffect(visible) {
+            if (visible) {
+                state.isMinimized = false
+                (window as? java.awt.Frame)?.state = java.awt.Frame.NORMAL
+                (window as? java.awt.Frame)?.extendedState = java.awt.Frame.NORMAL
+                window.toFront()
+                window.requestFocus()
+            }
+        }
+
         LatchTheme {
             Surface(
                 modifier = Modifier

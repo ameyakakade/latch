@@ -105,7 +105,9 @@ object LinuxAppIndicatorTray {
 
             // 1. Open Latch
             val itemOpen = gtk.gtk_menu_item_new_with_label("Open Latch")
-            openLatchCallback = GCallback { _, _ -> onOpenLatch() }
+            openLatchCallback = GCallback { _, _ ->
+                javax.swing.SwingUtilities.invokeLater { onOpenLatch() }
+            }
             gtk.g_signal_connect_data(itemOpen, "activate", openLatchCallback!!, null, null, 0)
             gtk.gtk_menu_shell_append(menu, itemOpen)
 
@@ -115,7 +117,9 @@ object LinuxAppIndicatorTray {
             // 2. Connect / Disconnect
             val connectLabel = if (isLatched) "Disconnect" else "Connect"
             val itemConnect = gtk.gtk_menu_item_new_with_label(connectLabel)
-            toggleConnectCallback = GCallback { _, _ -> onToggleConnect() }
+            toggleConnectCallback = GCallback { _, _ ->
+                javax.swing.SwingUtilities.invokeLater { onToggleConnect() }
+            }
             gtk.g_signal_connect_data(itemConnect, "activate", toggleConnectCallback!!, null, null, 0)
             gtk.gtk_menu_shell_append(menu, itemConnect)
 
@@ -124,7 +128,9 @@ object LinuxAppIndicatorTray {
 
             // 3. Exit Latch
             val itemExit = gtk.gtk_menu_item_new_with_label("Exit Latch")
-            exitLatchCallback = GCallback { _, _ -> onExitLatch() }
+            exitLatchCallback = GCallback { _, _ ->
+                javax.swing.SwingUtilities.invokeLater { onExitLatch() }
+            }
             gtk.g_signal_connect_data(itemExit, "activate", exitLatchCallback!!, null, null, 0)
             gtk.gtk_menu_shell_append(menu, itemExit)
 
