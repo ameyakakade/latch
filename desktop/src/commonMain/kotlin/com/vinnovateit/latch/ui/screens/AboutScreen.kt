@@ -151,7 +151,7 @@ fun AboutScreen(
                         is UpdateState.UpdateAvailable -> {
                             Spacer(Modifier.height(8.dp))
                             OutlinedButton(onClick = onDownloadUpdate) {
-                                Text("Download ${updateState.version}")
+                                Text("Update available: v${updateState.version}. Update?")
                             }
                         }
                         is UpdateState.Downloaded -> {
