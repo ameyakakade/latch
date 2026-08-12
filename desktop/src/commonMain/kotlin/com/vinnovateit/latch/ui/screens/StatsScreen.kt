@@ -2,12 +2,14 @@ package com.vinnovateit.latch.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -122,6 +124,12 @@ fun StatsScreen(
                 TotalsRow(summaries = summaries)
             }
 
+            if (summaries.isNotEmpty()) {
+                item {
+                    DailyUsageBarChart(summaries = summaries)
+                }
+            }
+
             if (summaries.isEmpty()) {
                 item {
                     Box(
@@ -218,35 +226,18 @@ private fun LiveSessionCard(
         },
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            // Android-matching Header: "ACTIVE SESSION" live green badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(6.dp),
-                        ) {}
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "ACTIVE SESSION",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontFamily = satoshiFontFamily(),
-                        )
-                    }
-                }
+                Text(
+                    text = "Active Session",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = satoshiFontFamily(),
+                )
 
                 Text(
                     text = "${formatDurationDynamic(duration)} • since " +
@@ -457,6 +448,94 @@ private fun SessionRow(session: SessionSummary) {
                         fontFamily = satoshiFontFamily(),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+    }
+}
+
+private data class DailyBarData(val label: String, val rxBytes: Long, val txBytes: Long)
+
+@Composable
+private fun DailyUsageBarChart(summaries: List<SessionSummary>) {
+    val dailyData = remember(summaries) {
+        val dateFormat = java.text.SimpleDateFormat("dd MMM", java.util.Locale.getDefault())
+        val dayKeyFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        summaries.groupBy { dayKeyFormat.format(java.util.Date(it.startTimestamp)) }
+            .map { (_, group) ->
+                val rx = group.sumOf { it.totalData.rxBytes }
+                val tx = group.sumOf { it.totalData.txBytes }
+                val dateLabel = dateFormat.format(java.util.Date(group.first().startTimestamp))
+                DailyBarData(dateLabel, rx, tx)
+            }.takeLast(7)
+    }
+
+    if (dailyData.isEmpty()) return
+
+    val maxBytes = remember(dailyData) {
+        dailyData.maxOf { it.rxBytes + it.txBytes }.coerceAtLeast(1L)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Daily Usage",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = satoshiFontFamily(),
+            )
+            Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().height(120.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                dailyData.forEach { bar ->
+                    val rxFrac = (bar.rxBytes.toFloat() / maxBytes).coerceIn(0.05f, 1f)
+                    val txFrac = (bar.txBytes.toFloat() / maxBytes).coerceIn(0.02f, 1f)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.BottomCenter,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Bottom,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(16.dp)
+                                        .fillMaxHeight(txFrac)
+                                        .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                        .background(ColorGraphUpload),
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .width(16.dp)
+                                        .fillMaxHeight(rxFrac)
+                                        .clip(RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
+                                        .background(ColorGraphDownload),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = bar.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = satoshiFontFamily(),
+                        )
+                    }
                 }
             }
         }
