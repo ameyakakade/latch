@@ -176,8 +176,9 @@ class LatchApp private constructor(
     }
 
     fun shutdown() {
-        engine.submit(LatchCommand.Shutdown)
-        runCatching { database.close() }
+        runCatching {
+            engine.submit(LatchCommand.Shutdown)
+        }
     }
 
     /**

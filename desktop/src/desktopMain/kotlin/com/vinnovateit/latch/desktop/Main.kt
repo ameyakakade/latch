@@ -61,6 +61,7 @@ fun main(args: Array<String>) {
                         else app.engine.submit(LatchCommand.CheckAndLogin)
                     },
                     onExitLatch = {
+                        com.vinnovateit.latch.desktop.platform.linux.LinuxAppIndicatorTray.stop()
                         app.shutdown()
                         kotlin.system.exitProcess(0)
                     },
