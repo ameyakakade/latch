@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform
+package com.vinnovateit.latch.desktop.platform.windows
 
 import com.sun.jna.Native
 import com.sun.jna.Structure
@@ -12,55 +12,32 @@ import com.sun.jna.platform.win32.WinUser
 import com.sun.jna.win32.StdCallLibrary
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.desktop.AppPaths
+import com.vinnovateit.latch.desktop.platform.InstalledBuild
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Sends tray balloon notifications with the Latch mark as the balloon icon
- * (NIIF_USER + NIIF_LARGE_ICON). Compose Desktop's Notification.Type enum
- * does not expose NIIF_USER, so this helper manages its own Shell tray icon
- * entry backed by a dedicated message-only window, used only to anchor
- * balloons.
- *
- * That entry is added lazily, only while a notification is actually showing,
- * and removed again a few seconds later -- not kept permanently. Windows has
- * no "invisible" tray icon state that still delivers balloons: NIS_HIDDEN
- * looked like the answer but actually maps to the shell's "hide icon and
- * notifications" mode and silently drops every balloon sent through it (see
- * git history). Leaving the entry unflagged makes it visible in the overflow
- * flyout -- fine for the few seconds a notification is up, but a *permanent*
- * second icon there, sitting inert forever with no click handler, is exactly
- * the confusing "why are there two and the second does nothing" bug this
- * lazy add/remove avoids.
- */
 internal object WindowsBalloonNotifier {
 
-    // Shell_NotifyIcon messages
     private const val NIM_ADD = 0
     private const val NIM_MODIFY = 1
     private const val NIM_DELETE = 2
 
-    /** How long the transient icon lingers after the last notification. */
     private const val ICON_LINGER_MS = 8_000L
 
-    // NOTIFYICONDATA uFlags
     private const val NIF_ICON = 0x00000002
     private const val NIF_INFO = 0x00000010
 
-    // Balloon dwInfoFlags
     private const val NIIF_ERROR = 0x00000003
     private const val NIIF_USER = 0x00000004
     private const val NIIF_NOSOUND = 0x00000010
     private const val NIIF_LARGE_ICON = 0x00000020
 
-    // User32.LoadImage constants
     private const val IMAGE_ICON = 1
     private const val LR_LOADFROMFILE = 0x00000010
 
-    // Unique ID that does not conflict with AWT's internal tray IDs (AWT uses a counter starting at 0)
     private const val ICON_UID = 0xB1A7
 
     private val hwnd = AtomicReference<HWND?>()
@@ -73,13 +50,8 @@ internal object WindowsBalloonNotifier {
 
     private const val TAG = "WindowsBalloonNotifier"
 
-    // Strong reference — the native callback must outlive any GC cycle.
     @Volatile private var wndProc: WinUser.WindowProc? = null
 
-    /**
-     * Spawns the notification thread. Call once at startup before any
-     * [notify] calls; subsequent calls are no-ops.
-     */
     fun start(logger: Logger) {
         this.logger = logger
         if (!started.compareAndSet(false, true)) return
@@ -88,10 +60,6 @@ internal object WindowsBalloonNotifier {
         t.start()
     }
 
-    /**
-     * Shows a balloon tip whose icon is the Latch mark. Falls back silently
-     * if the notification thread failed to initialise.
-     */
     fun notify(title: String, message: String, isError: Boolean) {
         ready.await()
         val win = hwnd.get()
@@ -117,8 +85,6 @@ internal object WindowsBalloonNotifier {
             }
             hBalloonIcon = icon
         }
-        // NIM_ADD the first time (or after a previous linger removed it), NIM_MODIFY
-        // if it's still sitting there from a very recent notification.
         val op = if (iconAdded.compareAndSet(false, true)) NIM_ADD else NIM_MODIFY
         val ok = Shell32Ext.INSTANCE.Shell_NotifyIconW(op, nid)
         if (!ok) {
@@ -129,12 +95,6 @@ internal object WindowsBalloonNotifier {
         scheduleRemoval(win)
     }
 
-    /**
-     * Removes the transient tray entry [ICON_LINGER_MS] after the most recent
-     * notification, unless a newer one has arrived meanwhile (tracked via
-     * [generation] so overlapping timers from rapid notifications collapse into
-     * whichever fires last).
-     */
     private fun scheduleRemoval(win: HWND) {
         val myGeneration = generation.incrementAndGet()
         val t = Thread({
@@ -151,8 +111,6 @@ internal object WindowsBalloonNotifier {
         t.isDaemon = true
         t.start()
     }
-
-    // ─── Notification thread ──────────────────────────────────────────────────
 
     private fun threadMain() {
         try {
@@ -172,11 +130,6 @@ internal object WindowsBalloonNotifier {
             logger?.d(TAG, "RegisterClassEx -> atom=${atom.toInt()} lastError=${Native.getLastError()}")
             if (atom.toInt() == 0) return
 
-            // A plain, never-shown top-level window rather than an HWND_MESSAGE
-            // child: CreateWindowEx reliably returns NULL / ERROR_INVALID_WINDOW_HANDLE
-            // (1400) for the message-only pseudo-parent through this JNA binding, so
-            // a normal (unshown) window is used instead -- it never calls ShowWindow,
-            // so nothing becomes visible.
             val win = User32.INSTANCE.CreateWindowEx(
                 0, className, "Latch Notify", 0,
                 0, 0, 0, 0,
@@ -189,13 +142,10 @@ internal object WindowsBalloonNotifier {
             val icon = loadIcon()
             hIcon.set(icon)
             logger?.d(TAG, "loadIcon -> $icon")
-            // The tray entry itself is added lazily by notify(), not here -- see
-            // the class doc for why a permanently-present icon is the wrong call.
         } finally {
             ready.countDown()
         }
 
-        // Message pump — required for the hidden window to remain valid.
         val msg = WinUser.MSG()
         while (User32.INSTANCE.GetMessage(msg, null, 0, 0) != 0) {
             User32.INSTANCE.TranslateMessage(msg)
@@ -203,17 +153,7 @@ internal object WindowsBalloonNotifier {
         }
     }
 
-    /**
-     * Resolves the Latch icon as a Win32 HICON.
-     *
-     * Preference order:
-     *  1. Extract directly from the installed Latch.exe (highest fidelity).
-     *  2. Load from the `latch.ico` file that was extracted into the data dir
-     *     on a previous run (dev build or installer that placed the file).
-     *  3. Extract `latch.ico` from the JAR classpath to the data dir, then load.
-     */
     private fun loadIcon(): HICON? {
-        // Option 1: extract from the running executable (installed build)
         val exePath = InstalledBuild.path
         logger?.d(TAG, "loadIcon: InstalledBuild.path=$exePath")
         if (exePath != null) {
@@ -223,7 +163,6 @@ internal object WindowsBalloonNotifier {
             if (count > 0 && large[0] != null) return large[0]
         }
 
-        // Option 2/3: load from a file — extract from JAR if missing
         val icoFile = File(AppPaths.dataDir, "latch.ico")
         if (!icoFile.exists()) {
             val extracted = runCatching {
@@ -238,9 +177,6 @@ internal object WindowsBalloonNotifier {
             return null
         }
 
-        // LoadImage is declared to return the generic WinNT.HANDLE, not HICON --
-        // `as? HICON` silently discards a perfectly valid handle here since HANDLE
-        // is not an instance of its own subclass. Wrap it explicitly instead.
         val handle = User32.INSTANCE.LoadImage(
             null, icoFile.absolutePath, IMAGE_ICON, 64, 64, LR_LOADFROMFILE,
         )
@@ -252,13 +188,6 @@ internal object WindowsBalloonNotifier {
     private fun String.toWideChars(size: Int): CharArray =
         toCharArray().copyOf(size)
 
-    // ─── JNA structures and interfaces ───────────────────────────────────────
-
-    /**
-     * Full NOTIFYICONDATA structure (Windows Vista+), including guidItem and
-     * hBalloonIcon. The field order must exactly match the Win32 struct layout;
-     * JNA applies natural alignment automatically.
-     */
     class NOTIFYICONDATA : Structure() {
         @JvmField var cbSize: Int = 0
         @JvmField var hWnd: HWND? = null
@@ -270,7 +199,7 @@ internal object WindowsBalloonNotifier {
         @JvmField var dwState: Int = 0
         @JvmField var dwStateMask: Int = 0
         @JvmField var szInfo: CharArray = CharArray(256)
-        @JvmField var uVersion: Int = 0  // union with uTimeout
+        @JvmField var uVersion: Int = 0
         @JvmField var szInfoTitle: CharArray = CharArray(64)
         @JvmField var dwInfoFlags: Int = 0
         @JvmField var guidItem: Guid.GUID = Guid.GUID()
@@ -283,7 +212,6 @@ internal object WindowsBalloonNotifier {
         )
     }
 
-    /** Thin binding for the Shell_NotifyIconW entry point. */
     interface Shell32Ext : StdCallLibrary {
         fun Shell_NotifyIconW(dwMessage: Int, lpData: NOTIFYICONDATA): Boolean
 

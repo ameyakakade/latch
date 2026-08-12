@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform
+package com.vinnovateit.latch.desktop.platform.windows
 
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.NetworkHandle
@@ -10,19 +10,10 @@ import kotlinx.coroutines.flow.flow
 import java.net.NetworkInterface
 import java.util.concurrent.TimeUnit
 
-internal data class SimpleNetworkHandle(override val id: String) : NetworkHandle
+internal data class SimpleWindowsNetworkHandle(override val id: String) : NetworkHandle
 
 /**
  * Windows Wi-Fi state via PowerShell.
- *
- * Why PowerShell and not `netsh wlan show interfaces`: netsh's output labels are
- * localized, so any key-based regex over it breaks on non-English Windows.
- * PowerShell cmdlet *property* names are not localized, so Get-NetConnectionProfile
- * and friends are locale-safe.
- *
- * Cost is ~200-400ms per invocation, hence the cache and the 5s poll floor. The
- * eventual upgrade is JNA against wlanapi.dll (WlanQueryInterface +
- * WlanRegisterNotification), which is both faster and push-based.
  */
 class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
 
@@ -31,26 +22,9 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         const val POLL_INTERVAL_MS = 5_000L
         const val CACHE_TTL_MS = 3_000L
         const val PS_TIMEOUT_SEC = 10L
-
-        /** Attempts to spend waiting for the radio to associate after enabling it. */
         const val ENABLE_SETTLE_ATTEMPTS = 6
         const val ENABLE_SETTLE_INTERVAL_MS = 1_000L
 
-        /**
-         * Prelude giving every script a `Get-LatchWifiRadio`.
-         *
-         * The Wi-Fi *soft* switch -- the Settings/Action-Center toggle and the
-         * airplane-mode kill -- is not visible through Get-NetAdapter: with the
-         * radio off the adapter is still present and merely reports Disconnected,
-         * exactly as it does when it is on but out of range. Only the WinRT
-         * Windows.Devices.Radio API distinguishes the two, and it is also the only
-         * way to turn the radio back on without administrator rights
-         * (Enable-NetAdapter requires elevation and addresses a different state:
-         * an administratively *disabled* adapter).
-         *
-         * PowerShell 5.1 cannot await an IAsyncOperation directly, hence the
-         * reflection over WindowsRuntimeSystemExtensions.AsTask.
-         */
         val PS_AWAIT = """
             function Latch-Await(${'$'}op, ${'$'}type) {
               ${'$'}m = [System.WindowsRuntimeSystemExtensions].GetMethods() |
@@ -74,7 +48,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
     private data class WifiSnapshot(
         val adapterName: String?,
         val adapterUp: Boolean,
-        /** Radio (soft) switch state; null when WinRT could not tell us. */
         val radioOn: Boolean?,
         val ssid: String?,
         val gateway: String?,
@@ -123,9 +96,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         val now = System.currentTimeMillis()
         cached?.let { if (now - cachedAt < CACHE_TTL_MS) return it }
 
-        // One PowerShell round-trip for all four facts, pipe-separated. Selecting
-        // explicit properties keeps this independent of display formatting, and
-        // cmdlet property names are not localized (unlike netsh's output labels).
         val script = """
             ${'$'}ErrorActionPreference = 'SilentlyContinue'
             $PS_AWAIT
@@ -169,7 +139,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         val snap = if (result == null) {
             WifiSnapshot(null, false, null, null, null)
         } else {
-            // Drop the RESULT marker, keeping field indices aligned.
             val parts = result.removePrefix("RESULT|").split('|')
             WifiSnapshot(
                 adapterName = parts.getOrNull(0)?.trim()?.takeIf { it.isNotEmpty() },
@@ -191,15 +160,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         return snap
     }
 
-    /**
-     * Runs a script via -EncodedCommand.
-     *
-     * Passing a multi-line script through -Command does not survive
-     * ProcessBuilder: Windows command-line assembly mangles the newlines and
-     * quoting, and the observed failure mode is silent -- the process exits 0
-     * having done nothing, so every field comes back empty. -EncodedCommand takes
-     * base64 UTF-16LE and is immune to all of that.
-     */
     private fun runPowerShell(script: String): String? {
         return try {
             val encoded = java.util.Base64.getEncoder()
@@ -210,7 +170,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
                 "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded,
             ).redirectErrorStream(true).start()
 
-            // Close stdin so the child never blocks waiting on input.
             process.outputStream.close()
             val output = process.inputStream.bufferedReader().use { it.readText() }
             if (!process.waitFor(PS_TIMEOUT_SEC, TimeUnit.SECONDS)) {
@@ -231,26 +190,11 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         }
     }
 
-    /**
-     * An adapter must exist and its radio must not be *known* to be off. An
-     * unknown radio state (older Windows, WinRT unavailable) is treated as on so
-     * this never becomes stricter than the pre-radio-check behaviour.
-     */
     override fun isWifiEnabled(): Boolean {
         val snap = snapshot()
         return snap.adapterName != null && snap.radioOn != false
     }
 
-    /**
-     * Turns the Wi-Fi radio back on, then waits briefly for the adapter to come
-     * up so callers see a settled state rather than a mid-association one.
-     *
-     * Both recovery paths are attempted because they cover different states:
-     * SetStateAsync fixes the soft switch (Settings toggle / airplane mode) and
-     * needs no elevation; Enable-NetAdapter fixes an administratively disabled
-     * adapter and silently does nothing when unelevated, which is the common case
-     * and is fine -- the soft switch is what users actually hit.
-     */
     override fun enableWifi(): Boolean {
         if (isWifiEnabled()) return true
 
@@ -278,7 +222,6 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         logger.d(TAG, "enableWifi: radio result '$outcome'")
         invalidate()
 
-        // Radio-on is not adapter-up: Windows still has to scan and associate.
         repeat(ENABLE_SETTLE_ATTEMPTS) {
             if (isWifiEnabled() && isConnectedToWifi()) return true
             Thread.sleep(ENABLE_SETTLE_INTERVAL_MS)
@@ -297,15 +240,10 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun gatewayIp(): String? = snapshot().gateway
 
     override fun activeHandle(): NetworkHandle? =
-        snapshot().takeIf { it.adapterUp }?.adapterName?.let { SimpleNetworkHandle(it) }
+        snapshot().takeIf { it.adapterUp }?.adapterName?.let { SimpleWindowsNetworkHandle(it) }
 
-    /** The Wi-Fi adapter's interface name, used by the OSHI counter source. */
-    fun wifiInterfaceName(): String? = snapshot().adapterName
+    override fun wifiInterfaceName(): String? = snapshot().adapterName
 
-    /**
-     * The local IPv4 address of the Wi-Fi interface. Needed for the eventual
-     * bound-socket transport that fixes multi-homed routing.
-     */
     fun wifiLocalAddress(): java.net.InetAddress? {
         val name = wifiInterfaceName() ?: return null
         return try {
@@ -319,17 +257,7 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
         }
     }
 
-    /**
-     * Windows has no ConnectivityManager.NetworkCallback, so events are
-     * synthesised by polling and diffing. Upgrade path is WlanRegisterNotification.
-     */
     override val events: Flow<WifiEvent> = flow {
-        // Baseline from the current state, not null: otherwise the first poll
-        // synthesises an Available for a network that was already connected
-        // before we started listening. That event races the startup
-        // CheckAndLogin command (see LatchApp.start) into a duplicate credential
-        // POST -- the "first connection always fails" bug. The startup command
-        // already probes this case, so nothing is lost by seeding the baseline.
         val seed = snapshot()
         var lastKey = if (seed.adapterUp && seed.ssid != null) {
             "${seed.adapterName}::${seed.ssid}"
@@ -347,10 +275,10 @@ class WindowsWifiPlatform(private val logger: Logger) : WifiPlatform {
 
             if (key != lastKey) {
                 if (lastKey != null) {
-                    emit(WifiEvent.Lost(SimpleNetworkHandle(lastKey.substringBefore("::"))))
+                    emit(WifiEvent.Lost(SimpleWindowsNetworkHandle(lastKey.substringBefore("::"))))
                 }
                 if (key != null) {
-                    emit(WifiEvent.Available(SimpleNetworkHandle(snap.adapterName!!)))
+                    emit(WifiEvent.Available(SimpleWindowsNetworkHandle(snap.adapterName!!)))
                 }
                 lastKey = key
             }
