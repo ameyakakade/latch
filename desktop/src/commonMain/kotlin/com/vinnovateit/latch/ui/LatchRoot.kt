@@ -34,6 +34,8 @@ import com.vinnovateit.latch.core.engine.LatchController
 import com.vinnovateit.latch.core.platform.PlatformServices
 import com.vinnovateit.latch.core.updater.UpdateState
 import com.vinnovateit.latch.desktop.LatchMark
+import com.vinnovateit.latch.ui.components.LatchHomeTopBar
+import com.vinnovateit.latch.ui.components.WindowControlButtons
 import com.vinnovateit.latch.ui.navigation.LatchDestination
 import com.vinnovateit.latch.ui.screens.AboutScreen
 import com.vinnovateit.latch.ui.screens.CredentialsScreen
@@ -61,6 +63,8 @@ fun LatchRoot(
     sessions: SessionRepository,
     platform: PlatformServices,
     updateState: UpdateState,
+    onMinimize: () -> Unit,
+    onClose: () -> Unit,
     onCheckForUpdates: () -> Unit,
     onDownloadUpdate: () -> Unit,
     onCancelDownload: () -> Unit,
@@ -77,47 +81,9 @@ fun LatchRoot(
             var showAbout by remember { mutableStateOf(false) }
             var destination by remember { mutableStateOf(LatchDestination.Home) }
 
-            if (!hasCredentials || editingCredentials) {
-                CredentialsScreen(
-                    onSave = { userId, password ->
-                        platform.credentials.save(userId, password)
-                        hasCredentials = true
-                        editingCredentials = false
-                    },
-                    // Nothing to go back to on first run. When re-entered from
-                    // Settings the old credentials are left untouched until a new
-                    // pair is actually saved, so cancelling is safe.
-                    onCancel = if (hasCredentials) {
-                        { editingCredentials = false }
-                    } else {
-                        null
-                    },
-                )
-                return@Surface
-            }
-
-            // Reference material, not a nav destination -- takes over the whole
-            // window the same way CredentialsScreen does above, rather than
-            // living in LatchDestination/the rail.
-            if (showAbout) {
-                AboutScreen(
-                    platform = platform,
-                    onBack = { showAbout = false },
-                )
-                return@Surface
-            }
-
             // Surfaced the moment an update is found rather than left for
-            // someone to stumble on in Settings. Only the states worth
-            // interrupting for take the window over; a background check that
-            // is still Checking, came back UpToDate, or failed silently
-            // (Error while nothing was already showing -- see the Error branch
-            // below) leaves the user on whatever screen they were on.
+            // someone to stumble on in Settings.
             var showUpdateScreen by remember { mutableStateOf(false) }
-
-            // Remembered so a failed install can be retried directly instead of
-            // re-downloading -- the Error state itself only carries a message,
-            // not the path the failure happened on.
             var lastDownloadedPath by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(updateState) {
@@ -126,27 +92,14 @@ fun LatchRoot(
                     is UpdateState.Downloading,
                     is UpdateState.Downloaded,
                     -> true
-                    // A download/install failure should stay on screen so the
-                    // error and Retry button are visible; a failed background
-                    // check must not pop the takeover up out of nowhere.
                     is UpdateState.Error -> showUpdateScreen
                     else -> false
                 }
 
-                // A fresh download invalidates whatever path was remembered
-                // from a previous cycle -- GithubUpdater deletes the file on
-                // failure, so retrying against a stale path here would hand
-                // msiexec a file that no longer exists.
                 if (updateState is UpdateState.UpdateAvailable || updateState is UpdateState.Downloading) {
                     lastDownloadedPath = null
                 }
 
-                // Installing is automatic once the file is on disk -- there is
-                // nothing left for the user to decide at this point, and the
-                // MSI silently installing (see GithubUpdater.installAndExit) is
-                // the whole point of getting here. onInstallUpdate exits the
-                // process on success; a failure surfaces as UpdateState.Error
-                // and the Downloaded->Error case above keeps the takeover up.
                 val downloaded = updateState as? UpdateState.Downloaded
                 if (downloaded != null) {
                     lastDownloadedPath = downloaded.filePath
@@ -154,71 +107,65 @@ fun LatchRoot(
                 }
             }
 
-            if (showUpdateScreen) {
-                UpdateScreen(
-                    state = updateState,
-                    onDownload = onDownloadUpdate,
-                    onCancelDownload = onCancelDownload,
-                    // Retrying after a download failure means fetching again;
-                    // after an install failure the file is already on disk, so
-                    // retrying means handing that same path to msiexec again.
-                    onRetry = {
-                        val path = lastDownloadedPath
-                        if (path != null) onInstallUpdate(path) else onDownloadUpdate()
-                    },
-                    onSkip = onDismissUpdate,
-                )
-                return@Surface
+            val currentRootScreen = when {
+                !hasCredentials || editingCredentials -> "Credentials"
+                showAbout -> "About"
+                showUpdateScreen -> "Update"
+                else -> "Main"
             }
 
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val railVisible = maxWidth >= RailBreakpoint
-
-                Row(modifier = Modifier.fillMaxSize()) {
-                    if (railVisible) {
-                        LatchNavigationRail(
-                            selected = destination,
-                            onSelect = { destination = it },
-                        )
-                    }
-
-                    AnimatedContent(
-                        targetState = destination,
-                        transitionSpec = {
-                            fadeIn(tween(220)) togetherWith fadeOut(tween(160))
-                        },
-                        label = "LatchDestination",
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                    ) { current ->
-                        val back: (() -> Unit)? = if (railVisible) {
-                            null
+            Box(modifier = Modifier.fillMaxSize()) {
+                AnimatedContent(
+                    targetState = currentRootScreen,
+                    transitionSpec = {
+                        if (targetState != "Main") {
+                            // Forward takeover transition: slide in from right to left
+                            (androidx.compose.animation.slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth },
+                                animationSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            ) + fadeIn(tween(110))) togetherWith (
+                                androidx.compose.animation.slideOutHorizontally(
+                                    targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                                    animationSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                ) + fadeOut(tween(90))
+                            )
                         } else {
-                            { destination = LatchDestination.Home }
+                            // Return to main transition: slide out to right
+                            (androidx.compose.animation.slideInHorizontally(
+                                initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                                animationSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                            ) + fadeIn(tween(110))) togetherWith (
+                                androidx.compose.animation.slideOutHorizontally(
+                                    targetOffsetX = { fullWidth -> fullWidth },
+                                    animationSpec = tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                ) + fadeOut(tween(90))
+                            )
+                        }
+                    },
+                    label = "LatchRootScreen",
+                    modifier = Modifier.fillMaxSize(),
+                ) { rootScreen ->
+                    when (rootScreen) {
+                        "Credentials" -> {
+                            CredentialsScreen(
+                                onSave = { userId, password ->
+                                    platform.credentials.save(userId, password)
+                                    hasCredentials = true
+                                    editingCredentials = false
+                                },
+                                onCancel = if (hasCredentials) {
+                                    { editingCredentials = false }
+                                } else {
+                                    null
+                                },
+                            )
                         }
 
-                        when (current) {
-                            LatchDestination.Home -> HomeScreen(
-                                controller = controller,
-                                sessions = sessions,
+                        "About" -> {
+                            AboutScreen(
                                 platform = platform,
-                                onOpenStats = { destination = LatchDestination.Stats },
-                                onOpenSettings = { destination = LatchDestination.Settings },
-                                onOpenAbout = { showAbout = true },
-                                showNavigationMenuItems = !railVisible,
-                            )
-
-                            LatchDestination.Stats -> StatsScreen(
-                                sessions = sessions,
-                                onBack = back,
-                                onClearHistory = { sessions.clearHistory() },
-                            )
-
-                            LatchDestination.Settings -> SettingsScreen(
-                                platform = platform,
+                                onBack = { showAbout = false },
                                 updateState = updateState,
-                                onBack = back,
-                                onNavigateToCredentials = { editingCredentials = true },
-                                onClearStats = { sessions.clearHistory() },
                                 onCheckForUpdates = onCheckForUpdates,
                                 onDownloadUpdate = onDownloadUpdate,
                                 onCancelDownload = onCancelDownload,
@@ -226,8 +173,111 @@ fun LatchRoot(
                                 onDismissUpdate = onDismissUpdate,
                             )
                         }
+
+                        "Update" -> {
+                            UpdateScreen(
+                                state = updateState,
+                                onDownload = onDownloadUpdate,
+                                onCancelDownload = onCancelDownload,
+                                onRetry = {
+                                    val path = lastDownloadedPath
+                                    if (path != null) onInstallUpdate(path) else onDownloadUpdate()
+                                },
+                                onSkip = onDismissUpdate,
+                            )
+                        }
+
+                        else -> {
+                            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                val railVisible = maxWidth >= RailBreakpoint
+
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    if (railVisible) {
+                                        LatchNavigationRail(
+                                            selected = destination,
+                                            onSelect = { destination = it },
+                                        )
+                                    }
+
+                                    AnimatedContent(
+                                        targetState = destination,
+                                        transitionSpec = {
+                                            if (targetState.ordinal > initialState.ordinal) {
+                                                // Slide in from right when opening a deeper section
+                                                (androidx.compose.animation.slideInHorizontally(
+                                                    initialOffsetX = { fullWidth -> fullWidth },
+                                                    animationSpec = tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                                ) + fadeIn(tween(100))) togetherWith (
+                                                    androidx.compose.animation.slideOutHorizontally(
+                                                        targetOffsetX = { fullWidth -> -fullWidth / 3 },
+                                                        animationSpec = tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                                    ) + fadeOut(tween(90))
+                                                )
+                                            } else {
+                                                // Slide in from left when returning to previous section
+                                                (androidx.compose.animation.slideInHorizontally(
+                                                    initialOffsetX = { fullWidth -> -fullWidth / 3 },
+                                                    animationSpec = tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                                ) + fadeIn(tween(100))) togetherWith (
+                                                    androidx.compose.animation.slideOutHorizontally(
+                                                        targetOffsetX = { fullWidth -> fullWidth },
+                                                        animationSpec = tween(150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                                                    ) + fadeOut(tween(90))
+                                                )
+                                            }
+                                        },
+                                        label = "LatchDestination",
+                                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    ) { current ->
+                                        val back: (() -> Unit)? = if (railVisible) {
+                                            null
+                                        } else {
+                                            { destination = LatchDestination.Home }
+                                        }
+
+                                        when (current) {
+                                            LatchDestination.Home -> HomeScreen(
+                                                controller = controller,
+                                                sessions = sessions,
+                                                platform = platform,
+                                                onOpenStats = { destination = LatchDestination.Stats },
+                                                onOpenSettings = { destination = LatchDestination.Settings },
+                                                onOpenAbout = { showAbout = true },
+                                                showNavigationMenuItems = !railVisible,
+                                            )
+
+                                            LatchDestination.Stats -> StatsScreen(
+                                                sessions = sessions,
+                                                onBack = back,
+                                                onClearHistory = { sessions.clearHistory() },
+                                            )
+
+                                            LatchDestination.Settings -> SettingsScreen(
+                                                platform = platform,
+                                                updateState = updateState,
+                                                onBack = back,
+                                                onNavigateToCredentials = { editingCredentials = true },
+                                                onClearStats = { sessions.clearHistory() },
+                                                onCheckForUpdates = onCheckForUpdates,
+                                                onDownloadUpdate = onDownloadUpdate,
+                                                onCancelDownload = onCancelDownload,
+                                                onInstallUpdate = onInstallUpdate,
+                                                onDismissUpdate = onDismissUpdate,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+
+                // Window control buttons static overlay: always pinned to TopEnd
+                WindowControlButtons(
+                    onMinimize = onMinimize,
+                    onClose = onClose,
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.TopEnd),
+                )
             }
         }
     }
