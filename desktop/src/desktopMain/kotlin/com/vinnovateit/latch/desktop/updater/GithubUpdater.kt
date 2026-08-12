@@ -185,13 +185,44 @@ class GithubUpdater(
                 .start()
             true
         } else {
-            ProcessBuilder("xdg-open", packagePath).start()
+            val script = writeLinuxUpdateScript(packagePath)
+            ProcessBuilder("sh", script.absolutePath)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
             true
         }
     } catch (e: Exception) {
         logger.e("GithubUpdater", "Failed to launch installer", e)
         _state.value = UpdateState.Error("Failed to launch installer: ${e.message ?: "Unknown error"}")
         false
+    }
+
+    private fun writeLinuxUpdateScript(tarPath: String): File {
+        val script = File.createTempFile("latch-update-", ".sh")
+        script.setExecutable(true)
+        val s = "$"
+        script.writeText(
+            """
+            #!/usr/bin/env sh
+            sleep 1
+            TMP_TAR="$tarPath"
+            if [ -w /opt/latch ] || [ ${s}(id -u) -eq 0 ]; then
+                mkdir -p /opt/latch
+                tar -xzf "${s}TMP_TAR" -C /opt/latch --strip-components=1 2>/dev/null || tar -xzf "${s}TMP_TAR" -C /opt/latch
+                /opt/latch/bin/Latch &
+            elif command -v pkexec >/dev/null 2>&1; then
+                pkexec sh -c "mkdir -p /opt/latch && (tar -xzf \"${s}TMP_TAR\" -C /opt/latch --strip-components=1 2>/dev/null || tar -xzf \"${s}TMP_TAR\" -C /opt/latch)"
+                /opt/latch/bin/Latch &
+            else
+                LOCAL_OPT="${s}HOME/.local/share/latch"
+                mkdir -p "${s}LOCAL_OPT"
+                tar -xzf "${s}TMP_TAR" -C "${s}LOCAL_OPT" --strip-components=1 2>/dev/null || tar -xzf "${s}TMP_TAR" -C "${s}LOCAL_OPT"
+                "${s}LOCAL_OPT/bin/Latch" &
+            fi
+            """.trimIndent()
+        )
+        return script
     }
 
     private fun writeRelaunchScript(msiPath: String): File {

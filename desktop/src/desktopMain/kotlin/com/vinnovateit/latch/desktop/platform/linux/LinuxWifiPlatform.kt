@@ -20,8 +20,8 @@ class LinuxWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private companion object {
         const val TAG = "LinuxWifiPlatform"
-        const val POLL_INTERVAL_MS = 5_000L
-        const val CACHE_TTL_MS = 3_000L
+        const val POLL_INTERVAL_MS = 1_500L
+        const val CACHE_TTL_MS = 1_000L
         const val CMD_TIMEOUT_SEC = 5L
         const val ENABLE_SETTLE_ATTEMPTS = 6
         const val ENABLE_SETTLE_INTERVAL_MS = 1_000L
@@ -264,6 +264,7 @@ class LinuxWifiPlatform(private val logger: Logger) : WifiPlatform {
         }
 
         while (true) {
+            invalidate()
             val snap = snapshot()
             val key = if (snap.connected && snap.ssid != null && snap.interfaceName != null) {
                 "${snap.interfaceName}::${snap.ssid}"
@@ -273,9 +274,11 @@ class LinuxWifiPlatform(private val logger: Logger) : WifiPlatform {
 
             if (key != lastKey) {
                 if (lastKey != null) {
+                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection lost: $lastKey")
                     emit(WifiEvent.Lost(SimpleLinuxNetworkHandle(lastKey.substringBefore("::"))))
                 }
                 if (key != null) {
+                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection available: $key (SSID='${snap.ssid}')")
                     emit(WifiEvent.Available(SimpleLinuxNetworkHandle(snap.interfaceName!!)))
                 }
                 lastKey = key
