@@ -7,14 +7,25 @@
   <a href="https://github.com/vinnovateit/latch">
     <picture>
       <source srcset="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg">
-  	  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg">
+   	  <img alt="Project Logo" src="https://raw.githubusercontent.com/vinnovateit/latch/main/.github/assets/redLogoLatch.svg" width="120">
     </picture>
   </a>
 
-<h3 align="center">Latch</h3>
+  <h2 align="center">Latch</h2>
 
   <p align="center">
-    Android app that automates login to VIT hostel WiFi networks.
+    Cross-platform app that automates login to VIT hostel WiFi networks.
+    <br />
+    <br />
+    <a href="https://github.com/vinnovateit/latch/releases/latest">
+      <img src="https://img.shields.io/github/v/release/vinnovateit/latch?style=for-the-badge&logo=github&color=E53935&logoColor=white&label=Release" alt="Latest Release" />
+    </a>
+    <a href="https://github.com/vinnovateit/latch/releases">
+      <img src="https://img.shields.io/github/downloads/vinnovateit/latch/total?style=for-the-badge&logo=github&color=E53935&logoColor=white&label=Downloads" alt="Total Downloads" />
+    </a>
+    <a href="https://github.com/vinnovateit/latch/stargazers">
+      <img src="https://img.shields.io/github/stars/vinnovateit/latch?style=for-the-badge&logo=github&color=E53935&logoColor=white&label=Stars" alt="Stars" />
+    </a>
     <br /><br />
     <a href="https://github.com/vinnovateit/latch">Visit</a>
     &middot;
