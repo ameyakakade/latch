@@ -10,11 +10,15 @@ import kotlinx.coroutines.flow.flow
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-internal data class SimpleLinuxNetworkHandle(override val id: String) : NetworkHandle
+internal data class SimpleMacOSNetworkHandle(override val id: String) : NetworkHandle
+
+// Assuming 'en0' is wifi network device
+val interfaceName = "en0"
 
 /**
- * Linux Wi-Fi platform implementation leveraging standard Linux CLI toolchains
- * (`nmcli`, `iwgetid`, `ip route`, `rfkill`).
+'networksetup -listpreferredwirelessnetworks <device-name> (en0 for mba)' lists all saved wifi networks. 
+'system_profiler SPAirPortDataType' gives info about current connected wifi network and lists available wifi networks.
+'networksetup -setairportnetwork en0 <ssid> [pwd]' connects to network with name ssid
  */
 class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
 
@@ -45,6 +49,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
         lastFingerprint = null
     }
 
+    // Not implemented
     private fun getNetworkFingerprint(): String = try {
         val routeStr = File("/proc/net/route").takeIf { it.exists() }?.readText() ?: ""
         val operstate = File("/sys/class/net").listFiles()?.joinToString {
@@ -102,76 +107,30 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun checkWifiEnabled(): Boolean {
-        // Option 1: nmcli radio wifi
-        val nmcliRadio = runCommand("nmcli", "radio", "wifi")
+        // Option 1: networksetup
+        val nmcliRadio = runCommand("networksetup", "-getairportpower", interfaceName)
         if (nmcliRadio != null) {
-            return nmcliRadio.lowercase().contains("enabled")
-        }
-
-        // Option 2: rfkill
-        val rfkillOut = runCommand("rfkill", "list", "wifi")
-        if (rfkillOut != null) {
-            val softBlocked = rfkillOut.contains("Soft blocked: yes", ignoreCase = true)
-            val hardBlocked = rfkillOut.contains("Hard blocked: yes", ignoreCase = true)
-            return !softBlocked && !hardBlocked
-        }
-
-        // Option 3: Check wireless interface presence in sysfs
-        val netDir = File("/sys/class/net")
-        if (netDir.exists()) {
-            val hasWireless = netDir.listFiles()?.any { File(it, "wireless").exists() || File(it, "phy80211").exists() } == true
-            if (hasWireless) return true
+            return nmcliRadio.lowercase().contains("on")
         }
 
         return true
     }
 
     private fun resolveConnectedWifi(): Pair<String?, String?> {
-        // 1. Try nmcli dev wifi
-        val nmcliOut = runCommand("nmcli", "-t", "-f", "ACTIVE,SSID,DEVICE,TYPE", "dev", "wifi")
-        if (nmcliOut != null) {
-            for (line in nmcliOut.lines()) {
-                val parts = line.split(":")
-                if (parts.firstOrNull() == "yes" && parts.size >= 3) {
-                    val ssid = parts[1].replace("\\:", ":").trim().removeSurrounding("\"")
-                    val dev = parts[2]
-                    if (ssid.isNotEmpty()) {
-                        return Pair(dev, ssid)
-                    }
+        // Using 
+        val scanOut = runCommand("system_profiler", "SPAirPortDataType")
+
+        if (scanOut != null) {
+            var currNetSection = false
+            for (line in scanOut.lines()) {
+                if (line.contains("Current Network Information:", ignoreCase = true)) {
+                    currNetSection = true
+                    continue
                 }
-            }
-        }
-
-        // 2. Try nmcli connection show --active
-        val connOut = runCommand("nmcli", "-t", "-f", "NAME,DEVICE,TYPE", "connection", "show", "--active")
-        if (connOut != null) {
-            for (line in connOut.lines()) {
-                val parts = line.split(":")
-                if (parts.size >= 3 && (parts[2].contains("wireless", ignoreCase = true) || parts[2].contains("wifi", ignoreCase = true))) {
-                    val name = parts[0].replace("\\:", ":").trim().removeSurrounding("\"")
-                    val dev = parts[1]
-                    if (name.isNotEmpty()) {
-                        return Pair(dev, name)
-                    }
-                }
-            }
-        }
-
-        // 3. Fallback: iwgetid
-        val ssid = runCommand("iwgetid", "-r")?.trim()?.removeSurrounding("\"")
-        val dev = runCommand("iwgetid", "-c")?.split("\\s+".toRegex())?.firstOrNull() ?: findFirstWirelessInterface()
-        if (!ssid.isNullOrEmpty()) {
-            return Pair(dev, ssid)
-        }
-
-        // 4. Fallback: If gateway route exists via wireless interface, get active SSID via nmcli dev show
-        val iface = findFirstWirelessInterface()
-        if (iface != null) {
-            val devShow = runCommand("nmcli", "-t", "-f", "GENERAL.CONNECTION", "dev", "show", iface)
-            if (!devShow.isNullOrEmpty() && devShow != "--") {
-                val connName = devShow.substringAfter(":").trim().removeSurrounding("\"")
-                if (connName.isNotEmpty() && connName != "--") {
-                    return Pair(iface, connName)
+                if (currNetSection) {
+                    var ssid = line.trim().dropLast(1)
+                    logger.d(TAG, "Connected WiFi: ${ssid}")
+                    return Pair(interfaceName, ssid)
                 }
             }
         }
@@ -180,6 +139,8 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun findFirstWirelessInterface(): String? {
+        logger.w(TAG, "Find wireless interface not implemented.")
+        return null
         val netDir = File("/sys/class/net")
         if (netDir.exists()) {
             return netDir.listFiles()
@@ -190,6 +151,8 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun resolveGateway(iface: String?): String? {
+        logger.w(TAG, "Resolve gateway not implemented.")
+        return null
         val routeOut = runCommand("ip", "route", "show", "default")
         if (routeOut != null) {
             val parts = routeOut.split("\\s+".toRegex())
@@ -204,25 +167,31 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun connectToBestVitNetwork(): Boolean {
         enableWifi()
         logger.d(TAG, "Scanning Wi-Fi access points for -VIT / VIT networks...")
-        val scanOut = runCommand("nmcli", "-t", "-f", "SSID,BSSID,SIGNAL", "dev", "wifi", "list", "--rescan", "yes")
-            ?: runCommand("nmcli", "-t", "-f", "SSID,BSSID,SIGNAL", "dev", "wifi", "list")
+        val networkDevice = "en0"
+        val scanOut = runCommand("system_profiler", "SPAirPortDataType")
 
         val apList = mutableListOf<com.vinnovateit.latch.core.platform.WifiAccessPoint>()
         if (scanOut != null) {
+            var wifiSection = false
+            var indentLevel = 0
             for (line in scanOut.lines()) {
-                val parts = line.split(":")
-                if (parts.size >= 3) {
-                    val ssid = parts[0].replace("\\:", ":").trim()
-                    val bssid = parts[1].replace("\\:", ":").trim()
-                    val signal = parts[2].toIntOrNull() ?: 0
-                    if (ssid.isNotEmpty() && bssid.isNotEmpty()) {
-                        apList.add(com.vinnovateit.latch.core.platform.WifiAccessPoint(ssid, bssid, signal))
-                    }
+                if (line.contains("Other Local Wi-Fi Networks:", ignoreCase = true)) {
+                    wifiSection = true
+                    continue
+                }
+                if (!wifiSection) continue
+                val currentIndent = countIndent(line)
+                if (indentLevel == 0) indentLevel = currentIndent
+                if (currentIndent < indentLevel) break
+                if (currentIndent > indentLevel) continue
+                var ssid = line.trim().dropLast(1)
+                val bssid = "" // Cannot figure out how to get bssid
+                val signal = 0 // Cannot figure out how to get signal
+                if (ssid.isNotEmpty()) {
+                    apList.add(com.vinnovateit.latch.core.platform.WifiAccessPoint(ssid, bssid, signal))
                 }
             }
         }
-
-        logger.d(TAG, "Stuff: '${scanOut}'")
 
         val vitAps = apList.filter { ap ->
             ap.ssid.endsWith("-VIT", ignoreCase = true) || ap.ssid.contains("VIT", ignoreCase = true)
@@ -235,9 +204,11 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
         }
 
         logger.d(TAG, "Best VIT AP found: SSID='${bestAp.ssid}', BSSID='${bestAp.bssid}', Signal=${bestAp.signalPercentage}%")
-        runCommand("nmcli", "dev", "wifi", "connect", bestAp.bssid)
-            ?: runCommand("nmcli", "dev", "wifi", "connect", bestAp.ssid, "bssid", bestAp.bssid)
-            ?: runCommand("nmcli", "dev", "wifi", "connect", bestAp.ssid)
+        runCommand(
+            "networksetup",
+            "-setairportnetwork", "en0",
+            bestAp.ssid
+        )
 
         invalidate()
         repeat(ENABLE_SETTLE_ATTEMPTS) {
@@ -272,7 +243,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun gatewayIp(): String? = snapshot().gateway
 
     override fun activeHandle(): NetworkHandle? =
-        snapshot().takeIf { it.connected }?.interfaceName?.let { SimpleLinuxNetworkHandle(it) }
+        snapshot().takeIf { it.connected }?.interfaceName?.let { SimpleMacOSNetworkHandle(it) }
 
     override fun wifiInterfaceName(): String? = snapshot().interfaceName
 
@@ -296,15 +267,24 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
             if (key != lastKey) {
                 if (lastKey != null) {
                     logger.d(TAG, "[NetworkEvent] Wi-Fi connection lost: $lastKey")
-                    emit(WifiEvent.Lost(SimpleLinuxNetworkHandle(lastKey.substringBefore("::"))))
+                    emit(WifiEvent.Lost(SimpleMacOSNetworkHandle(lastKey.substringBefore("::"))))
                 }
                 if (key != null) {
                     logger.d(TAG, "[NetworkEvent] Wi-Fi connection available: $key (SSID='${snap.ssid}')")
-                    emit(WifiEvent.Available(SimpleLinuxNetworkHandle(snap.interfaceName!!)))
+                    emit(WifiEvent.Available(SimpleMacOSNetworkHandle(snap.interfaceName!!)))
                 }
                 lastKey = key
             }
             delay(POLL_INTERVAL_MS)
         }
     }
+}
+
+fun countIndent(a: String): Int {
+    var count = 0
+    for(character in a) {
+        if (character == ' ') count++
+        else break
+    }
+    return count
 }
