@@ -94,7 +94,16 @@ class GithubUpdater(
                 return@withContext
             }
             val latestTag = release.tag_name.removePrefix("v")
-            if (compareVersions(latestTag, buildInfo.versionName) <= 0) {
+            val cmp = compareVersions(latestTag, buildInfo.versionName)
+            if (cmp == null) {
+                logger.e(
+                    "GithubUpdater",
+                    "Could not compare versions: latest='$latestTag', current='${buildInfo.versionName}'",
+                )
+                _state.value = UpdateState.Error("Version check failed: unexpected version format")
+                return@withContext
+            }
+            if (cmp <= 0) {
                 logger.d("GithubUpdater", "Already up to date ($latestTag)")
                 _state.value = UpdateState.UpToDate
                 SettingsManager.lastUpdateCheckEpochDay = today
@@ -344,9 +353,9 @@ class GithubUpdater(
         return json.decodeFromString(conn.inputStream.bufferedReader().readText())
     }
 
-    private fun compareVersions(a: String, b: String): Int {
-        val sa = parseSemver(a) ?: return a.compareTo(b)
-        val sb = parseSemver(b) ?: return a.compareTo(b)
+    private fun compareVersions(a: String, b: String): Int? {
+        val sa = parseSemver(a) ?: return null
+        val sb = parseSemver(b) ?: return null
         return sa.compareTo(sb)
     }
 
