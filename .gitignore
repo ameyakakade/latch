@@ -13,4 +13,6 @@ app/build/
 app/release/
 app/debug/
 desktop/build/
-.kotlin/
+.kotlin/node_modules/
+
+node_modules/
