@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.google.android.play.core.appupdate.AppUpdateManager
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.InstallStateUpdatedListener
 import com.google.android.play.core.install.model.AppUpdateType
 import com.google.android.play.core.install.model.InstallStatus
 import com.google.android.play.core.install.model.UpdateAvailability
@@ -30,6 +31,11 @@ class MainActivity : ComponentActivity() {
     private val wifiStatusViewModel: WiFiStatusViewModel by viewModels()
     private lateinit var appUpdateManager: AppUpdateManager
     private var updateDownloaded = androidx.compose.runtime.mutableStateOf(false)
+    private val installStateListener = InstallStateUpdatedListener { state ->
+        if (state.installStatus() == InstallStatus.DOWNLOADED) {
+            updateDownloaded.value = true
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -38,6 +44,7 @@ class MainActivity : ComponentActivity() {
         SettingsManager.initialize(this)
 
         appUpdateManager = AppUpdateManagerFactory.create(this)
+        appUpdateManager.registerListener(installStateListener)
         checkForAppUpdate()
 
         // Perform a silent check on launch to detect if already authenticated
@@ -71,8 +78,13 @@ class MainActivity : ComponentActivity() {
                             title = { androidx.compose.material3.Text("Update Ready") },
                             text = { androidx.compose.material3.Text("An update has been downloaded and is ready to be installed. Restart the app to apply the update.") },
                             confirmButton = {
-                                androidx.compose.material3.TextButton(onClick = { 
-                                    appUpdateManager.completeUpdate() 
+                                androidx.compose.material3.TextButton(onClick = {
+                                    appUpdateManager.completeUpdate()
+                                        .addOnSuccessListener { updateDownloaded.value = false }
+                                        .addOnFailureListener { e ->
+                                            e.printStackTrace()
+                                            updateDownloaded.value = false
+                                        }
                                 }) {
                                     androidx.compose.material3.Text("Restart")
                                 }
@@ -118,12 +130,6 @@ class MainActivity : ComponentActivity() {
                     e.printStackTrace()
                 }
             }
-
-            appUpdateManager.registerListener { state ->
-                if (state.installStatus() == InstallStatus.DOWNLOADED) {
-                    updateDownloaded.value = true
-                }
-            }
         }
     }
 
@@ -140,6 +146,11 @@ class MainActivity : ComponentActivity() {
                     updateDownloaded.value = true
                 }
             }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        appUpdateManager.unregisterListener(installStateListener)
     }
 
     companion object {
