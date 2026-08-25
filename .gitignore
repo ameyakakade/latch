@@ -13,6 +13,9 @@ app/build/
 app/release/
 app/debug/
 desktop/build/
-.kotlin/node_modules/
-
+.kotlin/
 node_modules/
+*.log
+*.pem
+*.jks
+*.keystore
