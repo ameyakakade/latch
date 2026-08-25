@@ -18,6 +18,9 @@ import com.vinnovateit.latch.desktop.platform.linux.LinuxWifiPlatform
 import com.vinnovateit.latch.desktop.platform.windows.DpapiCredentialStore
 import com.vinnovateit.latch.desktop.platform.windows.WindowsSystemActions
 import com.vinnovateit.latch.desktop.platform.windows.WindowsWifiPlatform
+import com.vinnovateit.latch.desktop.platform.macos.MacOSCredentialStore
+import com.vinnovateit.latch.desktop.platform.macos.MacOSSystemActions
+import com.vinnovateit.latch.desktop.platform.macos.MacOSWifiPlatform
 
 private object DesktopBuildInfo : BuildInfo {
     override val versionName: String = "1.3.7"
@@ -57,7 +60,7 @@ class DesktopPlatformServices(
     override val wifi: WifiPlatform = when {
         AppPaths.isWindows -> WindowsWifiPlatform(logger)
         AppPaths.isLinux -> LinuxWifiPlatform(logger)
-        else -> LinuxWifiPlatform(logger) // Default fallback
+        else -> MacOSWifiPlatform(logger) // Default fallback
     }
 
     override val counters: ByteCounterSource = OshiByteCounters(wifi, logger)
