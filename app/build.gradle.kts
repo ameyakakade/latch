@@ -57,6 +57,8 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core"))
+
     // Core and Lifecycle
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

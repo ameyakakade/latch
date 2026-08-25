@@ -1,0 +1,1 @@
+com.vinnovateit.latch.core
