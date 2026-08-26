@@ -63,7 +63,7 @@ class JsonKeyValueStore(
     private fun load() {
         if (!file.exists()) return
         try {
-            var root = json.parseToJsonElement(file.readText()) as? JsonObject ?: return
+            val root = json.parseToJsonElement(file.readText()) as? JsonObject ?: return
             root.forEach { (key, element) ->
                 when (element) {
                     is JsonPrimitive -> {
