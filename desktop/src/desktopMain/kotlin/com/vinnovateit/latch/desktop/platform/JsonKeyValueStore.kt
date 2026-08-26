@@ -10,6 +10,15 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import java.io.File
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.*
+import kotlinx.coroutines.sync.*
+
 /**
  * Settings persistence as a plain JSON file.
  *
@@ -36,14 +45,25 @@ class JsonKeyValueStore(
         data class StrSet(val value: Set<String>) : JsonPrimitiveOrArray
     }
 
+    private val scope        = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val writeChannel = Channel<JsonObject> ()
+
     init {
         load()
+        // Load file then launch writer coroutine.
+        scope.launch {
+            for (jsonObj in writeChannel) {
+                file.parentFile?.mkdirs()
+                file.writeText(json.encodeToString(JsonObject.serializer(), jsonObj))
+                logger.e(TAG, "Saved settings to file.")
+            }
+        }
     }
 
     private fun load() {
         if (!file.exists()) return
         try {
-            val root = json.parseToJsonElement(file.readText()) as? JsonObject ?: return
+            var root = json.parseToJsonElement(file.readText()) as? JsonObject ?: return
             root.forEach { (key, element) ->
                 when (element) {
                     is JsonPrimitive -> {
@@ -83,8 +103,9 @@ class JsonKeyValueStore(
                     }
                 }
             }
-            file.parentFile?.mkdirs()
-            file.writeText(json.encodeToString(JsonObject.serializer(), obj))
+            scope.launch {
+                writeChannel.send(obj)
+            }
         } catch (e: Throwable) {
             logger.e(TAG, "Failed to persist settings", e)
         }
