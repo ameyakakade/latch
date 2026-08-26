@@ -20,7 +20,7 @@ import com.vinnovateit.latch.desktop.platform.windows.WindowsSystemActions
 import com.vinnovateit.latch.desktop.platform.windows.WindowsWifiPlatform
 
 private object DesktopBuildInfo : BuildInfo {
-    override val versionName: String = "1.3.7"
+    override val versionName: String = "1.3.8"
     override val isDebug: Boolean = System.getProperty("latch.debug") == "true"
     override val isInstalled: Boolean = InstalledBuild.isInstalled
 }

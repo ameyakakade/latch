@@ -84,13 +84,11 @@ jobs:
           prerelease: false
           make_latest: true
           body: |
-            btw, available for Linux now.
+            Update checker fix.
 
             What's New
 
-            - Interface updates for a more immersive experience
-            - Fixed: Wi-Fi doesn't connect sometimes
-            - New: Speed is now max 20Mbps ;)
+            - Fixed: the app could show "update available" even when you already had the latest version
 
             Download the compatible version for your machine from the assets below.
           files: |

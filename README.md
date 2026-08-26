@@ -139,7 +139,7 @@ Follow these steps to get a local copy of Latch up and running.
    This installs Latch to `/opt/latch` (system-wide, if run with `sudo` access) or `~/.local/share/latch` (user-local otherwise), and registers a desktop entry.
 2. Launch Latch from your application menu, or run `latch` in a terminal
 
-   To install manually instead, download `latch-1.3.7-linux-x64.tar.gz` from the [latest release](https://github.com/vinnovateit/latch/releases/latest) and extract it.
+   To install manually instead, download `latch-1.3.8-linux-x64.tar.gz` from the [latest release](https://github.com/vinnovateit/latch/releases/latest) and extract it.
 
 ### **Android**
 
@@ -184,7 +184,7 @@ No pre-built APK is currently published for the Android app. To use it today, bu
 4. To test a locally-built (or otherwise custom) tarball without publishing a release, point `install.sh` at it directly instead of letting it download from GitHub:
 
    ```sh
-   LATCH_LOCAL_TAR=desktop/build/distributions/latch-1.3.7-linux-x64.tar.gz sh install.sh
+   LATCH_LOCAL_TAR=desktop/build/distributions/latch-1.3.8-linux-x64.tar.gz sh install.sh
    ```
    This module is built as part of the same Gradle project as `:app`, so the Android SDK still needs to be configured (see the Android app prerequisites above) even though the desktop app itself doesn't run on Android.
 
