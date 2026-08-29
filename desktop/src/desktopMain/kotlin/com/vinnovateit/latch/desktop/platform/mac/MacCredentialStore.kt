@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform.macos
+package com.vinnovateit.latch.desktop.platform.mac
 
 import com.vinnovateit.latch.core.platform.CredentialStore
 import com.vinnovateit.latch.core.platform.Logger
@@ -22,7 +22,7 @@ private data class StoredCreds(val userId: String, val password: String)
  * Linux credential storage leveraging Secret Service API (`secret-tool`) when available,
  * with fallback to AES-256 GCM encrypted storage with strict POSIX 0600 file permissions.
  */
-class MacOSCredentialStore(
+class MacCredentialStore(
     private val file: File,
     private val logger: Logger,
 ) : CredentialStore {

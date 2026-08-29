@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform.macos
+package com.vinnovateit.latch.desktop.platform.mac
 
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.SystemActions
@@ -8,12 +8,12 @@ import java.io.File
 import java.net.URI
 
 /**
- * MacOS implementation of system actions (opening settings(working), opening URLs(not working), XDG autostart(not working)).
+ * Mac implementation of system actions (opening settings(working), opening URLs(not working), XDG autostart(not working)).
  */
-class MacOSSystemActions(private val logger: Logger) : SystemActions {
+class MacSystemActions(private val logger: Logger) : SystemActions {
 
     private companion object {
-        const val TAG = "MacOSSystemActions"
+        const val TAG = "MacSystemActions"
         const val DESKTOP_FILE_NAME = "latch.desktop"
     }
 
@@ -39,7 +39,7 @@ class MacOSSystemActions(private val logger: Logger) : SystemActions {
     }
 
     override fun openUrl(url: String) {
-        if (tryExec(arrayOf("xdg-open", url))) return
+        if (tryExec(arrayOf("open", url))) return
         runCatching { Desktop.getDesktop().browse(URI(url)) }
             .onFailure { logger.e(TAG, "Could not open URL: $url", it) }
     }

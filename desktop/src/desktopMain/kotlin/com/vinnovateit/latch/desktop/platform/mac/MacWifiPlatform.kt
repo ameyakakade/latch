@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform.macos
+package com.vinnovateit.latch.desktop.platform.mac
 
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.NetworkHandle
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.flow
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-internal data class SimpleMacOSNetworkHandle(override val id: String) : NetworkHandle
+internal data class SimpleMacNetworkHandle(override val id: String) : NetworkHandle
 
 // Assuming 'en0' is wifi network device
 val interfaceName = "en0"
@@ -20,10 +20,10 @@ val interfaceName = "en0"
 'system_profiler SPAirPortDataType' gives info about current connected wifi network and lists available wifi networks.
 'networksetup -setairportnetwork en0 <ssid> [pwd]' connects to network with name ssid
  */
-class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
+class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private companion object {
-        const val TAG = "MacOSWifiPlatform"
+        const val TAG = "MacWifiPlatform"
         const val POLL_INTERVAL_MS = 1_500L
         const val CACHE_TTL_MS = 1_000L
         const val CMD_TIMEOUT_SEC = 5L
@@ -239,7 +239,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun gatewayIp(): String? = snapshot().gateway
 
     override fun activeHandle(): NetworkHandle? =
-        snapshot().takeIf { it.connected }?.interfaceName?.let { SimpleMacOSNetworkHandle(it) }
+        snapshot().takeIf { it.connected }?.interfaceName?.let { SimpleMacNetworkHandle(it) }
 
     override fun wifiInterfaceName(): String? = snapshot().interfaceName
 
@@ -263,11 +263,11 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
             if (key != lastKey) {
                 if (lastKey != null) {
                     logger.d(TAG, "[NetworkEvent] Wi-Fi connection lost: $lastKey")
-                    emit(WifiEvent.Lost(SimpleMacOSNetworkHandle(lastKey.substringBefore("::"))))
+                    emit(WifiEvent.Lost(SimpleMacNetworkHandle(lastKey.substringBefore("::"))))
                 }
                 if (key != null) {
                     logger.d(TAG, "[NetworkEvent] Wi-Fi connection available: $key (SSID='${snap.ssid}')")
-                    emit(WifiEvent.Available(SimpleMacOSNetworkHandle(snap.interfaceName!!)))
+                    emit(WifiEvent.Available(SimpleMacNetworkHandle(snap.interfaceName!!)))
                 }
                 lastKey = key
             }

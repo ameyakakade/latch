@@ -1,4 +1,4 @@
-package com.vinnovateit.latch.desktop.platform.macos
+package com.vinnovateit.latch.desktop.platform.mac
 
 import com.sun.jna.Callback
 import com.sun.jna.Library

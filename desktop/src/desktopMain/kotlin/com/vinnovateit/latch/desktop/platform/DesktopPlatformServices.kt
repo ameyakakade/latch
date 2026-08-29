@@ -18,9 +18,9 @@ import com.vinnovateit.latch.desktop.platform.linux.LinuxWifiPlatform
 import com.vinnovateit.latch.desktop.platform.windows.DpapiCredentialStore
 import com.vinnovateit.latch.desktop.platform.windows.WindowsSystemActions
 import com.vinnovateit.latch.desktop.platform.windows.WindowsWifiPlatform
-import com.vinnovateit.latch.desktop.platform.macos.MacOSCredentialStore
-import com.vinnovateit.latch.desktop.platform.macos.MacOSSystemActions
-import com.vinnovateit.latch.desktop.platform.macos.MacOSWifiPlatform
+import com.vinnovateit.latch.desktop.platform.mac.MacCredentialStore
+import com.vinnovateit.latch.desktop.platform.mac.MacSystemActions
+import com.vinnovateit.latch.desktop.platform.mac.MacWifiPlatform
 
 private object DesktopBuildInfo : BuildInfo {
     override val versionName: String = "1.3.8"
@@ -54,13 +54,15 @@ class DesktopPlatformServices(
     override val credentials: CredentialStore = when {
         AppPaths.isWindows -> DpapiCredentialStore(AppPaths.credentialsFile, logger)
         AppPaths.isLinux -> LinuxCredentialStore(AppPaths.credentialsFile, logger)
+        AppPaths.isMac -> MacCredentialStore(AppPaths.credentialsFile, logger)
         else -> LinuxCredentialStore(AppPaths.credentialsFile, logger) // Default fallback
     }
 
     override val wifi: WifiPlatform = when {
         AppPaths.isWindows -> WindowsWifiPlatform(logger)
         AppPaths.isLinux -> LinuxWifiPlatform(logger)
-        else -> MacOSWifiPlatform(logger) // Default fallback
+        AppPaths.isMac -> MacWifiPlatform(logger)
+        else -> LinuxWifiPlatform(logger) // Default fallback
     }
 
     override val counters: ByteCounterSource = OshiByteCounters(wifi, logger)
@@ -68,7 +70,8 @@ class DesktopPlatformServices(
     override val systemActions: SystemActions = when {
         AppPaths.isWindows -> WindowsSystemActions(logger)
         AppPaths.isLinux -> LinuxSystemActions(logger)
-        else -> MacOSSystemActions(logger) // Default fallback
+        AppPaths.isMac -> MacSystemActions(logger)
+        else -> LinuxSystemActions(logger) // Default fallback
     }
 
     override val httpTransport: HttpTransport = DesktopHttpTransport()
