@@ -1,6 +1,9 @@
 package com.vinnovateit.latch.features.about
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -39,6 +42,16 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.util.TooltipHint
+
+private fun openUrlSafely(context: Context, url: String, newTask: Boolean = false) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+        if (newTask) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(context, "No app found to open this link", Toast.LENGTH_SHORT).show()
+    }
+}
 
 data class TeamMember(
     val name: String,
@@ -99,8 +112,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
-                                val intent = Intent(Intent.ACTION_VIEW, "https://vinnovateit.com".toUri())
-                                context.startActivity(intent)
+                                openUrlSafely(context, "https://vinnovateit.com")
                             },
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
@@ -121,8 +133,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
-                                val intent = Intent(Intent.ACTION_VIEW, "https://www.linkedin.com/company/v-innovate-it/".toUri())
-                                context.startActivity(intent)
+                                openUrlSafely(context, "https://www.linkedin.com/company/v-innovate-it/")
                             },
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
@@ -135,8 +146,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
-                                val intent = Intent(Intent.ACTION_VIEW, "https://github.com/vinnovateit".toUri())
-                                context.startActivity(intent)
+                                openUrlSafely(context, "https://github.com/vinnovateit")
                             },
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
@@ -149,8 +159,7 @@ fun MeetTheTeamPage(onBackClick: () -> Unit) {
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
-                                val intent = Intent(Intent.ACTION_VIEW, "https://www.instagram.com/vinnovateit/".toUri())
-                                context.startActivity(intent)
+                                openUrlSafely(context, "https://www.instagram.com/vinnovateit/")
                             },
                         colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary)
                     )
@@ -331,9 +340,7 @@ fun TeamMemberCard(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, teamMember.githubUrl.toUri())
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
+                            openUrlSafely(context, teamMember.githubUrl, newTask = true)
                         }
                 ) {
                     Image(
@@ -350,9 +357,7 @@ fun TeamMemberCard(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
-                            val intent = Intent(Intent.ACTION_VIEW, teamMember.linkedinUrl.toUri())
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            context.startActivity(intent)
+                            openUrlSafely(context, teamMember.linkedinUrl, newTask = true)
                         }
                 ) {
                     Image(
@@ -406,11 +411,7 @@ fun ContributingSection() {
     // GitHub button
     OutlinedButton(
         onClick = {
-            val intent = Intent(
-                Intent.ACTION_VIEW,
-                "https://github.com/vinnovateit/latch".toUri()
-            )
-            context.startActivity(intent)
+            openUrlSafely(context, "https://github.com/vinnovateit/latch")
         },
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
         colors = ButtonDefaults.outlinedButtonColors(

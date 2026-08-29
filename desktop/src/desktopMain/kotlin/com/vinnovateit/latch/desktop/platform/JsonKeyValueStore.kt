@@ -10,6 +10,12 @@ import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import java.io.File
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.*
+
 /**
  * Settings persistence as a plain JSON file.
  *
@@ -36,8 +42,20 @@ class JsonKeyValueStore(
         data class StrSet(val value: Set<String>) : JsonPrimitiveOrArray
     }
 
+    private val scope        = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val writeChannel = Channel<JsonObject>(10)
+    // Channel's buffer has size 10.
+
     init {
         load()
+        // Load file then launch writer coroutine.
+        scope.launch {
+            for (jsonObj in writeChannel) {
+                file.parentFile?.mkdirs()
+                file.writeText(json.encodeToString(JsonObject.serializer(), jsonObj))
+                logger.d(TAG, "Saved settings to file.")
+            }
+        }
     }
 
     private fun load() {
@@ -83,8 +101,9 @@ class JsonKeyValueStore(
                     }
                 }
             }
-            file.parentFile?.mkdirs()
-            file.writeText(json.encodeToString(JsonObject.serializer(), obj))
+            if (!writeChannel.trySend(obj).isSuccess) {
+                throw Exception("Write channel is currently full.")
+            }
         } catch (e: Throwable) {
             logger.e(TAG, "Failed to persist settings", e)
         }
