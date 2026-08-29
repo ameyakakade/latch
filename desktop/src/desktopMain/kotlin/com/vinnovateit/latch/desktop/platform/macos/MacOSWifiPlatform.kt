@@ -108,6 +108,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private fun checkWifiEnabled(): Boolean {
         // Option 1: networksetup
+        // This reports on even if wifi is on 'disconnected' state.
         val power = runCommand("networksetup", "-getairportpower", interfaceName)
         if (power != null) {
             return power.lowercase().contains("on")
@@ -117,7 +118,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun resolveConnectedWifi(): Pair<String?, String?> {
-        // Using 
+        // Using system profiler
         val scanOut = runCommand("system_profiler", "SPAirPortDataType")
 
         if (scanOut != null) {
@@ -139,8 +140,8 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun findFirstWirelessInterface(): String? {
-        logger.w(TAG, "Find wireless interface not implemented.")
-        return null
+        logger.w(TAG, "Find wireless interface has hardcoded value.")
+        return interfaceName
         val netDir = File("/sys/class/net")
         if (netDir.exists()) {
             return netDir.listFiles()
@@ -152,7 +153,7 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private fun resolveGateway(iface: String?): String? {
         val routeOut = runCommand("ipconfig", "getoption", interfaceName, "router")
-        logger.w(TAG, "${routeOut}")
+        logger.w(TAG, "Route Out: ${routeOut}")
         return routeOut
     }
 
@@ -216,8 +217,11 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun enableWifi(): Boolean {
         if (isWifiEnabled()) return true
 
-        logger.d(TAG, "Attempting to enable Wi-Fi radio via nmcli/rfkill...")
-        runCommand("nmcli", "radio", "wifi", "on") ?: runCommand("rfkill", "unblock", "wifi")
+        logger.d(TAG, "Attempting to enable Wi-Fi radio via networksetup...")
+        // Turning off then turning it on handles the case where the wifi
+        // was in 'disconnected' state.
+        runCommand("networksetup", "-setairportpower", interfaceName, "off")
+        runCommand("networksetup", "-setairportpower", interfaceName, "on")
         invalidate()
 
         repeat(ENABLE_SETTLE_ATTEMPTS) {
