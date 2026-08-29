@@ -108,9 +108,9 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private fun checkWifiEnabled(): Boolean {
         // Option 1: networksetup
-        val nmcliRadio = runCommand("networksetup", "-getairportpower", interfaceName)
-        if (nmcliRadio != null) {
-            return nmcliRadio.lowercase().contains("on")
+        val power = runCommand("networksetup", "-getairportpower", interfaceName)
+        if (power != null) {
+            return power.lowercase().contains("on")
         }
 
         return true
@@ -151,17 +151,9 @@ class MacOSWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun resolveGateway(iface: String?): String? {
-        logger.w(TAG, "Resolve gateway not implemented.")
-        return null
-        val routeOut = runCommand("ip", "route", "show", "default")
-        if (routeOut != null) {
-            val parts = routeOut.split("\\s+".toRegex())
-            val viaIdx = parts.indexOf("via")
-            if (viaIdx >= 0 && viaIdx + 1 < parts.size) {
-                return parts[viaIdx + 1]
-            }
-        }
-        return null
+        val routeOut = runCommand("ipconfig", "getoption", interfaceName, "router")
+        logger.w(TAG, "${routeOut}")
+        return routeOut
     }
 
     override fun connectToBestVitNetwork(): Boolean {
