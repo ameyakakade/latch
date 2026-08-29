@@ -156,7 +156,7 @@ compose.desktop {
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
-            packageVersion = "1.3.7"
+            packageVersion = "1.3.8"
             description = "Auto-login for VIT hostel Wi-Fi"
             vendor = "VinnovateIT"
             copyright = "(c) 2026 VinnovateIT"
@@ -202,17 +202,17 @@ tasks.register<Tar>("packageReleaseTarGz") {
     description = "Packages release distributable directory into a .tar.gz archive"
     dependsOn("createReleaseDistributable")
 
-    archiveFileName.set("latch-1.3.7-linux-x64.tar.gz")
+    archiveFileName.set("latch-1.3.8-linux-x64.tar.gz")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     compression = Compression.GZIP
 
     // Compose Desktop places the app image one level deeper than the "app"
     // directory, under a subdirectory named after packageName ("Latch") -
-    // package that directly so the tar has a single latch-1.3.7/ wrapper
+    // package that directly so the tar has a single latch-1.3.8/ wrapper
     // around bin/ and lib/, matching what install.sh's --strip-components=1
     // expects (the previous "app" path produced an extra Latch/ nesting
     // level that broke the installer).
     from(layout.buildDirectory.dir("compose/binaries/main-release/app/Latch")) {
-        into("latch-1.3.7")
+        into("latch-1.3.8")
     }
 }

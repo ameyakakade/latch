@@ -1,7 +1,9 @@
 package com.vinnovateit.latch.features.wifi.quicksettings
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
@@ -44,6 +46,12 @@ class LatchTileService : TileService() {
     override fun onClick() {
         Log.d(TAG, "=== TILE CLICKED ===")
 
+        // SettingsManager may not have been initialized yet in this process (e.g. the
+        // tile is tapped right after a reboot, before MainActivity/ForegroundService/
+        // the widget ever ran) - setAutoLogin() below would crash on its lateinit
+        // sharedPreferences without this.
+        SettingsManager.initialize(applicationContext)
+
         if (isProcessing) {
             Log.d(TAG, "Already processing, ignoring click")
             return
@@ -60,7 +68,18 @@ class LatchTileService : TileService() {
             val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            startActivityAndCollapse(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val pendingIntent = PendingIntent.getActivity(
+                    this,
+                    0,
+                    intent,
+                    PendingIntent.FLAG_IMMUTABLE
+                )
+                startActivityAndCollapse(pendingIntent)
+            } else {
+                @Suppress("DEPRECATION")
+                startActivityAndCollapse(intent)
+            }
             return
         }
 
@@ -72,8 +91,8 @@ class LatchTileService : TileService() {
                 val autoLoginEnabled = SettingsManager.autoLogin.value
                 val isConnected = SessionRepository.liveStatus.value != null
 
-                if (autoLoginEnabled || isConnected) {
-                    Log.d(TAG, "Currently connected or auto-login enabled. Triggering logout...")
+                if (isConnected) {
+                    Log.d(TAG, "Currently connected. Triggering logout...")
                     val intent = Intent(this@LatchTileService, ForegroundService::class.java).apply {
                         action = ForegroundService.ACTION_TRIGGER_LOGOUT
                     }
