@@ -68,7 +68,7 @@ class DesktopPlatformServices(
     override val systemActions: SystemActions = when {
         AppPaths.isWindows -> WindowsSystemActions(logger)
         AppPaths.isLinux -> LinuxSystemActions(logger)
-        else -> LinuxSystemActions(logger) // Default fallback
+        else -> MacOSSystemActions(logger) // Default fallback
     }
 
     override val httpTransport: HttpTransport = DesktopHttpTransport()

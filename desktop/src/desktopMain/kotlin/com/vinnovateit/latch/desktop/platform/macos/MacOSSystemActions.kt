@@ -8,12 +8,12 @@ import java.io.File
 import java.net.URI
 
 /**
- * Linux implementation of system actions (opening settings, opening URLs, XDG autostart).
+ * MacOS implementation of system actions (opening settings(working), opening URLs(not working), XDG autostart(not working)).
  */
 class MacOSSystemActions(private val logger: Logger) : SystemActions {
 
     private companion object {
-        const val TAG = "LinuxSystemActions"
+        const val TAG = "MacOSSystemActions"
         const val DESKTOP_FILE_NAME = "latch.desktop"
     }
 
@@ -25,18 +25,10 @@ class MacOSSystemActions(private val logger: Logger) : SystemActions {
         }
 
     override fun openWifiSettings() {
-        val commands = listOf(
-            arrayOf("dbus-send", "--session", "--dest=org.gnome.Shell", "--type=method_call", "/org/gnome/Shell", "org.gnome.Shell.ShowSystemMenu"),
-            arrayOf("gnome-control-center", "wifi"),
-            arrayOf("nm-connection-editor"),
-            arrayOf("kcmshell6", "kcm_networkmanagement"),
-            arrayOf("kcmshell5", "kcm_networkmanagement"),
-        )
-
-        for (cmd in commands) {
-            if (tryExec(cmd)) return
-        }
-        logger.w(TAG, "Could not open Linux Wi-Fi settings GUI via standard desktop tools.")
+        if (tryExec(arrayOf("osascript",
+                "-e",
+                "tell application \"System Settings\"\n    reveal pane id \"com.apple.wifi-settings-extension\"\nend tell"))) return
+        logger.w(TAG, "Could not open WiFi Pane in System Settings.")
     }
 
     private fun tryExec(cmd: Array<String>): Boolean = try {
