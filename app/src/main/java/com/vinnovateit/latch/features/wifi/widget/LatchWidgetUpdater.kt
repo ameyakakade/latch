@@ -59,7 +59,6 @@ class LatchWidgetUpdater(
     SettingsManager.initialize(applicationContext)
 
     val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-    val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
     val useDynamic = SettingsManager.useDynamicColors.first()
     val accentColorVal = SettingsManager.accentColor.first()
 
@@ -71,7 +70,6 @@ class LatchWidgetUpdater(
         status = detailedStatus.message,
         connectedDuration = "...",
         isConnected = false,
-        isLightTheme = !isDarkMode,
         useDynamicColors = useDynamic,
         accentColor = accentColorVal
       )
@@ -79,7 +77,6 @@ class LatchWidgetUpdater(
         status = detailedStatus.message,
         connectedDuration = "-",
         isConnected = false,
-        isLightTheme = !isDarkMode,
         useDynamicColors = useDynamic,
         accentColor = accentColorVal
       )
@@ -97,7 +94,6 @@ class LatchWidgetUpdater(
             status = applicationContext.getString(R.string.widget_status_connected),
             connectedDuration = durationString,
             isConnected = true,
-            isLightTheme = !isDarkMode,
             useDynamicColors = useDynamic,
             accentColor = accentColorVal
           )
@@ -106,7 +102,6 @@ class LatchWidgetUpdater(
             status = applicationContext.getString(R.string.widget_status_disconnected),
             connectedDuration = "-",
             isConnected = false,
-            isLightTheme = !isDarkMode,
             useDynamicColors = useDynamic,
             accentColor = accentColorVal
           )

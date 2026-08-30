@@ -66,7 +66,6 @@ data class LatchWidgetState(
   val status: String = "Disconnected",
   val connectedDuration: String = "-",
   val isConnected: Boolean = false,
-  val isLightTheme: Boolean = true,  // Flag for theme mode
   val useDynamicColors: Boolean = true,
   val accentColor: String = "Red"
 )
