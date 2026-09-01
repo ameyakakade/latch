@@ -32,7 +32,11 @@ firebaseCrashlyticsBuildtools = "3.0.6"
 foundationVersion = "1.9.0"
 animation = "1.9.0"
 hilt-navigation-compose = "1.2.0"
-room = "2.7.2"
+# Matches roomKmp below -- :app now transitively depends on :core's Room
+# artifact (2.8.4) via api(...), so this must match or Gradle's classpath
+# conflict resolution silently upgrades :app's runtime past what its own
+# pinned room-compiler (ksp) targets.
+room = "2.8.4"
 foundation = "1.9.3"
 animationCore = "1.9.3"
 
@@ -57,6 +61,7 @@ slf4jSimple = "2.0.16"
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
