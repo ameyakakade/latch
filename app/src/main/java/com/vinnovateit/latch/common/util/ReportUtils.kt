@@ -1,6 +1,6 @@
 package com.vinnovateit.latch.common.util
 
-import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.core.model.SessionSummary
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -64,8 +64,8 @@ fun generateHtmlReport(sessions: List<SessionSummary>, outputStream: OutputStrea
         val totalDataMb = (session.totalData.rxBytes + session.totalData.txBytes) / 1048576.0
         val downloadMb = session.totalData.rxBytes / 1048576.0
         val uploadMb = session.totalData.txBytes / 1048576.0
-        val maxDownloadMbps = (session.history.maxOfOrNull { it.usage.rxBytes } ?: 0L) * 8 / 1000000.0
-        val maxUploadMbps = (session.history.maxOfOrNull { it.usage.txBytes } ?: 0L) * 8 / 1000000.0
+        val maxDownloadMbps = session.maxRxBps * 8 / 1000000.0
+        val maxUploadMbps = session.maxTxBps * 8 / 1000000.0
 
         appendLine("            <tr>")
         appendLine("                <td>$startTime</td>")

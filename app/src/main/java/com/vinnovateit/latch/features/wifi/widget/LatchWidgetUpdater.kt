@@ -1,6 +1,5 @@
 package com.vinnovateit.latch.features.wifi.widget
 
-import android.app.UiModeManager
 import android.content.Context
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -13,9 +12,9 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.domain.model.SessionRepository
 import com.vinnovateit.latch.features.wifi.manager.ConnectionStatus
-import com.vinnovateit.latch.features.wifi.manager.ConnectionStatusManager
+import com.vinnovateit.latch.platform.LatchAppGraph
+import com.vinnovateit.latch.platform.toLegacyStatus
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.serialization.json.Json
 import java.util.concurrent.TimeUnit
@@ -64,20 +63,17 @@ class LatchWidgetUpdater(
 
     SettingsManager.initialize(applicationContext)
 
-    val uiModeManager = applicationContext.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
-    val isDarkMode = uiModeManager.nightMode == UiModeManager.MODE_NIGHT_YES
     val useDynamic = SettingsManager.useDynamicColors.first()
     val accentColorVal = SettingsManager.accentColor.first()
 
-    val liveSession = SessionRepository.liveStatus.firstOrNull()
-    val detailedStatus = ConnectionStatusManager.status.firstOrNull()
+    val liveSession = LatchAppGraph.sessions.liveStatus.firstOrNull()
+    val detailedStatus = LatchAppGraph.engine.status.value.toLegacyStatus(applicationContext)
 
     val widgetState = when (detailedStatus) {
       is ConnectionStatus.Companion.Connecting -> LatchWidgetState(
         status = detailedStatus.message,
         connectedDuration = "...",
         isConnected = false,
-        isLightTheme = !isDarkMode,
         useDynamicColors = useDynamic,
         accentColor = accentColorVal
       )
@@ -85,7 +81,6 @@ class LatchWidgetUpdater(
         status = detailedStatus.message,
         connectedDuration = "-",
         isConnected = false,
-        isLightTheme = !isDarkMode,
         useDynamicColors = useDynamic,
         accentColor = accentColorVal
       )
@@ -102,8 +97,8 @@ class LatchWidgetUpdater(
           LatchWidgetState(
             status = applicationContext.getString(R.string.widget_status_connected),
             connectedDuration = durationString,
+            connectedAt = connectedAt,
             isConnected = true,
-            isLightTheme = !isDarkMode,
             useDynamicColors = useDynamic,
             accentColor = accentColorVal
           )
@@ -111,8 +106,8 @@ class LatchWidgetUpdater(
           LatchWidgetState(
             status = applicationContext.getString(R.string.widget_status_disconnected),
             connectedDuration = "-",
+            connectedAt = 0L,
             isConnected = false,
-            isLightTheme = !isDarkMode,
             useDynamicColors = useDynamic,
             accentColor = accentColorVal
           )

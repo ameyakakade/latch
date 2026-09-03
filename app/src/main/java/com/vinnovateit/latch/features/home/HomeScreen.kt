@@ -59,13 +59,12 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.os.Build
 import android.provider.Settings
-import com.vinnovateit.latch.features.wifi.detector.WiFiConnectionDetector
-import com.vinnovateit.latch.features.wifi.detector.WiFiStateDetector
+import com.vinnovateit.latch.platform.LatchAppGraph
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.common.ui.LeafOverlay
 import com.vinnovateit.latch.common.util.TooltipHint
-import com.vinnovateit.latch.domain.model.LiveDataPoint
-import com.vinnovateit.latch.domain.model.SessionSummary
+import com.vinnovateit.latch.core.model.LiveDataPoint
+import com.vinnovateit.latch.core.model.SessionSummary
 import com.vinnovateit.latch.features.home.components.SpectrumCard
 import com.vinnovateit.latch.features.settings.manager.SettingsManager
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
@@ -117,9 +116,9 @@ fun HomeScreen(
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         statusTimerTrigger = System.currentTimeMillis()
 
-        val isWifiConnected = WiFiConnectionDetector.isConnectedToWiFi(context)
+        val isWifiConnected = LatchAppGraph.platform.wifi.isConnectedToWifi()
 
-        if (!isConnected && (!WiFiStateDetector.isWiFiEnabled(context) || !isWifiConnected)) {
+        if (!isConnected && (!LatchAppGraph.platform.wifi.isWifiEnabled() || !isWifiConnected)) {
             val panelIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 Intent(Settings.Panel.ACTION_WIFI)
             } else {
@@ -127,10 +126,8 @@ fun HomeScreen(
             }
             context.startActivity(panelIntent)
         } else if (isConnected) {
-            val intent = Intent(context, ForegroundService::class.java).apply {
-                action = ForegroundService.ACTION_TRIGGER_LOGOUT
-            }
-            context.startService(intent)
+            // setAutoLogin(false) dispatches ACTION_TRIGGER_LOGOUT itself --
+            // sending it manually here too used to fire the portal logout twice.
             SettingsManager.setAutoLogin(false)
         } else {
             val intent = Intent(context, ForegroundService::class.java).apply {

@@ -1,5 +1,7 @@
 package com.vinnovateit.latch.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -15,30 +18,49 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vinnovateit.latch.desktop.LatchMark
 import com.vinnovateit.latch.desktop.resources.Res
 import com.vinnovateit.latch.desktop.resources.credentials_error_message
@@ -51,7 +73,10 @@ import com.vinnovateit.latch.ui.components.LatchDetailHeader
 import com.vinnovateit.latch.ui.components.LatchIcons
 import com.vinnovateit.latch.ui.components.LeafOverlay
 import com.vinnovateit.latch.ui.theme.modernizFontFamily
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+
+private val REG_NO_REGEX = "^[0-9]{2}[A-Z]{3}[0-9]{4}$".toRegex()
 
 /**
  * Credential entry, dressed like the Android onboarding account page: leaf
@@ -67,19 +92,61 @@ import org.jetbrains.compose.resources.stringResource
  */
 @Composable
 fun CredentialsScreen(
+    initialRegNo: String = "",
+    initialPassword: String = "",
     onSave: (String, String) -> Unit,
     onCancel: (() -> Unit)?,
 ) {
-    var regNo by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var regNo by remember(initialRegNo) { mutableStateOf(initialRegNo.uppercase().trim()) }
+    var pass by remember(initialPassword) { mutableStateOf(initialPassword) }
+    var passwordVisible by remember { mutableStateOf(false) }
+    val regNoFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+    val shakeOffset = remember { Animatable(0f) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val errorMessage = stringResource(Res.string.credentials_error_message)
 
+    LaunchedEffect(Unit) {
+        regNoFocusRequester.requestFocus()
+    }
+
+    fun triggerError(msg: String) {
+        scope.launch {
+            shakeOffset.snapTo(0f)
+            shakeOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = keyframes {
+                    durationMillis = 400
+                    0f at 0
+                    (-12f) at 50
+                    12f at 100
+                    (-8f) at 150
+                    8f at 200
+                    (-4f) at 250
+                    4f at 300
+                    0f at 400
+                },
+            )
+        }
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
+
     val submit = {
-        if (regNo.isBlank() || pass.isBlank()) {
-            error = errorMessage
-        } else {
-            onSave(regNo.trim(), pass)
+        val trimmedRegNo = regNo.trim().uppercase()
+        when {
+            trimmedRegNo.isBlank() || pass.isBlank() -> {
+                triggerError(errorMessage)
+            }
+            !REG_NO_REGEX.matches(trimmedRegNo) -> {
+                triggerError("Invalid Registration Number")
+            }
+            else -> {
+                onSave(trimmedRegNo, pass)
+            }
         }
     }
 
@@ -132,37 +199,79 @@ fun CredentialsScreen(
 
                 Spacer(Modifier.height(32.dp))
 
-                OutlinedTextField(
-                    value = regNo,
-                    onValueChange = { regNo = it; error = null },
-                    label = { Text(stringResource(Res.string.registration_number)) },
-                    leadingIcon = { Icon(LatchIcons.Person, contentDescription = null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    isError = error != null && regNo.isBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(x = shakeOffset.value.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    OutlinedTextField(
+                        value = regNo,
+                        onValueChange = {
+                            regNo = it.uppercase().filter { char -> char.isLetterOrDigit() }.take(9)
+                        },
+                        label = { Text(stringResource(Res.string.registration_number)) },
+                        leadingIcon = { Icon(LatchIcons.Person, contentDescription = null) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(regNoFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if ((event.key == Key.Enter || event.key == Key.NumPadEnter) && event.type == KeyEventType.KeyDown) {
+                                    passwordFocusRequester.requestFocus()
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Characters,
+                            autoCorrectEnabled = false,
+                            keyboardType = KeyboardType.Ascii,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { passwordFocusRequester.requestFocus() }
+                        ),
+                    )
+                    Spacer(Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = pass,
-                    onValueChange = { pass = it; error = null },
-                    label = { Text(stringResource(Res.string.password)) },
-                    leadingIcon = { Icon(LatchIcons.Lock, contentDescription = null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    isError = error != null && pass.isBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                error?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                    OutlinedTextField(
+                        value = pass,
+                        onValueChange = { pass = it },
+                        label = { Text(stringResource(Res.string.password)) },
+                        leadingIcon = { Icon(LatchIcons.Lock, contentDescription = null) },
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) LatchIcons.Visibility else LatchIcons.VisibilityOff,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(passwordFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if ((event.key == Key.Enter || event.key == Key.NumPadEnter) && event.type == KeyEventType.KeyDown) {
+                                    submit()
+                                    true
+                                } else {
+                                    false
+                                }
+                            },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = { submit() }
+                        ),
                     )
                 }
 
@@ -171,10 +280,12 @@ fun CredentialsScreen(
                 Button(
                     onClick = submit,
                     shape = RoundedCornerShape(100),
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
                 ) {
                     Text(
                         text = stringResource(Res.string.save_credentials),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -216,6 +327,20 @@ fun CredentialsScreen(
                     }
                 }
             }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp),
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                shape = RoundedCornerShape(16.dp),
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
 }

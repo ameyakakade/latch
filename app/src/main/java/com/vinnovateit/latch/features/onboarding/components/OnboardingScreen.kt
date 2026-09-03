@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vinnovateit.latch.R
-import com.vinnovateit.latch.data.StoredCredentials
+import com.vinnovateit.latch.core.platform.android.StoredCredentials
 import com.vinnovateit.latch.features.onboarding.pages.*
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
@@ -47,13 +47,9 @@ fun OnboardingScreen(
     val context = LocalContext.current
     var credentialsHandled by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    var showCredentialsAlert by remember { mutableStateOf(false) }
     var permissionGranted by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
     val offsetX = remember { Animatable(0f) }
-    val intent = (context as? Activity)?.intent
-    val startFromStepOne = intent?.getBooleanExtra("start_from_step_one", false) ?: false
-
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -129,21 +125,12 @@ fun OnboardingScreen(
         )
     }
 
-    val pagerState = rememberPagerState(initialPage = if (startFromStepOne) 1 else 0, pageCount = { slides.size })
-
-    LaunchedEffect(pagerState.targetPage) { if (startFromStepOne && pagerState.targetPage == 0) { pagerState.scrollToPage(1) } }
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { slides.size })
 
     LaunchedEffect(pagerState.isScrollInProgress, credentialsHandled, permissionGranted) {
         if (pagerState.isScrollInProgress) {
             if (pagerState.currentPage == 2 && pagerState.targetPage > 2 && !permissionGranted) { scope.launch { pagerState.scrollToPage(2) } }
             if (pagerState.currentPage == 3 && pagerState.targetPage > 3 && !credentialsHandled) { scope.launch { pagerState.scrollToPage(3) } }
-        }
-    }
-
-    // credentialsHandled state should be checked if we return from credentials
-    LaunchedEffect(Unit) {
-        if (StoredCredentials.credentialsExist(context)) {
-            credentialsHandled = true
         }
     }
 
@@ -268,18 +255,5 @@ fun OnboardingScreen(
                     }
             }
         }
-    }
-
-    if (showCredentialsAlert) {
-        AlertDialog(
-            onDismissRequest = { showCredentialsAlert = false },
-            title = { Text("Enter Credentials") },
-            text = { Text("Please enter your credentials before proceeding.") },
-            confirmButton = {
-                TextButton(onClick = { showCredentialsAlert = false }) {
-                    Text("OK")
-                }
-            }
-        )
     }
 }

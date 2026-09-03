@@ -181,7 +181,7 @@ internal fun LatchHomeTopBar(
                     shape = RoundedCornerShape(12.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier.width(200.dp),
-                    properties = PopupProperties(clippingEnabled = false),
+                    properties = PopupProperties(focusable = false),
                 ) {
                     if (showNavigationItems) {
                         DropdownMenuItem(

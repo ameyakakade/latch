@@ -41,6 +41,7 @@ import androidx.glance.text.TextStyle
 import com.vinnovateit.latch.features.home.MainActivity
 import com.vinnovateit.latch.R
 import com.vinnovateit.latch.features.wifi.background.ForegroundService
+import com.vinnovateit.latch.platform.LatchAppGraph
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -55,18 +56,14 @@ import androidx.glance.LocalSize
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.dynamicColorScheme
 
-// Configurable constants for easy customization
 private const val WIDGET_CORNER_RADIUS = 28
-private const val WIDGET_PADDING = 16
-private val STATUS_FONT_SIZE = 24.sp
-private val BUTTON_FONT_SIZE = 18.sp
 
 @Serializable
 data class LatchWidgetState(
   val status: String = "Disconnected",
   val connectedDuration: String = "-",
+  val connectedAt: Long = 0L,
   val isConnected: Boolean = false,
-  val isLightTheme: Boolean = true,  // Flag for theme mode
   val useDynamicColors: Boolean = true,
   val accentColor: String = "Red"
 )
@@ -146,9 +143,19 @@ private fun LatchWidgetContent(state: LatchWidgetState) {
         Spacer(modifier = GlanceModifier.height(16.dp))
 
         if (state.isConnected) {
+          val displayDuration = if (state.connectedAt > 0L) {
+            val durationMillis = System.currentTimeMillis() - state.connectedAt
+            when {
+              durationMillis < 60_000 -> "Just now"
+              durationMillis < 3_600_000 -> "${java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(durationMillis)}m"
+              else -> "${java.util.concurrent.TimeUnit.MILLISECONDS.toHours(durationMillis)}h"
+            }
+          } else {
+            state.connectedDuration
+          }
           Box(modifier = GlanceModifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(modifier = GlanceModifier.background(GlanceTheme.colors.primary).cornerRadius(10.dp).padding(horizontal = 12.dp, vertical = 6.dp)) {
-              Text(text = state.connectedDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = durationFontSize))
+              Text(text = displayDuration, style = TextStyle(color = GlanceTheme.colors.onPrimary, fontSize = durationFontSize))
             }
           }
         }
@@ -192,15 +199,9 @@ class ConnectAction : ActionCallback {
         LatchWidgetState()
       }
 
-      val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-      val connectivityManager = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-      
-      val isWifiEnabled = wifiManager.isWifiEnabled
-      val activeNetwork = connectivityManager.activeNetwork
-      val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-      val isWifiConnected = networkCapabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+      val wifi = LatchAppGraph.platform.wifi
 
-      if (!state.isConnected && (!isWifiEnabled || !isWifiConnected)) {
+      if (!state.isConnected && (!wifi.isWifiEnabled() || !wifi.isConnectedToWifi())) {
           val wifiIntent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS).apply {
               flags = Intent.FLAG_ACTIVITY_NEW_TASK
           }

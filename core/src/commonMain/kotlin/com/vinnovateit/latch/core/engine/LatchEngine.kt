@@ -1,0 +1,503 @@
+package com.vinnovateit.latch.core.engine
+
+import com.vinnovateit.latch.core.domain.SessionRepository
+import com.vinnovateit.latch.core.platform.NetworkHandle
+import com.vinnovateit.latch.core.platform.PlatformServices
+import com.vinnovateit.latch.core.platform.WifiEvent
+import com.vinnovateit.latch.core.settings.SettingsManager
+import com.vinnovateit.latch.core.wifi.AutoLoginManager
+import com.vinnovateit.latch.core.wifi.CaptivePortalDetector
+import com.vinnovateit.latch.core.wifi.ConnectionStatus
+import com.vinnovateit.latch.core.wifi.ConnectionStatusManager
+import com.vinnovateit.latch.core.wifi.LoginResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.net.InetAddress
+
+enum class LatchCommand { CheckAndLogin, SilentCheck, Logout, Shutdown }
+
+/** The only engine API the UI knows about. Replaces Android's Intent control plane. */
+interface LatchController {
+    val status: StateFlow<ConnectionStatus>
+    val isLatched: StateFlow<Boolean>
+    fun submit(command: LatchCommand)
+
+    /**
+     * Like [submit], but suspends until [command] has actually finished
+     * processing (not until some StateFlow happens to already satisfy a
+     * predicate -- that races the command itself). Returns false on timeout.
+     */
+    suspend fun submitAndAwait(command: LatchCommand, timeoutMs: Long): Boolean
+}
+
+/**
+ * The portal state machine, extracted from Android's ForegroundService.
+ *
+ * Behaviour carried over unchanged: the 3-retry x 2s revalidation after a
+ * successful login, the 60s health check, and the onAvailable/onLost handling.
+ *
+ * Behaviour deliberately NOT carried over, because it is Android-specific and
+ * porting it would cause silent failure:
+ *
+ *  - The 5h45m proactive stopSelf(). That worked around the Android 15
+ *    foreground-service time limit. A tray daemon has no such cap, and porting
+ *    it would mean monitoring silently dies mid-day with no error and no log line.
+ *  - onTimeout(). Android 15 FGS callback, no analogue.
+ *  - reportNetworkConnectivity(). Behind wifi.reportConnectivity(), a no-op here.
+ *  - bindProcessToNetwork(). Behind wifi.bindProcess(), a no-op here.
+ *  - stopSelf() on failure paths. The desktop daemon must stay alive and keep
+ *    listening; failures post a status and return to Idle.
+ */
+class LatchEngine(
+    private val platform: PlatformServices,
+    private val sessions: SessionRepository,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+) : LatchController {
+
+    private companion object {
+        const val TAG = "LatchEngine"
+        const val PORTAL_HOST = "phc.prontonetworks.com"
+        const val HEALTH_CHECK_INTERVAL_MS = 60_000L
+        const val REVALIDATE_DELAY_MS = 2000L
+        const val MAX_REVALIDATE_RETRIES = 3
+
+        // Campus networks come in two shapes: the hostel/block form
+        // "<letter>-VIT" (optionally with a trailing band suffix Windows
+        // appends, e.g. "G-VIT 5") and the academic-block form "VIT<band>"
+        // ("VIT5G", "VIT2.4G"). Anchored to the start of the SSID so an
+        // unrelated network that merely contains "VIT" somewhere in its name
+        // does not match.
+        val VIT_SSID_PATTERN = Regex("^(?:[A-Za-z]-)?VIT", RegexOption.IGNORE_CASE)
+    }
+
+    private val logger = platform.logger
+    private val login = AutoLoginManager(platform.httpTransport, logger, platform.buildInfo)
+    private val portal = CaptivePortalDetector(platform.httpTransport, logger)
+
+    /** Wraps a command with an optional per-invocation completion signal for [submitAndAwait]. */
+    private data class QueuedCommand(
+        val command: LatchCommand,
+        val done: CompletableDeferred<Unit>? = null,
+    )
+
+    private val commands = Channel<QueuedCommand>(Channel.UNLIMITED)
+    private var healthCheckJob: Job? = null
+    private var activeActionJob: Job? = null
+    private var currentHandle: NetworkHandle? = null
+    private var started = false
+
+    /**
+     * Serialises checkAndAct entry points so two flows -- e.g. the startup
+     * CheckAndLogin command and the first polled Wi-Fi Available event -- cannot
+     * race the portal with simultaneous credential POSTs. Pronto responds to
+     * concurrent logins for one user with a read timeout or an unrecognised 200
+     * page, which made the first connection after app start fail silently.
+     */
+    private val loginGate = Mutex()
+
+    private val _isLatched = MutableStateFlow(false)
+    override val isLatched: StateFlow<Boolean> = _isLatched.asStateFlow()
+
+    override val status: StateFlow<ConnectionStatus> = ConnectionStatusManager.status
+
+    private fun unlatch() {
+        _isLatched.value = false
+        sessions.stopSession()
+    }
+
+    override fun submit(command: LatchCommand) {
+        commands.trySend(QueuedCommand(command))
+    }
+
+    override suspend fun submitAndAwait(command: LatchCommand, timeoutMs: Long): Boolean {
+        val done = CompletableDeferred<Unit>()
+        commands.trySend(QueuedCommand(command, done))
+        return withTimeoutOrNull(timeoutMs) { done.await() } != null
+    }
+
+    /** Idempotent -- the desktop engine is created once but may be re-started. */
+    fun start() {
+        if (started) return
+        started = true
+
+        scope.launch {
+            platform.wifi.events.collect { event -> onWifiEvent(event) }
+        }
+        scope.launch {
+            for (queued in commands) {
+                try {
+                    handle(queued.command)
+                } finally {
+                    queued.done?.complete(Unit)
+                }
+            }
+        }
+    }
+
+    private suspend fun onWifiEvent(event: WifiEvent) {
+        when (event) {
+            is WifiEvent.Available -> {
+                currentHandle = event.handle
+                if (!platform.wifi.isWifiEnabled()) return
+                logger.d(TAG, "Wi-Fi available: ${event.handle.id}")
+                checkAndActExclusive(
+                    handle = event.handle,
+                    revalidating = false,
+                    silent = !SettingsManager.autoLogin.value,
+                )
+            }
+
+            is WifiEvent.Lost -> {
+                logger.d(TAG, "Wi-Fi lost")
+                currentHandle = null
+                activeActionJob?.cancel()
+                activeActionJob = null
+                healthCheckJob?.cancel()
+                unlatch()
+            }
+        }
+    }
+
+    private suspend fun handle(command: LatchCommand) {
+        when (command) {
+            LatchCommand.CheckAndLogin -> {
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Connecting(ConnectionStatus.Step.Initializing)
+                )
+                if (!platform.wifi.isWifiEnabled()) {
+                    unlatch()
+                    ConnectionStatusManager.postStatus(
+                        ConnectionStatus.Failed(ConnectionStatus.Reason.WifiOff)
+                    )
+                    return
+                }
+                val handle = currentHandle ?: platform.wifi.activeHandle()
+                if (handle == null) {
+                    unlatch()
+                    ConnectionStatusManager.postStatus(
+                        ConnectionStatus.Failed(ConnectionStatus.Reason.NotOnWifi)
+                    )
+                    return
+                }
+                checkAndActExclusive(handle, revalidating = false, silent = false)
+            }
+
+            LatchCommand.SilentCheck -> {
+                val handle = currentHandle ?: platform.wifi.activeHandle() ?: return
+                checkAndActExclusive(handle, revalidating = false, silent = true)
+            }
+
+            // Serialized against checkAndActExclusive so a logout can't run
+            // concurrently with a fresh login on the Wi-Fi-event coroutine and
+            // clobber it -- the two run on separate coroutines sharing this pool.
+            LatchCommand.Logout -> {
+                activeActionJob?.cancel()
+                activeActionJob = null
+                healthCheckJob?.cancel()
+                loginGate.withLock { logoutNow() }
+            }
+
+            LatchCommand.Shutdown -> {
+                activeActionJob?.cancel()
+                activeActionJob = null
+                healthCheckJob?.cancel()
+                unlatch()
+            }
+        }
+    }
+
+    /**
+     * checkAndAct under [loginGate].
+     *
+     * Only external entry points use this. The recursive revalidation call inside
+     * [handleCaptivePortal] must keep using the raw checkAndAct -- it runs while
+     * the lock is already held, and Mutex is not reentrant.
+     */
+    private suspend fun checkAndActExclusive(
+        handle: NetworkHandle,
+        revalidating: Boolean,
+        retry: Int = 0,
+        silent: Boolean = false,
+    ) {
+        val job = scope.launch {
+            loginGate.withLock {
+                if (!isActive) return@withLock
+                checkAndAct(handle, revalidating, retry, silent)
+            }
+        }
+        activeActionJob = job
+        job.join()
+    }
+
+    private suspend fun checkAndAct(
+        handle: NetworkHandle,
+        revalidating: Boolean,
+        retry: Int = 0,
+        silent: Boolean = false,
+    ) {
+        val currentSsid = platform.wifi.currentSsid()
+        val currentGateway = platform.wifi.gatewayIp()
+        logger.d(TAG, "[ConnectAnalysis] === Connection Probe Started (revalidating=$revalidating, retry=$retry) ===")
+        logger.d(TAG, "[ConnectAnalysis] Step 1/4: Network Info: SSID='$currentSsid', Gateway='$currentGateway'")
+
+        ConnectionStatusManager.postStatus(
+            ConnectionStatus.Connecting(ConnectionStatus.Step.CheckingInternet)
+        )
+
+        val code = withTimeoutOrNull(3500L) {
+            portal.checkPortalStatus(handle)
+        } ?: -1
+        logger.d(TAG, "[ConnectAnalysis] Step 2/4: Portal Probe Response Code: $code (204 = Direct Internet, 200/302 = Captive Portal, -1 = Network Error)")
+
+        if (code == 204) {
+            val ssid = platform.wifi.currentSsid()
+            if (!isVitCampusSsid(ssid)) {
+                logger.d(TAG, "[ConnectAnalysis] Network has 204 internet but SSID '$ssid' is not a VIT campus network; not latching.")
+                unlatch()
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Failed(ConnectionStatus.Reason.NotTargetNetwork)
+                )
+                return
+            }
+            logger.d(TAG, "[ConnectAnalysis] Network has real internet (HTTP 204). Starting session.")
+            platform.wifi.reportConnectivity(handle, ok = true)
+            ConnectionStatusManager.postStatus(ConnectionStatus.Success)
+            _isLatched.value = true
+            sessions.startSession()
+            startHealthCheck(handle)
+            return
+        }
+
+        // DNS resolution failing outright (as opposed to resolving but the
+        // portal not answering) usually means Private DNS is blocking
+        // captive-portal detection entirely -- retrying the same probe would
+        // just fail the same way, so this is reported distinctly rather than
+        // falling into the generic login-failure path below.
+        if (code == CaptivePortalDetector.DNS_RESOLUTION_FAILED && !revalidating) {
+            logger.w(TAG, "[ConnectAnalysis] Portal host DNS resolution failed.")
+            unlatch()
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Failed(ConnectionStatus.Reason.DnsResolutionFailed)
+            )
+            return
+        }
+
+        // Just logged in: give the portal a moment to open the gates rather than
+        // looping forever.
+        if (revalidating) {
+            if (retry < MAX_REVALIDATE_RETRIES) {
+                logger.d(TAG, "[ConnectAnalysis] Waiting for network gates to open (attempt ${retry + 1}/$MAX_REVALIDATE_RETRIES)")
+                delay(REVALIDATE_DELAY_MS)
+                checkAndAct(handle, revalidating = true, retry = retry + 1, silent = silent)
+            } else {
+                logger.w(TAG, "[ConnectAnalysis] Network never granted internet after successful login.")
+                unlatch()
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Failed(ConnectionStatus.Reason.NetworkTimeoutAfterLogin)
+                )
+            }
+            return
+        }
+
+        if (silent || !SettingsManager.autoLogin.value) {
+            logger.d(TAG, "[ConnectAnalysis] Silent check or auto-login disabled; skipping login attempt.")
+            unlatch()
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
+            )
+            return
+        }
+
+        if (!isTargetNetwork()) {
+            logger.w(TAG, "[ConnectAnalysis] Captive portal present but network target verification failed.")
+            unlatch()
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Failed(ConnectionStatus.Reason.NotTargetNetwork)
+            )
+            return
+        }
+
+        logger.d(TAG, "[ConnectAnalysis] Captive portal detected on a verified network. Proceeding to login.")
+        handleCaptivePortal(handle)
+    }
+
+    /**
+     * Gate before any credential-bearing request.
+     */
+    private suspend fun isTargetNetwork(): Boolean = withContext(Dispatchers.IO) {
+        val ssid = platform.wifi.currentSsid()
+        logger.d(TAG, "[ConnectAnalysis] Step 3/4: Target Network Verification: SSID='$ssid'")
+        if (!isVitCampusSsid(ssid)) {
+            logger.w(TAG, "[ConnectAnalysis] SSID '$ssid' failed VIT campus match; refusing login.")
+            return@withContext false
+        }
+        if (isVitCampusSsid(ssid) && !ssid.isNullOrEmpty()) {
+            return@withContext true
+        }
+
+        var resolves = withTimeoutOrNull(1500L) {
+            runCatching { InetAddress.getByName(PORTAL_HOST) }.isSuccess
+        } ?: false
+
+        if (!resolves) {
+            val gatewayIp = platform.wifi.gatewayIp()
+            if (gatewayIp != null) {
+                logger.d(TAG, "[ConnectAnalysis] Checking fallback gateway IP reachable: $gatewayIp")
+                resolves = withTimeoutOrNull(1500L) {
+                    runCatching { InetAddress.getByName(gatewayIp) }.isSuccess
+                } ?: false
+            }
+        }
+
+        if (!resolves) {
+            logger.w(TAG, "[ConnectAnalysis] Target Verification FAILED: Portal host '$PORTAL_HOST' unresolvable.")
+        } else {
+            logger.d(TAG, "[ConnectAnalysis] Target Verification PASSED: Network verified successfully.")
+        }
+        resolves
+    }
+
+    /**
+     * True unless the SSID is readable and readably *not* a campus network.
+     */
+    private fun isVitCampusSsid(ssid: String?): Boolean {
+        val clean = ssid?.trim()?.removeSurrounding("\"")?.takeIf { it.isNotEmpty() } ?: return true
+        return VIT_SSID_PATTERN.containsMatchIn(clean) ||
+            clean.contains("VIT", ignoreCase = true) ||
+            clean.endsWith("-VIT", ignoreCase = true) ||
+            SettingsManager.allowedSsids.value.any { clean.contains(it, ignoreCase = true) }
+    }
+
+    private suspend fun handleCaptivePortal(handle: NetworkHandle) {
+        logger.d(TAG, "[ConnectAnalysis] Step 4/4: Authenticating with Captive Portal...")
+        ConnectionStatusManager.postStatus(
+            ConnectionStatus.Connecting(ConnectionStatus.Step.Authenticating)
+        )
+        platform.wifi.bindProcess(handle)
+        try {
+            val user = platform.credentials.userId()
+            val pass = platform.credentials.password()
+            if (user == null || pass == null) {
+                logger.w(TAG, "[ConnectAnalysis] Auth Failed: Missing saved credentials.")
+                unlatch()
+                ConnectionStatusManager.postStatus(
+                    ConnectionStatus.Failed(ConnectionStatus.Reason.NoCredentials)
+                )
+                return
+            }
+            logger.d(TAG, "[ConnectAnalysis] Attempting Portal Login (HTTP)...")
+            var result = login.attemptLogin(
+                userId = user,
+                password = pass,
+                handle = handle,
+                useAlternate = false,
+                fallbackIp = platform.wifi.gatewayIp(),
+            )
+            if (result is LoginResult.Failure) {
+                val gw = platform.wifi.gatewayIp()
+                if (gw != null) {
+                    logger.d(TAG, "[ConnectAnalysis] Retrying HTTP login with direct Gateway IP ($gw)...")
+                    result = login.attemptLogin(
+                        userId = user,
+                        password = pass,
+                        handle = handle,
+                        useAlternate = false,
+                        fallbackIp = gw,
+                    )
+                }
+            }
+
+            logger.d(TAG, "[ConnectAnalysis] Login request submitted (result=$result). Revalidating network access...")
+            checkAndAct(handle, revalidating = true)
+        } catch (e: Exception) {
+            logger.e(TAG, "[ConnectAnalysis] Exception during handleCaptivePortal: ${e.message}", e)
+            unlatch()
+            ConnectionStatusManager.postStatus(
+                ConnectionStatus.Failed(ConnectionStatus.Reason.LoginFailed)
+            )
+        } finally {
+            platform.wifi.bindProcess(null)
+        }
+    }
+
+    private suspend fun logoutNow() {
+        healthCheckJob?.cancel()
+
+        val handle = currentHandle ?: platform.wifi.activeHandle()
+        val wasLatched = _isLatched.value
+
+        unlatch()
+        ConnectionStatusManager.postStatus(
+            ConnectionStatus.Failed(ConnectionStatus.Reason.Disconnected)
+        )
+
+        if (handle != null && wasLatched) {
+            platform.wifi.bindProcess(handle)
+            try {
+                val ok = withTimeoutOrNull(2000L) {
+                    login.attemptLogout(handle, false, platform.wifi.gatewayIp())
+                } ?: false
+
+                platform.wifi.reportConnectivity(handle, ok = false)
+                if (ok) {
+                    logger.d(TAG, "Remote portal logout succeeded.")
+                } else {
+                    logger.w(TAG, "Remote portal logout timed out or failed (locally disconnected).")
+                }
+            } finally {
+                platform.wifi.bindProcess(null)
+            }
+        }
+    }
+
+    private fun startHealthCheck(handle: NetworkHandle) {
+        healthCheckJob?.cancel()
+        healthCheckJob = scope.launch {
+            var lastTick = System.currentTimeMillis()
+            var failCount = 0
+            while (isActive) {
+                delay(HEALTH_CHECK_INTERVAL_MS)
+
+                // delay() does not track wall-clock across OS suspend, so after a
+                // lid-close the tick can be arbitrarily late. Detect that and
+                // re-check immediately rather than trusting stale state.
+                val now = System.currentTimeMillis()
+                val drift = now - lastTick - HEALTH_CHECK_INTERVAL_MS
+                lastTick = now
+                if (drift > HEALTH_CHECK_INTERVAL_MS) {
+                    logger.d(TAG, "Detected resume from sleep (drift ${drift}ms); re-checking.")
+                }
+
+                val code = withTimeoutOrNull(3500L) {
+                    portal.checkPortalStatus(handle)
+                } ?: -1
+                if (code == 204) {
+                    failCount = 0
+                } else {
+                    failCount++
+                    logger.w(TAG, "Health check probe failed ($failCount/3, status $code).")
+                    if (failCount >= 3) {
+                        logger.w(TAG, "Health check failed 3 consecutive times; session may have expired.")
+                        failCount = 0
+                        unlatch()
+                        checkAndActExclusive(handle, revalidating = false)
+                    }
+                }
+            }
+        }
+    }
+}
