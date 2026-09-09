@@ -2,6 +2,8 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.*
 
+val latchVersion = providers.gradleProperty("latchVersion").get()
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
@@ -128,22 +130,19 @@ compose.desktop {
         )
 
 
-        // `packageRelease*` runs the jars through ProGuard: dead-code shrinking,
-        // optimisation, and name obfuscation. SourceFile is kept so crash line
-        // numbers survive; class/method names are scrambled.
+        // ProGuard is disabled for Desktop builds to prevent JVM stackmap verification errors (VerifyError).
+        // R8 / ProGuard is retained for Android release builds.
         buildTypes.release.proguard {
-            version.set("7.8.0")
-            obfuscate.set(true)
-            optimize.set(true)
-            configurationFiles.from(project.file("proguard-rules.pro"))
+            isEnabled.set(false)
         }
+
 
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage, TargetFormat.Rpm)
             packageName = "Latch"
             // jpackage REQUIRES MAJOR.MINOR.PATCH with MAJOR >= 1. The Android
             // versionName "1.3" has only two components and would be rejected.
-            packageVersion = "1.3.8"
+            packageVersion = latchVersion
             description = "Auto-login for VIT hostel Wi-Fi"
             vendor = "VinnovateIT"
             copyright = "(c) 2026 VinnovateIT"
@@ -189,7 +188,7 @@ tasks.register<Tar>("packageReleaseTarGz") {
     description = "Packages release distributable directory into a .tar.gz archive"
     dependsOn("createReleaseDistributable")
 
-    archiveFileName.set("latch-1.3.8-linux-x64.tar.gz")
+    archiveFileName.set("latch-$latchVersion-linux-x64.tar.gz")
     destinationDirectory.set(layout.buildDirectory.dir("distributions"))
     compression = Compression.GZIP
 
@@ -200,6 +199,6 @@ tasks.register<Tar>("packageReleaseTarGz") {
     // expects (the previous "app" path produced an extra Latch/ nesting
     // level that broke the installer).
     from(layout.buildDirectory.dir("compose/binaries/main-release/app/Latch")) {
-        into("latch-1.3.8")
+        into("latch-$latchVersion")
     }
 }

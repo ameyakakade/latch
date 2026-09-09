@@ -9,12 +9,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import java.io.File
-
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.*
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 /**
  * Settings persistence as a plain JSON file.
@@ -42,20 +39,46 @@ class JsonKeyValueStore(
         data class StrSet(val value: Set<String>) : JsonPrimitiveOrArray
     }
 
-    private val scope        = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val writeChannel = Channel<JsonObject>(10)
-    // Channel's buffer has size 10.
+    /** Serialises writers against each other. */
+    private val writeLock = Any()
 
     init {
         load()
-        // Load file then launch writer coroutine.
-        scope.launch {
-            for (jsonObj in writeChannel) {
-                file.parentFile?.mkdirs()
-                file.writeText(json.encodeToString(JsonObject.serializer(), jsonObj))
-                logger.d(TAG, "Saved settings to file.")
+    }
+
+    /**
+     * Writes the settings file whole, on the calling thread.
+     *
+     * Deliberately not deferred to a coroutine. A background writer meant a
+     * one-shot `latch-cli --settings set ...` exited before its write ran, and
+     * it left a window where the file was truncated mid-rewrite -- a reader
+     * arriving then (another Latch process, or the next store instance) parsed
+     * nothing and silently fell back to defaults. The file is well under a
+     * kilobyte and only written on an explicit settings change, so writing it
+     * inline costs nothing worth deferring.
+     *
+     * The temp-file-plus-move keeps that window closed for readers: they see
+     * either the previous file or the new one, never a half-written one.
+     */
+    private fun write(obj: JsonObject) = synchronized(writeLock) {
+        file.parentFile?.mkdirs()
+        val temporary = Files.createTempFile(file.parentFile.toPath(), file.name, ".tmp")
+        try {
+            Files.writeString(temporary, json.encodeToString(JsonObject.serializer(), obj))
+            try {
+                Files.move(
+                    temporary,
+                    file.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(temporary, file.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
+        } finally {
+            Files.deleteIfExists(temporary)
         }
+        logger.d(TAG, "Saved settings to file.")
     }
 
     private fun load() {
@@ -87,23 +110,24 @@ class JsonKeyValueStore(
         }
     }
 
-    private fun persist() {
-        try {
-            val obj = buildJsonObject {
-                values.forEach { (key, value) ->
-                    when (value) {
-                        is JsonPrimitiveOrArray.Str -> put(key, JsonPrimitive(value.value))
-                        is JsonPrimitiveOrArray.Bool -> put(key, JsonPrimitive(value.value))
-                        is JsonPrimitiveOrArray.StrSet -> put(
-                            key,
-                            JsonArray(value.value.map { JsonPrimitive(it) }),
-                        )
-                    }
+    private fun snapshot(): JsonObject = synchronized(writeLock) {
+        buildJsonObject {
+            values.forEach { (key, value) ->
+                when (value) {
+                    is JsonPrimitiveOrArray.Str -> put(key, JsonPrimitive(value.value))
+                    is JsonPrimitiveOrArray.Bool -> put(key, JsonPrimitive(value.value))
+                    is JsonPrimitiveOrArray.StrSet -> put(
+                        key,
+                        JsonArray(value.value.map { JsonPrimitive(it) }),
+                    )
                 }
             }
-            if (!writeChannel.trySend(obj).isSuccess) {
-                throw Exception("Write channel is currently full.")
-            }
+        }
+    }
+
+    private fun persist() {
+        try {
+            write(snapshot())
         } catch (e: Throwable) {
             logger.e(TAG, "Failed to persist settings", e)
         }
@@ -119,14 +143,14 @@ class JsonKeyValueStore(
         (values[key] as? JsonPrimitiveOrArray.StrSet)?.value ?: default
 
     override fun putString(key: String, value: String) {
-        values[key] = JsonPrimitiveOrArray.Str(value); persist()
+        synchronized(writeLock) { values[key] = JsonPrimitiveOrArray.Str(value) }; persist()
     }
 
     override fun putBoolean(key: String, value: Boolean) {
-        values[key] = JsonPrimitiveOrArray.Bool(value); persist()
+        synchronized(writeLock) { values[key] = JsonPrimitiveOrArray.Bool(value) }; persist()
     }
 
     override fun putStringSet(key: String, value: Set<String>) {
-        values[key] = JsonPrimitiveOrArray.StrSet(value); persist()
+        synchronized(writeLock) { values[key] = JsonPrimitiveOrArray.StrSet(value) }; persist()
     }
 }
