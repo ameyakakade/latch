@@ -180,6 +180,8 @@ internal object LatchIcons {
 
     val Refresh: ImageVector get() = Autorenew
 
+    val WifiOutlined: ImageVector get() = Wifi
+
     val ArrowOutward: ImageVector by lazy {
         icon("ArrowOutward", "M6 6v2h8.59L5 17.59 6.41 19 16 9.41V18h2V6z")
     }
@@ -328,6 +330,97 @@ internal object LatchIcons {
         )
     }
 
+    val History: ImageVector get() = Restore
+
+    val Sort: ImageVector by lazy {
+        icon("Sort", "M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z")
+    }
+
+    val ExportNotes: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "export_notes",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(16.2f, 20.5f)
+                lineTo(19f, 17.7f)
+                verticalLineTo(20f)
+                horizontalLineToRelative(1f)
+                verticalLineTo(16f)
+                horizontalLineTo(16f)
+                verticalLineToRelative(1f)
+                horizontalLineToRelative(2.3f)
+                lineToRelative(-2.8f, 2.8f)
+                lineToRelative(0.7f, 0.7f)
+                close()
+                moveTo(5f, 21f)
+                quadTo(4.18f, 21f, 3.59f, 20.41f)
+                reflectiveQuadTo(3f, 19f)
+                verticalLineTo(5f)
+                quadTo(3f, 4.17f, 3.59f, 3.59f)
+                reflectiveQuadTo(5f, 3f)
+                horizontalLineTo(19f)
+                quadToRelative(0.83f, 0f, 1.41f, 0.59f)
+                reflectiveQuadTo(21f, 5f)
+                verticalLineToRelative(6.7f)
+                quadTo(20.53f, 11.48f, 20.03f, 11.31f)
+                reflectiveQuadTo(19f, 11.08f)
+                verticalLineTo(5f)
+                horizontalLineTo(5f)
+                verticalLineTo(19f)
+                horizontalLineToRelative(6.05f)
+                quadToRelative(0.07f, 0.55f, 0.24f, 1.05f)
+                reflectiveQuadTo(11.68f, 21f)
+                horizontalLineTo(5f)
+                close()
+                moveTo(5f, 18f)
+                quadToRelative(0f, 0.27f, 0f, 0.51f)
+                reflectiveQuadTo(5f, 19f)
+                verticalLineTo(5f)
+                verticalLineToRelative(6.07f)
+                quadTo(5f, 11.02f, 5f, 11.01f)
+                reflectiveQuadTo(5f, 11f)
+                reflectiveQuadToRelative(0f, 2.05f)
+                reflectiveQuadTo(5f, 18f)
+                close()
+                moveTo(7f, 17f)
+                horizontalLineToRelative(4.08f)
+                quadToRelative(0.07f, -0.52f, 0.24f, -1.03f)
+                quadTo(11.48f, 15.48f, 11.68f, 15f)
+                horizontalLineTo(7f)
+                verticalLineToRelative(2f)
+                close()
+                moveTo(7f, 13f)
+                horizontalLineToRelative(6.1f)
+                quadToRelative(0.8f, -0.75f, 1.79f, -1.25f)
+                reflectiveQuadTo(17f, 11.08f)
+                verticalLineTo(11f)
+                horizontalLineTo(7f)
+                verticalLineToRelative(2f)
+                close()
+                moveTo(7f, 9f)
+                horizontalLineTo(17f)
+                verticalLineTo(7f)
+                horizontalLineTo(7f)
+                verticalLineTo(9f)
+                close()
+                moveTo(18f, 23f)
+                quadToRelative(-2.07f, 0f, -3.54f, -1.46f)
+                reflectiveQuadTo(13f, 18f)
+                reflectiveQuadToRelative(1.46f, -3.54f)
+                reflectiveQuadTo(18f, 13f)
+                reflectiveQuadToRelative(3.54f, 1.46f)
+                reflectiveQuadTo(23f, 18f)
+                reflectiveQuadToRelative(-1.46f, 3.54f)
+                reflectiveQuadTo(18f, 23f)
+                close()
+            }
+        }.build()
+    }
+
     val Login: ImageVector by lazy {
         icon(
             "Login",
@@ -459,6 +552,32 @@ internal object LatchIcons {
             "visibility_off",
             "M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.44-4.75C21.27 7.61 17 4.5 12 4.5c-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z",
         )
+    }
+
+    val ArrowDropDown: ImageVector by lazy {
+        icon(
+            "arrow_drop_down",
+            "M7 10l5 5 5-5z",
+        )
+    }
+
+    val CalendarToday: ImageVector by lazy {
+        icon(
+            "calendar_today",
+            "M20 3h-1V1h-2v2H7V1H5v2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 18H4V8h16v13z",
+        )
+    }
+
+    val MoreVert: ImageVector by lazy {
+        icon("more_vert", "M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z")
+    }
+
+    val Edit: ImageVector by lazy {
+        icon("edit", "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z")
+    }
+
+    val Palette: ImageVector by lazy {
+        icon("palette", "M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.5c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0l1.9-1.9C9.22 18.67 10.57 19 12 19c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z")
     }
 }
 
