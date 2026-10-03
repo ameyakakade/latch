@@ -12,11 +12,6 @@ import java.util.concurrent.TimeUnit
 
 internal data class SimpleMacNetworkHandle(override val id: String) : NetworkHandle
 
-/**
-'networksetup -listpreferredwirelessnetworks <device-name> (en0 for mba)' lists all saved wifi networks. 
-'system_profiler SPAirPortDataType' gives info about current connected wifi network and lists available wifi networks.
-'networksetup -setairportnetwork en0 <ssid> [pwd]' connects to network with name ssid
- */
 class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
 
     private companion object {
@@ -46,16 +41,8 @@ class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
         lastFingerprint = null
     }
 
-    // Not implemented
-    private fun getNetworkFingerprint(): String = try {
-        val routeStr = File("/proc/net/route").takeIf { it.exists() }?.readText() ?: ""
-        val operstate = File("/sys/class/net").listFiles()?.joinToString {
-            "${it.name}:${File(it, "operstate").takeIf { f -> f.exists() }?.readText()?.trim()}"
-        } ?: ""
-        "$routeStr|$operstate"
-    } catch (_: Throwable) {
-        ""
-    }
+    // Not implemented, returns a empty string
+    private fun getNetworkFingerprint(): String = return ""
 
     private fun runCommand(vararg args: String): String? = try {
         val process = ProcessBuilder(*args)
@@ -115,36 +102,18 @@ class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
     }
 
     private fun resolveConnectedWifi(): Pair<String?, String?> {
-        // Using system profiler
-        val scanOut = runCommand("system_profiler", "SPAirPortDataType")
-
-        if (scanOut != null) {
-            var currNetSection = false
-            for (line in scanOut.lines()) {
-                if (line.contains("Current Network Information:", ignoreCase = true)) {
-                    currNetSection = true
-                    continue
-                }
-                if (currNetSection) {
-                    var ssid = line.trim().dropLast(1)
-                    logger.d(TAG, "Connected WiFi: ${ssid}")
-                    return Pair(findFirstWirelessInterface() as String, ssid)
-                }
-            }
-        }
-
-        return Pair(findFirstWirelessInterface(), null)
+        // Cannot resolve connected wifi, using hardcoded value
+        return Pair(findFirstWirelessInterface(), "B-VIT")
     }
 
     private fun findFirstWirelessInterface(): String? {
-        logger.w(TAG, "Find wireless interface has hardcoded value.")
-        return "en0"
-        // Return correct interface instead of hardcoded value.
-        val netDir = File("/sys/class/net")
-        if (netDir.exists()) {
-            return netDir.listFiles()
-                ?.firstOrNull { File(it, "wireless").exists() || File(it, "phy80211").exists() }
-                ?.name
+        val output = runCommand("networksetup", "-listallhardwareports")
+        if (output != null) {
+            val lines = output.split("\n")
+            val ifaceL = lines[lines.indexOf("Hardware Port: Wi-Fi") + 1]
+            val iface = ifaceL.split(":")[1].trim()
+            logger.w(TAG, "Wireless interface detected is " + iface)
+            return iface
         }
         return null
     }
@@ -217,13 +186,4 @@ class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
             delay(POLL_INTERVAL_MS)
         }
     }
-}
-
-fun countIndent(a: String): Int {
-    var count = 0
-    for(character in a) {
-        if (character == ' ') count++
-        else break
-    }
-    return count
 }
