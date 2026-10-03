@@ -60,7 +60,7 @@ class DesktopPlatformServices(
 ) : PlatformServices {
 
     init {
-        check(os == DesktopOs.WINDOWS || os == DesktopOs.LINUX) {
+        check(os == DesktopOs.WINDOWS || os == DesktopOs.LINUX || os == DesktopOs.MACOS) {
             "Latch CLI runtime currently supports Windows and Linux."
         }
     }
@@ -88,13 +88,15 @@ class DesktopPlatformServices(
     override val credentials: CredentialStore = when (os) {
         DesktopOs.WINDOWS -> DpapiCredentialStore(AppPaths.credentialsFile, logger)
         DesktopOs.LINUX -> LinuxCredentialStore(AppPaths.credentialsFile, logger)
-        DesktopOs.MACOS, DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
+        DesktopOs.MACOS -> MacCredentialStore(AppPaths.credentialsFile, logger)
+        DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
     }
 
     override val wifi: WifiPlatform = when (os) {
         DesktopOs.WINDOWS -> WindowsWifiPlatform(logger)
         DesktopOs.LINUX -> LinuxWifiPlatform(logger)
-        DesktopOs.MACOS, DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
+        DesktopOs.MACOS -> MacWifiPlatform(logger)
+        DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
     }
 
     override val counters: ByteCounterSource = OshiByteCounters(wifi, logger)
@@ -102,7 +104,8 @@ class DesktopPlatformServices(
     override val systemActions: SystemActions = when (os) {
         DesktopOs.WINDOWS -> WindowsSystemActions(logger)
         DesktopOs.LINUX -> LinuxSystemActions(logger)
-        DesktopOs.MACOS, DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
+        DesktopOs.MACOS -> MacSystemActions(logger)
+        DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
     }
 
     override val httpTransport: HttpTransport = DesktopHttpTransport()
