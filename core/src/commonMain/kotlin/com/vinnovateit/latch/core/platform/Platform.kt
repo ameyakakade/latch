@@ -133,11 +133,18 @@ interface ByteCounterSource {
 // ---------------------------------------------------------------------------
 
 interface CredentialStore {
-    fun save(userId: String, password: String)
+    /** Failure must be observable -- implementations must not swallow it. */
+    fun save(userId: String, password: String): Result<Unit>
     fun userId(): String?
     fun password(): String?
     fun exists(): Boolean
-    fun clear()
+
+    /**
+     * Fails if a copy of the credentials this store owns could still remain,
+     * so a caller never reports credentials as removed when they are not.
+     * Failure messages never include credential values.
+     */
+    fun clear(): Result<Unit>
 }
 
 // ---------------------------------------------------------------------------

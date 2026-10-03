@@ -16,17 +16,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,11 +46,13 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.vinnovateit.latch.desktop.VinnovateItLogo
 import com.vinnovateit.latch.ui.components.LatchIcons
+import com.vinnovateit.latch.ui.theme.satoshiFontFamily
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -151,15 +156,23 @@ fun HandsConnectAnimation(
 }
 
 /**
+ * What the forward button currently offers. A blocked button must never wear the
+ * arrow or the checkmark: the reported bug was a greyed checkmark that looked
+ * like a working finish control and silently swallowed every click.
+ */
+private enum class ForwardAffordance { NEXT, FINISH, BLOCKED }
+
+/**
  * 1:1 match of Android LatchSetupBottomBar: morphing shape FAB, rotation animation,
  * VinnovateIT branding logo, and page indicator dots.
  */
 @Composable
 fun DesktopOnboardingBottomBar(
     pagerState: PagerState,
-    isFinishButtonEnabled: Boolean,
+    isForwardEnabled: Boolean,
     onNextClicked: () -> Unit,
     onFinishClicked: () -> Unit,
+    onBackClicked: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val morphAnimationSpec = tween<Float>(durationMillis = 600, easing = FastOutSlowInEasing)
@@ -200,16 +213,44 @@ fun DesktopOnboardingBottomBar(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    Icon(
-                        imageVector = VinnovateItLogo,
-                        contentDescription = "VinnovateIT",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(width = 110.dp, height = 36.dp),
-                    )
+                    if (pagerState.currentPage == 0) {
+                        Icon(
+                            imageVector = VinnovateItLogo,
+                            contentDescription = "VinnovateIT",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(width = 110.dp, height = 36.dp),
+                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (onBackClicked != null) {
+                                IconButton(
+                                    onClick = onBackClicked,
+                                    modifier = Modifier.size(36.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = LatchIcons.ArrowBack,
+                                        contentDescription = "Back",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = "Step ${pagerState.currentPage} of ${pagerState.pageCount - 1}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontFamily = satoshiFontFamily(),
+                            )
+                        }
+                    }
                 }
 
                 val isLastPage = pagerState.currentPage == pagerState.pageCount - 1
-                val isEnabled = !isLastPage || isFinishButtonEnabled
+                val isEnabled = isForwardEnabled
                 val fabShape = RoundedCornerShape(
                     topStart = animatedTopStart.dp,
                     topEnd = animatedTopEnd.dp,
@@ -223,15 +264,15 @@ fun DesktopOnboardingBottomBar(
                         if (isLastPage) onFinishClicked() else onNextClicked()
                     },
                     shape = fabShape,
-                    containerColor = if (isLastPage) {
-                        if (isFinishButtonEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                    } else {
-                        MaterialTheme.colorScheme.primaryContainer
+                    containerColor = when {
+                        !isEnabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                        isLastPage -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.primaryContainer
                     },
-                    contentColor = if (isLastPage) {
-                        if (isFinishButtonEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    } else {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                    contentColor = when {
+                        !isEnabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        isLastPage -> MaterialTheme.colorScheme.onPrimary
+                        else -> MaterialTheme.colorScheme.onPrimaryContainer
                     },
                     elevation = FloatingActionButtonDefaults.elevation(defaultElevation = if (isEnabled) 2.dp else 0.dp),
                     modifier = Modifier.size(56.dp),
@@ -241,22 +282,30 @@ fun DesktopOnboardingBottomBar(
                         modifier = Modifier.rotate(animatedRotation),
                     ) {
                         AnimatedContent(
-                            targetState = isLastPage,
+                            targetState = when {
+                                !isEnabled -> ForwardAffordance.BLOCKED
+                                isLastPage -> ForwardAffordance.FINISH
+                                else -> ForwardAffordance.NEXT
+                            },
                             transitionSpec = {
                                 (slideInVertically { it } + fadeIn()).togetherWith(
                                     slideOutVertically { -it } + fadeOut(),
                                 )
                             },
                             label = "FabIcon",
-                        ) { last ->
-                            if (last) {
-                                Icon(
+                        ) { affordance ->
+                            when (affordance) {
+                                ForwardAffordance.BLOCKED -> Icon(
+                                    imageVector = LatchIcons.Close,
+                                    contentDescription = "Blocked",
+                                    modifier = Modifier.size(20.dp),
+                                )
+                                ForwardAffordance.FINISH -> Icon(
                                     imageVector = LatchIcons.Check,
                                     contentDescription = "Finish",
                                     modifier = Modifier.size(24.dp),
                                 )
-                            } else {
-                                Icon(
+                                ForwardAffordance.NEXT -> Icon(
                                     imageVector = LatchIcons.ArrowForwardIos,
                                     contentDescription = "Next",
                                     modifier = Modifier.size(20.dp),
