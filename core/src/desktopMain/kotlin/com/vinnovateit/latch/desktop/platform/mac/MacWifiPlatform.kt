@@ -7,142 +7,123 @@ import com.vinnovateit.latch.core.platform.WifiPlatform
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import java.io.File
-import java.util.concurrent.TimeUnit
 
-internal data class SimpleMacNetworkHandle(override val id: String) : NetworkHandle
+internal data class MacNetworkHandle(override val id: String) : NetworkHandle
 
-class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
+/**
+ * macOS Wi-Fi state for the engine, built from one [MacWifiProbe] reading
+ * plus the interface's address and gateway.
+ *
+ * The network's name is the only thing that tells VIT Wi-Fi from any other,
+ * and macOS can withhold it (no Location permission, a failed or timed-out
+ * read). So this platform sets [requiresKnownSsid]: an unknown name is never
+ * a campus network, and the engine sends no credentials until a VIT SSID has
+ * actually been read.
+ */
+class MacWifiPlatform internal constructor(
+    private val logger: Logger,
+    private val probe: MacWifiProbe,
+    private val links: MacLinkInspector,
+    private val power: MacWifiPower,
+    private val pollIntervalMillis: Long = POLL_INTERVAL_MS,
+    private val enableSettle: EnableSettle = EnableSettle(),
+    private val clock: () -> Long = System::currentTimeMillis,
+) : WifiPlatform {
 
-    private companion object {
-        const val TAG = "MacWifiPlatform"
-        const val POLL_INTERVAL_MS = 1_500L
-        const val CACHE_TTL_MS = 1_000L
-        const val CMD_TIMEOUT_SEC = 5L
-        const val ENABLE_SETTLE_ATTEMPTS = 6
-        const val ENABLE_SETTLE_INTERVAL_MS = 1_000L
-    }
-
-    private data class WifiSnapshot(
-        val interfaceName: String?,
-        val wifiEnabled: Boolean,
-        val connected: Boolean,
-        val ssid: String?,
-        val gateway: String?,
+    constructor(logger: Logger) : this(
+        logger = logger,
+        probe = defaultProbe(logger),
+        links = SystemMacLinkInspector(),
+        power = NetworksetupWifiPower(),
     )
 
-    private var cached: WifiSnapshot? = null
-    private var cachedAt: Long = 0
-    private var lastFingerprint: String? = null
+    /** How long [enableWifi] waits for the radio to come up and associate. */
+    internal class EnableSettle(val attempts: Int = 6, val intervalMillis: Long = 1_000L)
 
-    private fun invalidate() {
-        cached = null
-        cachedAt = 0
-        lastFingerprint = null
+    internal data class Snapshot(
+        val reading: MacWifiReading,
+        val interfaceName: String?,
+        val enabled: Boolean,
+        val connected: Boolean,
+        /** Only ever a name macOS actually reported for the associated network. */
+        val ssid: String?,
+        val address: String?,
+        val gateway: String?,
+    ) {
+        /**
+         * What identifies "the network we are on". The address is part of it
+         * so that moving between two networks is still seen as a change when
+         * their names are hidden.
+         */
+        val key: String? get() = if (connected) "$interfaceName|${ssid ?: "?"}|$address" else null
     }
 
-    // Not implemented, returns a empty string
-    private fun getNetworkFingerprint(): String = return ""
+    private var cached: Snapshot? = null
+    private var cachedAt = 0L
+    private var lastLogged: Snapshot? = null
 
-    private fun runCommand(vararg args: String): String? = try {
-        val process = ProcessBuilder(*args)
-            .redirectErrorStream(true)
-            .start()
-        process.outputStream.close()
-        val output = process.inputStream.bufferedReader().use { it.readText() }
-        if (!process.waitFor(CMD_TIMEOUT_SEC, TimeUnit.SECONDS)) {
-            process.destroyForcibly()
-            null
-        } else if (process.exitValue() == 0) {
-            output.trim()
-        } else {
-            null
-        }
-    } catch (e: Throwable) {
-        null
-    }
+    override val requiresKnownSsid: Boolean get() = true
 
-    private fun snapshot(): WifiSnapshot {
-        val currentFingerprint = getNetworkFingerprint()
-        val now = System.currentTimeMillis()
-
-        cached?.let {
-            if (currentFingerprint == lastFingerprint && (now - cachedAt < 10_000L)) {
-                return it
-            }
-        }
-
-        lastFingerprint = currentFingerprint
-        val wifiEnabled = checkWifiEnabled()
-        val (iface, ssid) = resolveConnectedWifi()
-        val gateway = resolveGateway(iface)
-
-        val snap = WifiSnapshot(
-            interfaceName = iface,
-            wifiEnabled = wifiEnabled,
-            connected = !ssid.isNullOrEmpty(),
-            ssid = ssid?.takeIf { it.isNotEmpty() },
-            gateway = gateway?.takeIf { it.isNotEmpty() },
-        )
-
+    @Synchronized
+    internal fun snapshot(fresh: Boolean = false): Snapshot {
+        val now = clock()
+        cached?.takeIf { !fresh && now - cachedAt < CACHE_TTL_MS }?.let { return it }
+        val snap = observe(probe.read())
         cached = snap
         cachedAt = now
+        logIfChanged(snap)
         return snap
     }
 
-    private fun checkWifiEnabled(): Boolean {
-        // Option 1: networksetup
-        // This reports on even if wifi is on 'disconnected' state.
-        val power = runCommand("networksetup", "-getairportpower", findFirstWirelessInterface() as String)
-        if (power != null) {
-            return power.lowercase().contains("on")
+    private fun observe(reading: MacWifiReading): Snapshot = when (reading) {
+        MacWifiReading.NoInterface,
+        is MacWifiReading.Unavailable -> Snapshot(reading, null, enabled = false, connected = false, ssid = null, address = null, gateway = null)
+        is MacWifiReading.PoweredOff -> Snapshot(reading, reading.interfaceName, enabled = false, connected = false, ssid = null, address = null, gateway = null)
+        is MacWifiReading.PoweredOn -> {
+            val address = links.ipv4Address(reading.interfaceName)
+            val connected = address != null
+            Snapshot(
+                reading = reading,
+                interfaceName = reading.interfaceName,
+                enabled = true,
+                connected = connected,
+                ssid = reading.ssid?.trim()?.takeIf { connected && it.isNotEmpty() },
+                address = address,
+                gateway = if (connected) links.gateway(reading.interfaceName) else null,
+            )
         }
-
-        return true
     }
 
-    private fun resolveConnectedWifi(): Pair<String?, String?> {
-        // Cannot resolve connected wifi, using hardcoded value
-        return Pair(findFirstWirelessInterface(), "B-VIT")
-    }
-
-    private fun findFirstWirelessInterface(): String? {
-        val output = runCommand("networksetup", "-listallhardwareports")
-        if (output != null) {
-            val lines = output.split("\n")
-            val ifaceL = lines[lines.indexOf("Hardware Port: Wi-Fi") + 1]
-            val iface = ifaceL.split(":")[1].trim()
-            logger.w(TAG, "Wireless interface detected is " + iface)
-            return iface
+    private fun logIfChanged(snap: Snapshot) {
+        val previous = lastLogged
+        if (previous != null && previous.reading == snap.reading && previous.key == snap.key) return
+        lastLogged = snap
+        val reading = snap.reading
+        val detail = when {
+            reading is MacWifiReading.Unavailable -> "Wi-Fi state unavailable (${reading.reason}); treating as not connected"
+            reading is MacWifiReading.NoInterface -> "no Wi-Fi interface"
+            reading is MacWifiReading.PoweredOff -> "Wi-Fi off on ${reading.interfaceName}"
+            !snap.connected -> "Wi-Fi on, not connected (${snap.interfaceName})"
+            snap.ssid != null -> "connected to '${snap.ssid}' on ${snap.interfaceName}"
+            reading is MacWifiReading.PoweredOn && reading.location != MacLocationAccess.Granted ->
+                "connected on ${snap.interfaceName}, network name hidden (Location access: ${reading.location}); " +
+                    "not treated as VIT Wi-Fi"
+            else -> "connected on ${snap.interfaceName}, network name unavailable; not treated as VIT Wi-Fi"
         }
-        return null
+        logger.d(TAG, "Network state: $detail")
     }
 
-    private fun resolveGateway(iface: String?): String? {
-        val routeOut = runCommand("ipconfig", "getoption", findFirstWirelessInterface() as String, "router")
-        logger.w(TAG, "Route Out: ${routeOut}")
-        return routeOut
+    /**
+     * Asks macOS for the Location access it requires before revealing the
+     * network name (macOS 14+). Only meaningful from the packaged Latch.app,
+     * whose Info.plist explains the request; until it is granted the name
+     * stays hidden and Latch does not log in.
+     */
+    fun requestNetworkNameAccess() {
+        MacLocationServices.requestAccessIfUndetermined(logger)
     }
 
-    override fun isWifiEnabled(): Boolean = snapshot().wifiEnabled
-
-    override fun enableWifi(): Boolean {
-        if (isWifiEnabled()) return true
-
-        logger.d(TAG, "Attempting to enable Wi-Fi radio via networksetup...")
-        // Turning off then turning it on handles the case where the wifi
-        // was in 'disconnected' state.
-        runCommand("networksetup", "-setairportpower", findFirstWirelessInterface() as String, "off")
-        runCommand("networksetup", "-setairportpower", findFirstWirelessInterface() as String, "on")
-        invalidate()
-
-        repeat(ENABLE_SETTLE_ATTEMPTS) {
-            if (isWifiEnabled() && isConnectedToWifi()) return true
-            Thread.sleep(ENABLE_SETTLE_INTERVAL_MS)
-            invalidate()
-        }
-        return isWifiEnabled()
-    }
+    override fun isWifiEnabled(): Boolean = snapshot().enabled
 
     override fun isConnectedToWifi(): Boolean = snapshot().connected
 
@@ -151,39 +132,65 @@ class MacWifiPlatform(private val logger: Logger) : WifiPlatform {
     override fun gatewayIp(): String? = snapshot().gateway
 
     override fun activeHandle(): NetworkHandle? =
-        snapshot().takeIf { it.connected }?.interfaceName?.let { SimpleMacNetworkHandle(it) }
+        snapshot().takeIf { it.connected }?.interfaceName?.let(::MacNetworkHandle)
 
     override fun wifiInterfaceName(): String? = snapshot().interfaceName
 
-    override val events: Flow<WifiEvent> = flow {
-        val seed = snapshot()
-        var lastKey = if (seed.connected && seed.ssid != null && seed.interfaceName != null) {
-            "${seed.interfaceName}::${seed.ssid}"
-        } else {
-            null
+    /**
+     * Switches the radio on only when it is positively reported off. An
+     * unreadable state is left alone rather than toggled blind.
+     */
+    override fun enableWifi(): Boolean {
+        val reading = snapshot(fresh = true).reading
+        if (reading !is MacWifiReading.PoweredOff) return isWifiEnabled()
+        logger.d(TAG, "Turning Wi-Fi on (${reading.interfaceName})")
+        if (!power.turnOn(reading.interfaceName)) {
+            logger.w(TAG, "macOS refused to turn Wi-Fi on")
+            return false
         }
+        repeat(enableSettle.attempts) {
+            val snap = snapshot(fresh = true)
+            if (snap.enabled && snap.connected) return true
+            Thread.sleep(enableSettle.intervalMillis)
+        }
+        return snapshot(fresh = true).enabled
+    }
 
+    override val events: Flow<WifiEvent> = flow {
+        var last = snapshot(fresh = true)
         while (true) {
-            invalidate()
-            val snap = snapshot()
-            val key = if (snap.connected && snap.ssid != null && snap.interfaceName != null) {
-                "${snap.interfaceName}::${snap.ssid}"
-            } else {
-                null
+            delay(pollIntervalMillis)
+            val snap = snapshot(fresh = true)
+            if (snap.key != last.key) {
+                last.interfaceName?.takeIf { last.connected }?.let {
+                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection lost: ${last.key}")
+                    emit(WifiEvent.Lost(MacNetworkHandle(it)))
+                }
+                snap.interfaceName?.takeIf { snap.connected }?.let {
+                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection available: ${snap.key}")
+                    emit(WifiEvent.Available(MacNetworkHandle(it)))
+                }
             }
+            last = snap
+        }
+    }
 
-            if (key != lastKey) {
-                if (lastKey != null) {
-                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection lost: $lastKey")
-                    emit(WifiEvent.Lost(SimpleMacNetworkHandle(lastKey.substringBefore("::"))))
+    private companion object {
+        const val TAG = "MacWifiPlatform"
+        const val POLL_INTERVAL_MS = 1_500L
+        const val CACHE_TTL_MS = 1_000L
+
+        /** CoreWLAN, chosen on first read so that assembling the platform loads nothing native. */
+        fun defaultProbe(logger: Logger): MacWifiProbe {
+            val chosen by lazy {
+                try {
+                    CoreWlanProbe.create()
+                } catch (e: Throwable) {
+                    logger.e(TAG, "CoreWLAN unavailable; falling back to networksetup, which cannot read the network name", e)
+                    NetworksetupWifiProbe()
                 }
-                if (key != null) {
-                    logger.d(TAG, "[NetworkEvent] Wi-Fi connection available: $key (SSID='${snap.ssid}')")
-                    emit(WifiEvent.Available(SimpleMacNetworkHandle(snap.interfaceName!!)))
-                }
-                lastKey = key
             }
-            delay(POLL_INTERVAL_MS)
+            return MacWifiProbe { chosen.read() }
         }
     }
 }

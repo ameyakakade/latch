@@ -16,12 +16,12 @@ import com.vinnovateit.latch.desktop.AppPaths
 import com.vinnovateit.latch.desktop.platform.linux.LinuxCredentialStore
 import com.vinnovateit.latch.desktop.platform.linux.LinuxSystemActions
 import com.vinnovateit.latch.desktop.platform.linux.LinuxWifiPlatform
+import com.vinnovateit.latch.desktop.platform.mac.MacKeychainCredentialStore
+import com.vinnovateit.latch.desktop.platform.mac.MacSystemActions
+import com.vinnovateit.latch.desktop.platform.mac.MacWifiPlatform
 import com.vinnovateit.latch.desktop.platform.windows.DpapiCredentialStore
 import com.vinnovateit.latch.desktop.platform.windows.WindowsSystemActions
 import com.vinnovateit.latch.desktop.platform.windows.WindowsWifiPlatform
-import com.vinnovateit.latch.desktop.platform.mac.MacCredentialStore
-import com.vinnovateit.latch.desktop.platform.mac.MacSystemActions
-import com.vinnovateit.latch.desktop.platform.mac.MacWifiPlatform
 
 /** The operating systems [DesktopPlatformServices] can build concrete implementations for. */
 enum class DesktopOs { WINDOWS, LINUX, MACOS, UNSUPPORTED }
@@ -40,17 +40,17 @@ private object DesktopBuildInfo : BuildInfo {
 }
 
 private object DesktopCapabilities : PlatformCapabilities {
-    override val supportsAutostart: Boolean = AppPaths.isWindows || AppPaths.isLinux
+    override val supportsAutostart: Boolean = AppPaths.isWindows || AppPaths.isLinux || AppPaths.isMac
 }
 
 /**
- * Wires concrete OS implementations together via runtime OS dispatch.
- * Windows and Linux are supported; macOS can be added by adding a macos package
- * and wiring its implementations in this dispatch.
+ * Wires concrete OS implementations together via runtime OS dispatch:
+ * Windows, Linux and macOS each get only their own Wi-Fi, credential and
+ * system-action implementations.
  *
- * Unsupported OSes -- currently macOS -- fail here, before any OS-specific
- * side effect, rather than silently running Linux Wi-Fi/credential/system
- * code on a machine it was never written for. [os] is only a seam for tests;
+ * Any other OS fails here, before any OS-specific side effect, rather than
+ * silently running another platform's Wi-Fi/credential/system code on a
+ * machine it was never written for. [os] is only a seam for tests;
  * production callers always take the default.
  */
 class DesktopPlatformServices(
@@ -60,8 +60,8 @@ class DesktopPlatformServices(
 ) : PlatformServices {
 
     init {
-        check(os == DesktopOs.WINDOWS || os == DesktopOs.LINUX || os == DesktopOs.MACOS) {
-            "Latch CLI runtime currently supports Windows and Linux."
+        check(os != DesktopOs.UNSUPPORTED) {
+            "Latch currently supports Windows, Linux and macOS."
         }
     }
 
@@ -88,7 +88,7 @@ class DesktopPlatformServices(
     override val credentials: CredentialStore = when (os) {
         DesktopOs.WINDOWS -> DpapiCredentialStore(AppPaths.credentialsFile, logger)
         DesktopOs.LINUX -> LinuxCredentialStore(AppPaths.credentialsFile, logger)
-        DesktopOs.MACOS -> MacCredentialStore(AppPaths.credentialsFile, logger)
+        DesktopOs.MACOS -> MacKeychainCredentialStore(logger)
         DesktopOs.UNSUPPORTED -> error("unreachable: guarded by init")
     }
 

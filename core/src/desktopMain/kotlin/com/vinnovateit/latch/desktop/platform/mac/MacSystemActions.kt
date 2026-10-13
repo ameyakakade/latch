@@ -2,80 +2,134 @@ package com.vinnovateit.latch.desktop.platform.mac
 
 import com.vinnovateit.latch.core.platform.Logger
 import com.vinnovateit.latch.core.platform.SystemActions
+import com.vinnovateit.latch.desktop.platform.BoundedCommandRunner
+import com.vinnovateit.latch.desktop.platform.CommandOutcome
 import com.vinnovateit.latch.desktop.platform.InstalledBuild
-import java.awt.Desktop
+import com.vinnovateit.latch.desktop.platform.SecureFileWriter
 import java.io.File
-import java.net.URI
+import java.nio.file.Files
+
+private const val OPEN = "/usr/bin/open"
 
 /**
- * Mac implementation of system actions (opening settings(working), opening URLs(not working), XDG autostart(not working)).
+ * macOS OS actions. Start at login is a per-user LaunchAgent: launchd reads
+ * ~/Library/LaunchAgents at login and starts Latch with `--hidden`. It needs
+ * no entitlement or signature, so it works for every build Latch ships, and
+ * macOS 13+ lists it under Login Items, where the user can switch it off.
  */
-class MacSystemActions(private val logger: Logger) : SystemActions {
+class MacSystemActions internal constructor(
+    private val logger: Logger,
+    private val launchAgentsDir: File,
+    private val installedExecutable: () -> String?,
+    /** Runs a command to completion or its deadline; a seam so tests can see what is run. */
+    private val command: (List<String>) -> CommandOutcome = BoundedCommandRunner(timeoutMillis = 5_000)::run,
+) : SystemActions {
 
-    private companion object {
+    constructor(logger: Logger) : this(
+        logger = logger,
+        launchAgentsDir = File(System.getProperty("user.home"), "Library/LaunchAgents"),
+        installedExecutable = { InstalledBuild.path },
+    )
+
+    internal companion object {
         const val TAG = "MacSystemActions"
-        const val DESKTOP_FILE_NAME = "latch.desktop"
+        const val LAUNCH_AGENT_LABEL = "com.vinnovateit.latch.login"
+        const val BUNDLE_ID = "com.vinnovateit.latch"
+
+        // System Settings' Wi-Fi pane (macOS 13+), then the Network pane of
+        // System Preferences (macOS 12), which is where Wi-Fi lived.
+        val WIFI_SETTINGS = listOf(
+            "x-apple.systempreferences:com.apple.wifi-settings-extension",
+            "x-apple.systempreferences:com.apple.preference.network",
+        )
+
+        /** The launchd job that starts [executable] at login. Paths are XML-escaped. */
+        fun launchAgentPlist(executable: String): String = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>Label</key>
+                <string>$LAUNCH_AGENT_LABEL</string>
+                <key>ProgramArguments</key>
+                <array>
+                    <string>${xmlEscape(executable)}</string>
+                    <string>--hidden</string>
+                </array>
+                <key>RunAtLoad</key>
+                <true/>
+                <key>ProcessType</key>
+                <string>Interactive</string>
+                <key>LimitLoadToSessionType</key>
+                <string>Aqua</string>
+                <key>AssociatedBundleIdentifiers</key>
+                <string>$BUNDLE_ID</string>
+            </dict>
+            </plist>
+        """.trimIndent() + "\n"
+
+        private fun xmlEscape(value: String): String = buildString {
+            value.forEach { c ->
+                when (c) {
+                    '&' -> append("&amp;")
+                    '<' -> append("&lt;")
+                    '>' -> append("&gt;")
+                    '"' -> append("&quot;")
+                    '\'' -> append("&apos;")
+                    else -> append(c)
+                }
+            }
+        }
     }
 
-    private val autostartFile: File
-        get() {
-            val configDir = System.getenv("XDG_CONFIG_HOME")
-                ?: (System.getProperty("user.home") + "/.config")
-            return File(configDir, "autostart/$DESKTOP_FILE_NAME")
-        }
+    private val launchAgent: File get() = File(launchAgentsDir, "$LAUNCH_AGENT_LABEL.plist")
 
     override fun openWifiSettings() {
-        if (tryExec(arrayOf("osascript",
-                "-e",
-                "tell application \"System Settings\"\n    reveal pane id \"com.apple.wifi-settings-extension\"\nend tell"))) return
-        logger.w(TAG, "Could not open WiFi Pane in System Settings.")
-    }
-
-    private fun tryExec(cmd: Array<String>): Boolean = try {
-        ProcessBuilder(*cmd).start()
-        true
-    } catch (e: Throwable) {
-        false
+        if (WIFI_SETTINGS.any { open(it) }) return
+        logger.w(TAG, "Could not open Wi-Fi settings.")
     }
 
     override fun openUrl(url: String) {
-        if (tryExec(arrayOf("open", url))) return
-        runCatching { Desktop.getDesktop().browse(URI(url)) }
-            .onFailure { logger.e(TAG, "Could not open URL: $url", it) }
-    }
-
-    override fun setAutostart(enabled: Boolean) {
-        val exePath = InstalledBuild.path
-        if (exePath == null) {
-            logger.w(TAG, "Not running from an installed build; refusing to set autostart.")
+        // Only web links: anything else handed to `open` could name a local app or file.
+        if (!url.startsWith("https://") && !url.startsWith("http://")) {
+            logger.w(TAG, "Refusing to open a non-web URL")
             return
         }
+        if (!open(url)) logger.w(TAG, "Could not open URL: $url")
+    }
 
+    /** `open` returns as soon as Launch Services has the request, so the bound is generous. */
+    private fun open(target: String): Boolean =
+        command(listOf(OPEN, target)) is CommandOutcome.Succeeded
+
+    /**
+     * Only an installed Latch.app is registered: a Gradle run is a bare JVM,
+     * and an app Gatekeeper launched from a translocated read-only copy has a
+     * path that is gone by the next login.
+     */
+    override fun setAutostart(enabled: Boolean) {
+        val executable = installedExecutable()
+        if (executable == null || !executable.contains(".app/Contents/MacOS/")) {
+            logger.w(TAG, "Not running from an installed Latch.app; refusing to set start at login.")
+            return
+        }
+        if (executable.contains("/AppTranslocation/")) {
+            logger.w(TAG, "Latch is running from a translocated copy; move Latch.app to Applications to start it at login.")
+            return
+        }
         try {
-            val file = autostartFile
             if (enabled) {
-                file.parentFile?.mkdirs()
-                file.writeText(
-                    """
-                    [Desktop Entry]
-                    Type=Application
-                    Name=Latch
-                    Comment=Auto-login for VIT hostel Wi-Fi
-                    Exec="$exePath" --hidden
-                    Terminal=false
-                    X-GNOME-Autostart-enabled=true
-                    Categories=Network;
-                    """.trimIndent() + "\n"
-                )
-                logger.d(TAG, "Autostart enabled -> ${file.absolutePath}")
-            } else if (file.exists()) {
-                file.delete()
-                logger.d(TAG, "Autostart disabled")
+                launchAgentsDir.mkdirs()
+                SecureFileWriter(ownerOnly = true).replace(launchAgent, launchAgentPlist(executable).toByteArray(Charsets.UTF_8))
+                logger.d(TAG, "Start at login enabled -> ${launchAgent.absolutePath}")
+            } else {
+                Files.deleteIfExists(launchAgent.toPath())
+                logger.d(TAG, "Start at login disabled")
             }
-        } catch (e: Throwable) {
-            logger.e(TAG, "Failed to update autostart", e)
+        } catch (e: Exception) {
+            logger.e(TAG, "Failed to update start at login", e)
         }
     }
 
-    override fun isAutostartEnabled(): Boolean = autostartFile.exists()
+    override fun isAutostartEnabled(): Boolean = launchAgent.isFile
 }
