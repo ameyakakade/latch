@@ -7,8 +7,10 @@
 #     Location usage text without which macOS never shows the prompt that
 #     lets Latch read the Wi-Fi network name;
 #   - the launcher, the bundled runtime and every classpath jar exist;
-#   - the bundled runtime runs the headless platform smoke test (CoreWLAN,
-#     Keychain round trip, Room, OSHI) with nothing but what the app ships;
+#   - the headless platform smoke test (CoreWLAN, Keychain round trip, Room,
+#     OSHI) passes on the app's jars, limited to the bundled runtime's
+#     modules. jpackage strips the java command from that runtime, so a JDK
+#     of the same version (JAVA_HOME) runs it with --limit-modules;
 #   - the app itself starts, hidden, and becomes the runtime owner.
 #
 # Everything the app writes goes to a temporary data directory, set through
@@ -121,8 +123,12 @@ echo "  CFBundleIconFile: $icon (present)"
 echo "== Bundle contents"
 require_executable "$app/Contents/MacOS/Latch"
 java_home="$app/Contents/runtime/Contents/Home"
-require_executable "$java_home/bin/java"
 [ -f "$java_home/lib/server/libjvm.dylib" ] || fail "the bundled runtime has no libjvm.dylib"
+[ -f "$java_home/release" ] || fail "the bundled runtime has no release file"
+runtime_version=$(sed -n 's/^JAVA_VERSION="\(.*\)"$/\1/p' "$java_home/release")
+runtime_modules=$(sed -n 's/^MODULES="\(.*\)"$/\1/p' "$java_home/release" | tr ' ' ',')
+{ [ -n "$runtime_version" ] && [ -n "$runtime_modules" ]; } || fail "the bundled runtime's release file names no version or modules"
+echo "  bundled runtime: Java $runtime_version, $(printf '%s' "$runtime_modules" | tr ',' '\n' | grep -c .) modules"
 cfg="$app/Contents/app/Latch.cfg"
 [ -f "$cfg" ] || fail "missing Contents/app/Latch.cfg"
 jars=0
@@ -143,12 +149,17 @@ echo "  signature (informational): $(codesign -dv "$app" 2>&1 | grep -E '^(Signa
 data="$root/data"
 mkdir -p "$data"
 
-echo "== Headless smoke test on the bundled runtime"
+echo "== Headless smoke test on the bundled runtime's modules"
+host_java="${JAVA_HOME:?set JAVA_HOME to a JDK matching the bundled runtime}/bin/java"
+[ -x "$host_java" ] || fail "JAVA_HOME has no bin/java: $JAVA_HOME"
+host_version=$(sed -n 's/^JAVA_VERSION="\(.*\)"$/\1/p' "$JAVA_HOME/release")
+[ "${host_version%%.*}" = "${runtime_version%%.*}" ] \
+    || fail "JAVA_HOME is Java $host_version but the bundled runtime is Java $runtime_version"
 smoke_log="$root/smoke.log"
-if ! "$java_home/bin/java" -Djava.awt.headless=true -Dlatch.dataDir="$data/smoke" \
+if ! "$host_java" --limit-modules "$runtime_modules" -Djava.awt.headless=true -Dlatch.dataDir="$data/smoke" \
     -cp "$app/Contents/app/*" com.vinnovateit.latch.desktop.SmokeMainKt >"$smoke_log" 2>&1; then
     tail -n 60 "$smoke_log" >&2
-    fail "the smoke test failed on the bundled runtime"
+    fail "the smoke test failed with the bundled runtime's modules"
 fi
 grep -q '=== smoke test complete ===' "$smoke_log" || { tail -n 60 "$smoke_log" >&2; fail "the smoke test did not finish"; }
 grep -E 'roundtrip|cleared|guard holds|currentSsid|wifiEnabled' "$smoke_log" | sed 's/^/  /' || true
